@@ -1,0 +1,24 @@
+{
+  "source_path": "/Users/lovelyalien/Documents/workspace/FootLog2/DESIGN.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Design System — FootLog",
+  "summary": "Defines FootLog's typography, color, spacing, layout/navigation, and motion design tokens and rules for the iOS app.",
+  "scope": [
+    "typography system (system/monospace/serif)",
+    "color palette and accent usage rules",
+    "spacing scale",
+    "layout and navigation shell (tab bar, map, bottom sheet)",
+    "motion/animation timing and easing",
+    "FootLog iOS app design system"
+  ],
+  "cross_refs": [
+    "docs/designs/day-end-reflection-map.md",
+    "calendar-multiselect-view.md",
+    "calendar-date-scrubber.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

@@ -1,0 +1,32 @@
+{
+  "source_path": "/Users/lovelyalien/Documents/workspace/FootLog2/docs/designs/calendar-multiselect-view.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Design: FootLog — 과거 기록 보기: 달력 자유 선택 뷰",
+  "summary": "Spec for a multiselect calendar view (map + bottom sheet) letting users freely select dates/ranges to view aggregated check-ins, with Phase 1 grid and Phase 2 drag-multiselect scoping.",
+  "scope": [
+    "calendar tab",
+    "month grid",
+    "multiselect calendar",
+    "map + bottom sheet layout",
+    "drag range selection",
+    "T10 calendar past-date view",
+    "date scrubber",
+    "check-in button visibility",
+    "bottom tab bar navigation",
+    "loading indicator",
+    "trajectory line rendering",
+    "DESIGN.md design tokens"
+  ],
+  "cross_refs": [
+    "lovelyalien-main-design-20260823-031850.md",
+    "DESIGN.md",
+    "footlog-product-design.md",
+    "calendar-date-scrubber.md",
+    "~/.gstack/projects/FootLog2/designs/calendar-multiselect-20260823/variant-A.png"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

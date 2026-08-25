@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/lovelyalien/Documents/workspace/FootLog2/docs/designs/calendar-date-scrubber.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Design: FootLog — 캘린더 과거 날짜 뷰: 날짜 스크러버",
+  "summary": "Interaction and layout spec for a horizontal date scrubber overlay on the map for browsing past check-in dates.",
+  "scope": ["calendar past date view (T10)", "date scrubber", "map view", "bottom sheet", "check-in records", "detail screen (T13)", "gesture handling", "z-index layering", "accessibility touch targets"],
+  "cross_refs": ["footlog-product-design.md", "DESIGN.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

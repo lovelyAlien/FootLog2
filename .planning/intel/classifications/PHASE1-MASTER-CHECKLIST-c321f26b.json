@@ -1,0 +1,30 @@
+{
+  "source_path": "/Users/lovelyalien/Documents/workspace/FootLog2/docs/designs/PHASE1-MASTER-CHECKLIST.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "FootLog Phase 1 — 마스터 구현 체크리스트",
+  "summary": "Consolidated build-order checklist merging Phase 1 tasks from four FootLog design docs into one implementation sequence with dependencies.",
+  "scope": [
+    "FootLog Phase 1",
+    "check-in core flow",
+    "today view",
+    "calendar tab",
+    "day-end reflection",
+    "notification infrastructure",
+    "SQLite schema/migrations",
+    "photo export and EXIF tagging",
+    "onboarding",
+    "accessibility"
+  ],
+  "cross_refs": [
+    "footlog-product-design.md",
+    "day-end-reflection-map.md",
+    "calendar-multiselect-view.md",
+    "calendar-date-scrubber.md",
+    "TODOS.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

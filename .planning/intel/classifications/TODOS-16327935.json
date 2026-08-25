@@ -1,0 +1,30 @@
+{
+  "source_path": "/Users/lovelyalien/Documents/workspace/FootLog2/TODOS.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "TODOS",
+  "summary": "Backlog of deferred items from CEO/Eng/Design reviews and brainstorming sessions for FootLog Phase 1 build and the Phase 2 backend plan.",
+  "scope": [
+    "FootLog",
+    "Phase 1 로컬 전용 MVP",
+    "Phase 2 백엔드/인증/클라우드 인프라",
+    "체크인 알림 및 확인 핀",
+    "잠금화면/홈화면 위젯",
+    "카카오 OAuth2/PKCE 인증",
+    "S3 호환 객체 스토리지",
+    "달력 멀티셀렉트 뷰 성능",
+    "VoiceOver 접근성",
+    "Apple Journal 경쟁 분석"
+  ],
+  "cross_refs": [
+    "footlog-product-design.md",
+    "docs/designs/calendar-multiselect-view.md",
+    "docs/designs/PHASE1-MASTER-CHECKLIST.md",
+    "day-end-reflection-map.md",
+    "~/.gstack/projects/FootLog2/lovelyalien-main-design-20260821-011836.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

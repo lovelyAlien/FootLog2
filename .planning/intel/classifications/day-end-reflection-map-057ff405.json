@@ -1,0 +1,23 @@
+{
+  "source_path": "/Users/lovelyalien/Documents/workspace/FootLog2/docs/designs/day-end-reflection-map.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "FootLog — 하루 마무리(회고) 화면 + 지도",
+  "summary": "Design/spec for FootLog's end-of-day reflection screen: reused map, two reflection prompts, DailyReflection data model, autosave, and daily notification.",
+  "scope": [
+    "day-end reflection screen",
+    "DailyReflection data model",
+    "today-view map and trajectory reuse",
+    "autosave debounce and failure handling",
+    "daily fixed-time notification",
+    "T10 past-date reflection editing"
+  ],
+  "cross_refs": [
+    "lovelyalien-main-design-20260821-011836.md",
+    "calendar-date-scrubber.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "MANIFEST_TYPE=SPEC applied as authoritative per process (heuristic/content classification skipped). Content is actually an /office-hours design-review artifact mixing PRD-like elements (Premises, user-facing decisions, Approaches Considered, task list) with a SPEC-like Data Model section (DailyReflection schema) and review/decision-log structure (GSTACK REVIEW REPORT) resembling ADR status tracking. Flagging for synthesizer awareness in case downstream precedence handling wants finer-grained treatment."
+}

@@ -1,0 +1,30 @@
+{
+  "source_path": "/Users/lovelyalien/Documents/workspace/FootLog2/docs/designs/footlog-product-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Design: FootLog — 시간 기반 위치 체크인 & 성찰 저널",
+  "summary": "FootLog 앱의 시간 기반 위치 체크인·성찰 저널 기능에 대한 1단계 로컬 전용 MVP의 제품 설계, UX 스펙, 데이터 모델을 정의한 통합 설계 문서.",
+  "scope": [
+    "FootLog 앱",
+    "체크인 플로우",
+    "로컬 SQLite 데이터 모델",
+    "알림 스케줄링 (반복 트리거)",
+    "위치 권한/GPS 캡처 처리",
+    "하단 탭바/네비게이션 구조",
+    "디자인 시스템(DESIGN.md) 연동",
+    "Success Criteria / kill condition",
+    "1단계(로컬 전용) vs 2단계(Spring Boot 백엔드) 스코프"
+  ],
+  "cross_refs": [
+    "DESIGN.md",
+    "CLAUDE.md",
+    "calendar-multiselect-view.md",
+    "calendar-date-scrubber.md",
+    "day-end-reflection-map.md",
+    "TODOS.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

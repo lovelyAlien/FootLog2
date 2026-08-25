@@ -1,0 +1,26 @@
+## Conflict Detection Report
+
+### BLOCKERS (0)
+
+None found. No ADR-classified documents exist in this ingest (so no LOCKED-vs-LOCKED or LOCKED-vs-existing-context contradictions are possible), no UNKNOWN/low-confidence classifications were produced, and cross_ref cycle detection (see INFO below) did not surface anything requiring a hard stop.
+
+### WARNINGS (0)
+
+None found. No PRD-classified documents exist in this ingest, so the "same requirement, divergent acceptance criteria" competing-variants check has no PRD pairs to compare. The 5 SPEC-classified documents were checked for same-scope contradictions and found to be a single, already-reconciled corpus (each doc documents its own supersessions against its siblings, with dates and rationale, and 3 of the 5 carry a "GSTACK REVIEW REPORT" cross-model consensus log). No unreconciled overlapping acceptance criteria were found.
+
+### INFO (5)
+
+[INFO] cross_refs form a mutual-reference mesh, not a hazard-bearing dependency graph
+  Note: DFS cycle detection over the `cross_refs` field found multiple 2–4 node cycles among DESIGN.md, footlog-product-design.md, calendar-multiselect-view.md, calendar-date-scrubber.md, day-end-reflection-map.md, TODOS.md, and PHASE1-MASTER-CHECKLIST.md (e.g. DESIGN.md ↔ calendar-date-scrubber.md ↔ footlog-product-design.md ↔ DESIGN.md). This is expected for a tightly-coupled design corpus where every spec references the shared design system and the parent product doc, and where the parent doc lists its own children — none of these edges carry supersedes/depends-on semantics, and the synthesis extraction step in this run read each document independently (no recursive graph traversal), so no synthesis-loop risk was present. Per-doc extraction proceeded normally for all 7 sources rather than being gated. Flagging so downstream consumers know this judgment call was made rather than silently applying/skipping the literal cycle-blocker rule.
+
+[INFO] TODOS.md P1 "kill condition" entry is stale — already resolved in SPEC
+  Note: TODOS.md ("/gstack-autoplan CEO 리뷰에서 유예된 항목 (2026-08-24)") lists "1~2주 실사용 검증의 명시적 실패 조건(kill condition) 부재" as an open P1 item discovered 2026-08-24. `docs/designs/footlog-product-design.md`'s Success Criteria section was directly edited the same day and now contains an explicit kill condition (3+ consecutive zero-check-in days, or <20% memo/photo attachment rate across the 1–2 week window) with a "확정" (confirmed) tag and Decision Audit Trail entry #45. `docs/designs/PHASE1-MASTER-CHECKLIST.md` also marks the corresponding task `[PD-T27]` as done ("이미 완료"). Per precedence (SPEC > DOC), the SPEC content wins and TODOS.md's entry is outdated bookkeeping, not a live gap. No auto-edit was made to TODOS.md — recommend the user close/remove that entry.
+
+[INFO] TODOS.md Phase 2 "Depends on" line still cites the retired quantitative success gate
+  Note: TODOS.md's "2단계: 백엔드/인증/클라우드 인프라" entry gates Phase 2 start on "체크인 완료율이 수기 일기보다 높고, 메모/사진 첨부율이 50% 이상" — a quantitative bar. `docs/designs/footlog-product-design.md`'s Success Criteria section documents that this quantitative gate was replaced by a qualitative founder judgment call back on 2026-08-21, and then further sharpened by the explicit kill condition added 2026-08-24 (see prior INFO entry). TODOS.md's Phase 2 gate description was not updated to match either revision. Recommend the user update TODOS.md's Phase 2 "Depends on/blocked by" line to reference the current qualitative Success Criteria + kill condition instead of the retired percentage figures, so `gsd-roadmapper` doesn't pick up the stale numeric gate as authoritative.
+
+[INFO] day-end-reflection-map.md was manifest-forced to SPEC despite mixed PRD/ADR-like structure
+  Note: Its own classification JSON flags that heuristic/content classification was skipped in favor of the manifest override, and that the document mixes PRD-shaped sections (Premises, Approaches Considered) with a SPEC-shaped Data Model and an ADR-status-log-shaped "GSTACK REVIEW REPORT" / Decision Audit Trail. The same structural pattern (Problem Statement / Premises / Success Criteria / NOT-in-scope, plus a Decision Audit Trail) also appears in `footlog-product-design.md`. Synthesis honored the manifest SPEC type for precedence purposes in this run (see requirements.md and decisions.md for how the PRD-shaped and decision-log-shaped content was extracted anyway). If a future ingest wants these treated with PRD or ADR precedence semantics, re-classify explicitly via `--manifest` rather than relying on the SPEC default.
+
+[INFO] Auto-resolved: three-document accent-color drift already reconciled at the source
+  Note: `calendar-multiselect-view.md` and `calendar-date-scrubber.md` independently extended the single approved accent color (`#7C8660`) to two new uses (today's-date underline, scrubber selected-position indicator) in the same session (2026-08-23) without updating DESIGN.md first. DESIGN.md's own Decisions Log records this drift being caught and formalized by expanding the approved-use list from 4 to 6 entries, with rationale that both new uses share the original "지금 보고 있는/가리키는 지점" semantic. No action needed — noted here only for traceability, since DESIGN.md (SPEC) is the source of truth for approved accent usage and both child docs are already consistent with it.
