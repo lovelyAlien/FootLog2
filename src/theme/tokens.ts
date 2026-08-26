@@ -3,8 +3,9 @@
 // 새 토큰을 여기서 발명하지 않는다. 값이 바뀌면 DESIGN.md를 먼저 갱신하고 이 파일에
 // 반영한다 (CLAUDE.md: "Do not deviate without explicit user approval").
 //
-// journalEntry.fontFamily는 현재 리터럴이며, Task 2에서 src/theme/fonts.ts의
-// JOURNAL_FONT_FAMILY 단일 출처 참조로 교체된다.
+// journalEntry.fontFamily는 src/theme/fonts.ts의 JOURNAL_FONT_FAMILY를 단일 출처로
+// 참조한다 — 두 파일이 서로 드리프트하지 않도록 보장한다.
+import { JOURNAL_FONT_FAMILY } from './fonts';
 
 export const colors = {
   background: '#F4F1EA', // 웜 오프화이트
@@ -31,7 +32,7 @@ export const typography = {
     fontVariant: ['tabular-nums'] as const,
   },
   journalEntry: {
-    fontFamily: 'Newsreader_400Regular_Italic', // Task 2에서 JOURNAL_FONT_FAMILY 참조로 교체 예정
+    fontFamily: JOURNAL_FONT_FAMILY, // src/theme/fonts.ts 단일 출처 (사용자 작성 텍스트 전용)
     fontSize: 15,
     fontWeight: '400',
     lineHeight: 15 * 1.5,
