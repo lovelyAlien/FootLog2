@@ -100,6 +100,17 @@
 
 
 
+## Phase 2 계획 실행에서 남긴 인계 항목 (2026-08-27)
+
+### Phase 3/4: expo-location·expo-image-picker config plugin에 iOS 권한 문구 이관 필수 (P1)
+**What:** `app.json`의 `expo.ios.infoPlist`에 위치/카메라/사진 라이브러리 3개 한국어 권한 문구를 하드코딩했다(02-02 Task 1). Phase 3(`expo-location` 설치)와 Phase 4(`expo-image-picker` 설치) 계획 시, 각 패키지의 config plugin을 `expo.plugins`에 추가하면서 plugin 옵션(`locationWhenInUsePermission`, `cameraPermission`, `photosPermission`)으로 이 한국어 문구를 반드시 이관해야 한다 — 그렇지 않으면 plugin이 기본값(영어)으로 Info.plist 문구를 조용히 덮어쓸 수 있다(02-RESEARCH.md Pitfall 5).
+**Why:** `src/notifications/infoPlist.test.ts`의 Test 6이 이 이관을 강제하는 자동 게이트다 — `expo.plugins` 직렬화 문자열에 위 세 옵션 키 중 하나라도 등장하면 실패한다. Phase 3/4 작업 중 이 테스트가 실패하면, 문구를 삭제하는 게 아니라 plugin 옵션으로 옮겨야 한다.
+**Pros:** 문구 소실이 CI/로컬 테스트에서 즉시 드러남 — 조용한 배포 회귀 방지.
+**Cons:** 없음, 순수 안전장치.
+**Context:** 02-02-PLAN.md Task 2, 02-RESEARCH.md Common Pitfalls §5.
+**Depends on/blocked by:** 없음 — Phase 3/4 계획 시 참고.
+**참고:** D-03의 3개 권한 문구 원문은 창업자 최종 확인 대기 상태(초안)다 — 02-CONTEXT.md D-03 참고, 확정 전까지는 draft로 취급.
+
 ## 2단계: 백엔드/인증/클라우드 인프라 (1단계 검증 통과 후)
 
 **What:** Spring Boot(Kotlin) 백엔드, 카카오 OAuth2/PKCE 인증, S3 호환 객체 스토리지 사진 업로드, 클라이언트-서버 local-first 동기화 로직.
