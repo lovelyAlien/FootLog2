@@ -13,7 +13,10 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.jaeseungchoun.footlog",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "web": {
       "output": "static",
@@ -42,6 +45,12 @@
         "projectId": "ddae6f8e-f890-459e-bfcb-cc3f47478260"
       }
     },
-    "owner": "jaeseungchoun"
+    "owner": "jaeseungchoun",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ddae6f8e-f890-459e-bfcb-cc3f47478260"
+    }
   }
 }
