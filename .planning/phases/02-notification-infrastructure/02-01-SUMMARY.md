@@ -152,3 +152,12 @@ None - 외부 서비스 설정 불필요.
 ---
 *Phase: 02-notification-infrastructure*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+- FOUND: src/notifications/config.ts
+- FOUND: src/notifications/content.ts
+- FOUND: src/notifications/deps.ts
+- FOUND: src/notifications/testing/fakeNotifications.ts
+- FOUND: src/notifications/testing/fakeNotifications.test.ts
+- FOUND: 26271b7, 093c1c1, 2aefeee (git log --oneline -5 확인)
