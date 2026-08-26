@@ -1,3 +1,13 @@
 {
-  "response_language": "Korean"
+  "response_language": "Korean",
+  "agent_skills": {
+    "gsd-executor": [
+      ".claude/skills/test-driven-development",
+      ".claude/skills/systematic-debugging"
+    ]
+  },
+  "workflow": {
+    "code_review": true,
+    "ui_review": true
+  }
 }

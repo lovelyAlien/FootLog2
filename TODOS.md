@@ -94,13 +94,9 @@
 
 ## 브레인스토밍에서 유예된 항목 (2026-08-24)
 
-### 5개 설계 문서 태스크 통합 체크리스트 부재 (P2)
-**What:** `footlog-product-design.md`(T1-T24)와 자식 문서 3개(`day-end-reflection-map.md` T1-T5, `calendar-multiselect-view.md` T1a/T1b/T2-T5, `calendar-date-scrubber.md` T1-T4)가 각자 독립된 번호 체계로 태스크를 관리 중 — 구현 착수 시 부모 문서만 보고 자식 문서 태스크를 놓칠 위험이 있음.
-**Why:** `/superpowers:brainstorming`(2026-08-24) 세션에서 사용자가 이번 라운드 대상에서 제외하고 다음으로 미룸 — 이번엔 새로운 시각의 gap 탐색에 집중.
-**Pros:** 구현 시작 전 순서/의존성이 명확한 마스터 목록이 있으면 태스크 누락 리스크가 사라짐.
-**Cons:** 4개 문서를 넘나드는 통합 작업이라 순서/의존성 정리에 시간이 걸림 — 문서 자체보다 구현 착수 직전에 하는 게 더 실용적일 수 있음.
-**Context:** `/superpowers:brainstorming`(2026-08-24), 목업 캔버스 리뷰 세션에서 발견.
-**Depends on/blocked by:** 없음, 구현 착수 전 아무 때나 가능.
+### ~~5개 설계 문서 태스크 통합 체크리스트 부재~~ — 해소됨 (2026-08-24)
+**해결:** `docs/designs/PHASE1-MASTER-CHECKLIST.md` 작성 완료 — 4개 문서(부모 + 자식 3개)의 Phase 1 태스크 34개(M1~M34)를 빌드 순서·의존성과 함께 하나로 통합. 작성 중 기존 어느 문서에도 없던 gap도 하나 발견함: 하루 마무리 모달의 **기본 빌드 자체**가 어느 문서에도 명시적 태스크로 없었음(`day-end-reflection-map.md`의 T1-T5는 전부 그 위에 얹는 리뷰발견 수정사항이었음) — 마스터 체크리스트에 M23 `[신규발견]`으로 추가.
+**Context:** 최초 발견은 `/superpowers:brainstorming`(2026-08-24), 실제 작성은 같은 날 세션 후반.
 
 
 
