@@ -414,17 +414,19 @@ npx expo start
 
 **참고:** 위 세 항목 모두 이 phase의 3개 요구사항(REQ-foundation-setup/design-tokens/sqlite-migrations)을 완료하는 데 필수적이지 않은 세부 설정값이며, 라이브러리·패턴 선택 자체는 전부 공식 문서로 검증됨(`[VERIFIED]`).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **iOS 번들 식별자(Bundle Identifier)와 EAS 프로젝트 슬러그**
+두 항목 모두 계획 단계에서 확정되었으며, 확정값은 `01-01-PLAN.md`의 `<locked_decisions>`에 기록되어 있다.
+
+1. **iOS 번들 식별자(Bundle Identifier)와 EAS 프로젝트 슬러그** — **(RESOLVED)**
    - What we know: `eas build:configure`가 최초 실행 시 대화형으로 물어보며 자동 생성 가능. 창업자는 이미 유료 Apple Developer 계정 보유.
-   - What's unclear: 창업자가 선호하는 도메인 역순 네이밍(`com.jaeseung.footlog` 등)이 아직 문서화되지 않음.
-   - Recommendation: 플래너가 첫 태스크(프로젝트 스캐폴딩)에서 `eas build:configure`의 대화형 프롬프트에 맡기거나, 실행 직전 사용자에게 1회 확인.
+   - What was unclear: 창업자가 선호하는 도메인 역순 네이밍(`com.jaeseung.footlog` 등)이 아직 문서화되지 않음.
+   - **Resolution:** Claude's Discretion으로 확정 — 번들 식별자 `com.jaeseungchoun.footlog` (EAS 계정 소유자 `jaeseungchoun` 기준 도메인 역순), Expo 슬러그 `footlog`, 앱 표시명 `FootLog`, URL scheme `footlog`. `01-01-PLAN.md` Task 2가 `app.json`에 이 값을 기록하고 acceptance criteria가 기계 검증한다. (대화형 프롬프트에 맡기지 않고 사전 확정 → EAS 등록 시점의 재프로비저닝 리스크 제거, Assumptions Log A1 해소.)
 
-2. **`typescript: strict` 모드 활성화 여부**
+2. **`typescript: strict` 모드 활성화 여부** — **(RESOLVED)**
    - What we know: Expo 공식 문서는 기본적으로 strict를 켜지 않지만("user-friendly 기본값"), 켜는 것을 권장 옵션으로 소개.
-   - What's unclear: 이 프로젝트(1인 창업자, 빠른 반복)가 strict 모드의 엄격함을 원하는지 CONTEXT.md/PROJECT.md 어디에도 명시 안 됨.
-   - Recommendation: 신규 프로젝트이므로 처음부터 `"strict": true`로 시작하는 것을 권장(나중에 켜는 것보다 처음부터 켜는 게 훨씬 저비용) — Claude's Discretion 영역으로 플래너가 결정.
+   - What was unclear: 이 프로젝트(1인 창업자, 빠른 반복)가 strict 모드의 엄격함을 원하는지 CONTEXT.md/PROJECT.md 어디에도 명시 안 됨.
+   - **Resolution:** 권고안 채택 — `tsconfig.json`에 `"strict": true`. `01-01-PLAN.md` Task 1이 설정하고, 같은 태스크의 acceptance criteria + 위협 `T-1-06`이 이후 phase에서 조용히 꺼지는 것을 방지한다.
 
 ## Environment Availability
 
