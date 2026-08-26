@@ -124,3 +124,10 @@ None - 외부 서비스 설정 불필요.
 ---
 *Phase: 02-notification-infrastructure*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+- FOUND: src/notifications/permissions.ts
+- FOUND: src/notifications/permissions.test.ts
+- FOUND: .planning/phases/02-notification-infrastructure/02-04-SUMMARY.md
+- FOUND: 95050bd, 09d7ea7, 2c3514f (git log --oneline --all 확인)
