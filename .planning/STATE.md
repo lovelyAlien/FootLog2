@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Ingest intel로부터 ROADMAP.md, PROJECT.md, REQUIREMENTS.md, STATE.md 작성 완료; `/gsd:plan-phase 1` 진행 전 사용자 승인 대기 중."
-last_updated: "2026-08-26T03:38:38.420Z"
-last_activity: 2026-08-26 -- Phase 1 planning complete
+stopped_at: 01-01-PLAN.md(Expo 스캐폴드+런타임 의존성+jest-expo) 실행 완료
+last_updated: "2026-08-26T09:21:19.117Z"
+last_activity: 2026-08-26
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-25)
 
 **Core value:** 체크인을 남기는 행위가 실제 매일의 사용을 버텨낼 만큼 마찰이 적어야 합니다 — 이 습관이 형성되지 않으면 앱의 다른 어떤 부분도 의미가 없습니다.
-**Current focus:** Phase 1 (Foundation)
+**Current focus:** Phase 1 — Foundation
 
 ## Current Position
 
-Phase: 1 of 8 (Foundation)
-Plan: 0 of TBD in current phase
+Phase: 1 (Foundation) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-08-26 -- Phase 1 planning complete
+Last activity: 2026-08-26
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01-foundation P01 | 13min | 3 tasks | 33 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Progress: [░░░░░░░░░░] 0%
 - Ingest: 1단계는 로컬 전용(백엔드 없음); 백엔드/인증/클라우드는 1단계의 정성적 트라이얼을 조건으로 하는, roadmap에 포함되지 않은 별도의 "2단계" 제품 마일스톤으로 연기됨.
 - Ingest: 알림 스케줄링은 매일 재스케줄링 대신 방법 A(반복 캘린더 트리거) + 자가진단 레지스트리를 사용 — 이는 (roadmap상의) Phase 2 아키텍처를 그대로 형성함.
 - Ingest: 하루 마무리 회고는 유예된 추가기능이 아니라 핵심 루프의 정식 구성요소임(이 roadmap의 Phase 7).
+- [Phase ?]: create-expo-app 최신 템플릿이 라우트를 app/이 아닌 src/app/에 생성 - RESEARCH/PLAN의 app/ 최상위 경로 가정 대신 실제 템플릿 출력(src/app/)을 채택
+- [Phase ?]: jest@30.4.2 대신 jest@29.7.0으로 다운그레이드 - jest-expo 57.0.4가 실제로 검증된 조합은 Jest 29 계열이며 Jest 30과 조합 시 expo/src/winter 지연 getter가 테스트 사이 구간에서 에러 발생
 
 ### Pending Todos
 
@@ -92,6 +95,6 @@ Ingest에서 확인되어 이어받은 항목들.
 
 ## Session Continuity
 
-Last session: 2026-08-25
-Stopped at: Ingest intel로부터 ROADMAP.md, PROJECT.md, REQUIREMENTS.md, STATE.md 작성 완료; `/gsd:plan-phase 1` 진행 전 사용자 승인 대기 중.
+Last session: 2026-08-26T09:21:00.863Z
+Stopped at: 01-01-PLAN.md(Expo 스캐폴드+런타임 의존성+jest-expo) 실행 완료
 Resume file: None

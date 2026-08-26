@@ -16,6 +16,7 @@ REQUIREMENTS.md의 v2 섹션과 PROJECT.md의 Out of Scope 참고.
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): 계획된 마일스톤 작업
 - Decimal phases (2.1, 2.2): 긴급 삽입 항목(INSERTED로 표시)
 
@@ -33,102 +34,127 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 ## Phase Details
 
 ### Phase 1: Foundation
+
 **Goal**: Expo/EAS 스캐폴드, 디자인 토큰, 그리고 나머지 전부를 그 위에 지을 수 있는 SQLite 마이그레이션 프레임워크가 존재한다.
 **Depends on**: Nothing (first phase)
 **Requirements**: REQ-foundation-setup, REQ-design-tokens, REQ-sqlite-migrations
 **Success Criteria** (what must be TRUE):
+
   1. 창업자가 EAS Dev Client 빌드를 자신의 iPhone에 설치하고 실행할 수 있다.
   2. 앱 화면들이 DESIGN.md와 일치하는 단일 상수 파일에서 공유 디자인 토큰(컬러, 타입, 스페이싱, 모션)을 import할 수 있다.
   3. SQLite 데이터베이스가 마이그레이션 프레임워크(`PRAGMA user_version` + 마이그레이션 함수)를 통해 초기화되며, 이후 기존 데이터를 지우지 않고 테이블/컬럼을 추가할 수 있다.
+
 **Plans**: 5 plans (4 waves)
-- [ ] 01-01-PLAN.md — Expo SDK 57 스캐폴드 + 런타임 의존성 + jest-expo 테스트 인프라 (wave 1)
+
+- [x] 01-01-PLAN.md — Expo SDK 57 스캐폴드 + 런타임 의존성 + jest-expo 테스트 인프라 (wave 1)
 - [ ] 01-02-PLAN.md — DESIGN.md 디자인 토큰 단일 상수 파일 + Newsreader 번들 폰트 (wave 2)
 - [ ] 01-03-PLAN.md — PRAGMA user_version SQLite 마이그레이션 프레임워크 + 실엔진 회귀 테스트 (wave 2)
 - [ ] 01-04-PLAN.md — 루트 레이아웃 배선(폰트 게이팅 + onInit 마이그레이션) + 부팅 확인 화면 (wave 3)
 - [ ] 01-05-PLAN.md — EAS Dev Client 빌드 + 창업자 iPhone 실기기 설치·실행 검증 (wave 4)
 
 ### Phase 2: Notification Infrastructure
+
 **Goal**: 앱이 체크인/회고 리마인더를 신뢰성 있게 스케줄링하고 스스로 복구하며, 확정된 권한 프롬프트 문구와 거부 상태 UI 패턴을 갖춘다.
 **Depends on**: Phase 1
 **Requirements**: REQ-notification-scheduling, REQ-permission-copy, REQ-notification-denied-flow
 **Success Criteria** (what must be TRUE):
+
   1. 사용자가 반복 체크인·하루 마무리 리마인더를 예정대로 받으며, 종류당 반복 캘린더 트리거 1개만 사용한다(매일 재스케줄링 없음).
   2. 사용자가 4개 iOS 권한 프롬프트(위치/카메라/사진 라이브러리/알림) 각각에 대해 OS 다이얼로그가 뜨기 전에 확정된 구체적 문구를 본다.
   3. 알림 권한이 거부되면 사용자는 (오류가 아닌) 조용한 상태 배너와 설정 딥링크를 보며, 앱이 포그라운드로 돌아올 때 권한 상태를 재확인한다.
   4. 예정된 트리거가 조용히 사라지면(알려진 iOS 실패 모드), 자가진단 레지스트리가 앱이 다음에 포그라운드로 올 때 이를 감지해 재생성하며, 매일 재스케줄링 방식으로 되돌아가지 않는다.
+
 **Plans**: TBD
 
 ### Phase 3: Check-in Core Loop
+
 **Goal**: 사용자가 자유형 체크인(위치 + 선택적 사진/메모)을 GPS·저장 실패를 포함해 안정적으로 남길 수 있다.
 **Depends on**: Phase 2
 **Requirements**: REQ-checkin-core, REQ-checkin-write-failure-ui, REQ-checkin-confirm-pin, REQ-location-denied-flow
 **Success Criteria** (what must be TRUE):
+
   1. 체크인을 탭하면 사진/메모 입력이 가능해지기 전에 기기 위치를 캡처해 즉시 SQLite에 저장한다.
   2. 사용자는 (GPS 성공/실패/저정확도 관계없이) 항상 드래그로 보정 가능한 확인 핀을 보며, 5초 타임아웃 시 마지막으로 알려진 위치로 폴백한다.
   3. 저장이 실패하면 앱이 자동으로 한 번 재시도한 뒤 명확한 실패 메시지와 재시도 버튼을 보여주며, 저장이 성공할 때까지 메모/사진 입력을 막는다.
   4. 위치 권한이 거부되면 사용자는 알림 거부와 동일한 조용한 배너+설정 딥링크 패턴을 보며, (OS 캐시가 아닌) 앱 소유의 폴백 위치가 뒷받침한다.
   5. 진행 중인 체크인 드래프트는 저장되거나 명시적으로 폐기될 때까지 앱 백그라운드 전환/재실행을 버텨내며, 날짜 경계 만료와 단일 드래프트 전용 엣지케이스를 포함한다.
+
 **Plans**: TBD
 
 ### Phase 4: Today View
+
 **Goal**: 사용자가 오늘의 체크인들을 지도에서 보여주는 홈 화면과, 새 체크인을 위한 마찰 낮은 진입점을 갖는다.
 **Depends on**: Phase 3
 **Requirements**: REQ-today-view, REQ-photo-resize, REQ-onboarding-empty-state, REQ-trajectory-line
 **Success Criteria** (what must be TRUE):
+
   1. 사용자가 오늘 탭을 열면 3단 스냅 바텀시트(CLOSED/DRAGGING/OPEN)가 있는 지도가 보이며, 오늘의 실제 체크인들이 시간순으로 나열된다.
   2. 바텀시트 상태와 무관하게 플로팅 체크인 버튼에 항상 접근할 수 있다.
   3. 체크인 시 첨부된 사진은 최대 1600px로 리사이징되어 `documentDirectory` 하위에 저장되어 OS 캐시 삭제에도 살아남는다.
   4. 얇고 채도 낮은 궤적선이 오늘의 체크인들을 시간순으로 연결하며, 거리/시간 라벨은 없다.
   5. 첫 사용자는 알림 priming 외에 별도의 온보딩 플로우를 보지 않으며, 위치 권한은 첫 체크인 탭 시점에 맥락적으로 요청된다.
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 5: Check-in Detail & Edit
+
 **Goal**: 사용자가 기록된 개별 체크인을 조회·수정·삭제할 수 있다.
 **Depends on**: Phase 4
 **Requirements**: REQ-checkin-detail-base, REQ-checkin-detail-layout, REQ-checkin-detail-flush, REQ-maps-deeplink, REQ-checkin-swipe-delete
 **Success Criteria** (what must be TRUE):
+
   1. 완료된 체크인 행을 탭하면 시간(모노스페이스) → 정적 지도 미리보기 → "지도 앱에서 열기" → 사진 → 메모 순서로 상세화면이 열린다.
   2. 사용자는 상세화면에서 언제든 메모/사진을 수정할 수 있으며, 저장되지 않은 메모 수정 내용은 앱이 백그라운드로 전환될 때 강제로 flush된다.
   3. "지도 앱에서 열기"는 저장되지 않은 수정 내용을 잃지 않고 지도 앱에서 위치를 연다.
   4. 사용자는 메모/사진 유무와 무관하게 체크인을 스와이프 삭제할 수 있으며(빨강이 아닌 올리브그린 어포던스), 4초 스낵바로 되돌릴 수 있다.
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 6: Calendar Tab
+
 **Goal**: 사용자가 월 그리드와 빠른 날짜별 스크러버로 과거 날짜를 훑어볼 수 있다.
 **Depends on**: Phase 5
 **Requirements**: REQ-calendar-grid, REQ-past-date-view, REQ-date-scrubber
 **Success Criteria** (what must be TRUE):
+
   1. 사용자가 캘린더 탭을 열면 오늘 날짜가 시각적으로 밑줄 표시된 월 그리드가 보이며, 과거 날짜를 탭하면 (체크인 버튼 없이) 그날의 읽기전용 지도+시트 뷰가 열린다.
   2. 과거 날짜 뷰에서 사용자는 플로팅 가로 날짜 스크러버를 드래그해 실시간으로 날짜 사이를 이동할 수 있으며, 범위 경계에서는 하드 클램프(러버밴딩 없음)되고 44×44pt 터치 타겟을 사용한다.
   3. 스크러버를 터치하면 바텀시트가 강제로 접혀 스크러빙 중에도 지도가 계속 보인다.
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 7: Day-end Reflection
+
 **Goal**: 사용자가 하루 루프의 핵심 요소인 짧은 하루 마무리 회고를 완료할 수 있다.
 **Depends on**: Phase 6
 **Requirements**: REQ-reflection-base, REQ-reflection-autosave, REQ-reflection-save-failure-ui, REQ-reflection-copy-fix, REQ-reflection-notification, REQ-reflection-today-entry, REQ-past-reflection-edit
 **Success Criteria** (what must be TRUE):
+
   1. 사용자가 (오늘의 정적 지도를 재사용하고 2개 프롬프트를 담은) 전체화면 하루 마무리 회고 모달을 열 수 있으며, `DailyReflection` 레코드로 저장된다. 이 모달은 탭 바를 숨기는 push 규칙이 아니라, 탭 바를 덮는 방식이다.
   2. 회고 답변은 5초 디바운스, 앱 백그라운드 전환, 모달 닫기(✕/스와이프) 시점에 — 모두 동일한 저장 함수를 통해 — 자동저장되며, 저장 실패 시 체크인 저장과 동일한 재시도 패턴을 사용한다.
   3. 이름이 바뀐 "오늘의 흔적" 행은 체크인 개수를 표시하지 않으며(진행률 수치 금지), 체크인이 0건이어도 오늘 뷰 바텀시트 리스트 최상단에 고정된다.
   4. 사용자는 기본으로 켜진 매일 고정 시각의 회고 리마인더를 받으며, 설정에서 끌 수 있는 토글이 있다.
   5. 과거 날짜 뷰에서 사용자는 그날의 회고 프롬프트도 편집할 수 있다(읽기전용 아님).
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 8: Export & Polish
+
 **Goal**: 사용자가 데이터를 로컬로 내보낼 수 있고, 앱이 이름/접근성 기준을 충족한다.
 **Depends on**: Phase 7
 **Requirements**: REQ-export, REQ-exif-geotag, REQ-exif-disclosure, REQ-app-name, REQ-accessibility-baseline
 **Success Criteria** (what must be TRUE):
+
   1. 사용자가 수동으로 내보내기를 실행하면 JSON 파일과 사진 zip이 함께 생성된다.
   2. 카메라로 촬영한 사진은 내보내기 시 EXIF GPS 지오태그를 받으며, 라이브러리에서 선택한 사진에는 위치 메타데이터가 절대 주입되지 않는다.
   3. 내보내기 화면은 내보내기 전에 "사진에 위치 정보가 포함됩니다"를 고지한다.
   4. "FootLog"는 priming/설정 화면에서만 표시명으로 나타나며, 매일 보는 오늘 뷰에는 절대 노출되지 않는다.
   5. 모든 인터랙티브 요소가 44px 터치 타겟과 4.5:1 텍스트 대비를 충족하며, 아이콘 전용 버튼에는 VoiceOver 라벨이 붙는다.
+
 **Plans**: TBD
 **UI hint**: yes
 
@@ -139,7 +165,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/5 | Planned | - |
+| 1. Foundation | 1/5 | In Progress|  |
 | 2. Notification Infrastructure | 0/TBD | Not started | - |
 | 3. Check-in Core Loop | 0/TBD | Not started | - |
 | 4. Today View | 0/TBD | Not started | - |
