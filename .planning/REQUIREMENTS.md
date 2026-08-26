@@ -21,7 +21,7 @@
 ### Notification infrastructure
 
 - [ ] **REQ-notification-scheduling** (M4, PD-T2/T22/T31): 앱이 `checkin`과 `daily_reflection` 두 종류 모두에 대해 반복 캘린더 트리거 알림(방법 A, minute 컴포넌트만, `repeats: true`)을 스케줄링하며, "사용자 설정으로 꺼짐"과 "예기치 않게 사라짐"을 구분하고, 다중 트리거의 부분 실패를 감지하고, 빈도 변경 시 고아 트리거를 정리하는 자가진단 레지스트리를 갖춘다.
-- [ ] **REQ-permission-copy** (M5, PD-T18): iOS 권한 프롬프트 4종(위치/카메라/사진 라이브러리/알림) 전부에 대해 OS 다이얼로그가 뜨기 전에 표시되는 확정된 문구가 존재한다.
+- [x] **REQ-permission-copy** (M5, PD-T18): iOS 권한 프롬프트 4종(위치/카메라/사진 라이브러리/알림) 전부에 대해 OS 다이얼로그가 뜨기 전에 표시되는 확정된 문구가 존재한다.
 - [ ] **REQ-notification-denied-flow** (M6, PD-T8; M4/M5에 의존): 알림 권한이 거부되면 사용자는 priming 화면 → OS 프롬프트 → 조용한 상태 배너 + 설정 딥링크를 보게 되며, 앱 복귀 시 `AppState` 기반 재확인이 이뤄진다.
 
 ### Check-in core loop
@@ -114,7 +114,7 @@
 | REQ-design-tokens | Phase 1 | Complete |
 | REQ-sqlite-migrations | Phase 1 | Complete |
 | REQ-notification-scheduling | Phase 2 | Pending |
-| REQ-permission-copy | Phase 2 | Pending |
+| REQ-permission-copy | Phase 2 | Complete |
 | REQ-notification-denied-flow | Phase 2 | Pending |
 | REQ-checkin-core | Phase 3 | Pending |
 | REQ-checkin-write-failure-ui | Phase 3 | Pending |
