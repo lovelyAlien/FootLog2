@@ -15,7 +15,10 @@
       "bundleIdentifier": "com.jaeseungchoun.footlog",
       "supportsTablet": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "체크인 위치를 기록하려면 위치 정보가 필요해요.",
+        "NSCameraUsageDescription": "체크인에 사진을 남기려면 카메라 접근이 필요해요.",
+        "NSPhotoLibraryUsageDescription": "체크인에 사진을 첨부하려면 사진 보관함 접근이 필요해요."
       }
     },
     "web": {
