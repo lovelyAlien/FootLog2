@@ -5,9 +5,11 @@
 // Plan 01-03 Task 1 (RED) — 실제 SQLite 엔진(node:sqlite)에 대해
 // `migrateDbIfNeeded`의 마이그레이션 계약을 검증한다.
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { createTestDb } from './testing/nodeSqliteAdapter';
 import { DATABASE_VERSION, migrateDbIfNeeded } from './migrations';
+import { stripComments } from '../test-utils/stripComments';
 
 const CHECKINS_COLUMNS = [
   'id',
@@ -248,13 +250,29 @@ describe('migrateDbIfNeeded', () => {
       'utf-8'
     );
 
-    const codeLines = migrationsSource
-      .split('\n')
-      .filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*'));
-
+    const codeLines = stripComments(migrationsSource).split('\n');
     const interpolatedLines = codeLines.filter((line) => line.includes('${'));
 
     expect(interpolatedLines).toHaveLength(1);
     expect(interpolatedLines[0]).toMatch(/PRAGMA user_version/);
+  });
+
+  it('Test 9: 실제 파일 기반 DB에서 journal_mode가 WAL로 설정된다 (:memory:는 WAL을 조용히 무시하므로 검증 불가)', async () => {
+    const tmpPath = path.join(
+      os.tmpdir(),
+      `footlog-wal-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`
+    );
+    const { db, raw, close } = createTestDb(tmpPath);
+    try {
+      await migrateDbIfNeeded(db);
+
+      const row = raw.prepare('PRAGMA journal_mode').get() as { journal_mode: string };
+      expect(row.journal_mode.toLowerCase()).toBe('wal');
+    } finally {
+      close();
+      for (const suffix of ['', '-wal', '-shm', '-journal']) {
+        fs.rmSync(`${tmpPath}${suffix}`, { force: true });
+      }
+    }
   });
 });

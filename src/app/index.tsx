@@ -18,11 +18,19 @@ export default function Index() {
 
   useEffect(() => {
     let isMounted = true;
-    db.getFirstAsync<{ user_version: number }>('PRAGMA user_version').then((row) => {
-      if (isMounted) {
-        setSchemaVersion(row?.user_version ?? null);
-      }
-    });
+    db.getFirstAsync<{ user_version: number }>('PRAGMA user_version')
+      .then((row) => {
+        if (isMounted) {
+          setSchemaVersion(row?.user_version ?? null);
+        }
+      })
+      .catch((error) => {
+        // 진단 화면이라 UI를 별도 에러 상태로 분기하지 않지만, 쿼리 실패를 조용히
+        // 삼키면 unhandled promise rejection이 되므로 최소한 로그는 남긴다.
+        if (isMounted) {
+          console.error('Failed to read PRAGMA user_version', error);
+        }
+      });
     return () => {
       isMounted = false;
     };
@@ -34,6 +42,11 @@ export default function Index() {
       <Text style={[styles.timestampText, schemaVersion === null ? styles.textFaint : styles.textMuted]}>
         {schemaVersion === null ? '···' : `schema v${schemaVersion}`}
       </Text>
+      {/* 예외(DESIGN.md 타이포그래피 규칙): 저널체(이탤릭 세리프)는 원래 "사용자가 직접
+          쓴 텍스트"에만 쓰는 게 원칙이지만, 이 화면은 Foundation phase의 임시 부팅
+          확인용 진단 화면(Phase 4에서 완전히 대체·삭제됨)이라 Newsreader 번들 폰트
+          로딩 성공 여부를 육안으로 확인하기 위해 의도적으로 하드코딩된 예시 문장에
+          적용했다. 실제 제품 화면에는 이 예외를 적용하지 않는다. */}
       <Text style={[typography.journalEntry, styles.textPrimary]}>
         오늘도 걸었던 길을 조용히 남겨둔다.
       </Text>

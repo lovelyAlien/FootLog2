@@ -12,6 +12,23 @@
 import { DatabaseSync } from 'node:sqlite';
 import type { MigratableDb } from '../migrations';
 
+// expo-sqlite의 실제 bindParams 관례(SQLiteBindParams)는 세 가지 호출 형태를 전부
+// 허용한다 — 가변인자(a, b), 단일 배열([a, b]), 단일 named-param 객체({ $a: a }).
+// 이 어댑터가 가변인자 형태만 지원하면, 이후 phase가 배열/객체 형태로 파라미터를 넘기는
+// 순간 테스트 어댑터와 실제 expo-sqlite가 조용히 다르게 동작하게 된다.
+function resolveBindArgs(params: unknown[]): unknown[] {
+  if (params.length === 1) {
+    const [only] = params;
+    if (Array.isArray(only)) {
+      return only;
+    }
+    if (only !== null && typeof only === 'object') {
+      return [only];
+    }
+  }
+  return params;
+}
+
 export function createTestDb(path: string = ':memory:'): {
   db: MigratableDb;
   raw: DatabaseSync;
@@ -24,11 +41,19 @@ export function createTestDb(path: string = ':memory:'): {
       raw.exec(sql);
     },
     getFirstAsync: async <T>(sql: string, ...params: unknown[]): Promise<T | null> => {
-      const row = raw.prepare(sql).get(...(params as never[]));
+      const row = raw.prepare(sql).get(...(resolveBindArgs(params) as never[]));
       return (row ?? null) as T | null;
     },
     runAsync: async (sql: string, ...params: unknown[]) => {
-      return raw.prepare(sql).run(...(params as never[]));
+      // node:sqlite의 StatementSync.run()은 `{ changes, lastInsertRowid }`(소문자 d)를
+      // 반환하지만, 실제 expo-sqlite의 SQLiteRunResult는 `lastInsertRowId`(대문자 I)다.
+      // 필드명을 그대로 통과시키면 이 테스트 어댑터에서만 undefined가 나오는 코드가
+      // 실기기에서는 정상 동작하는 테스트-실기기 불일치가 생긴다 — 여기서 이름을 맞춘다.
+      const result = raw.prepare(sql).run(...(resolveBindArgs(params) as never[]));
+      return {
+        changes: Number(result.changes),
+        lastInsertRowId: Number(result.lastInsertRowid),
+      };
     },
   };
 

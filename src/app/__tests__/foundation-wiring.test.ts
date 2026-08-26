@@ -7,19 +7,13 @@
 // 문자열/정규식으로 배선 계약을 단언한다.
 import fs from 'fs';
 import path from 'path';
+import { stripComments } from '../../test-utils/stripComments';
 
 const APP_DIR = path.join(__dirname, '..');
 const SRC_DIR = path.join(__dirname, '..', '..');
 
 function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(APP_DIR, relativePath), 'utf-8');
-}
-
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n');
 }
 
 // src/ 하위 모든 .ts/.tsx 파일을 재귀 수집한다.
@@ -44,15 +38,32 @@ describe('src/app/_layout.tsx 배선 계약', () => {
     expect(layoutSource).toMatch(/onInit=\{migrateDbIfNeeded\}/);
   });
 
-  it('Test 2: migrateDbIfNeeded 직접 호출이 존재하지 않는다 (Pitfall 3 회귀 가드)', () => {
-    const codeOnly = stripComments(layoutSource);
-    const directCallMatches = codeOnly.match(/await migrateDbIfNeeded|migrateDbIfNeeded\(/g);
-    expect(directCallMatches).toBeNull();
+  it('Test 2: migrateDbIfNeeded가 onInit prop 한 곳에서만 참조된다 (Pitfall 3 회귀 가드)', () => {
+    // 문자열 패턴(`migrateDbIfNeeded(`)만 보는 이전 버전은 `const m = migrateDbIfNeeded;`
+    // 같은 별칭(alias) 뒤 간접 호출로 우회될 수 있었다. import 줄을 제외한 코드에서
+    // 식별자 자체의 총 등장 횟수를 세면, 별칭 대입도 두 번째 등장으로 잡아낸다.
+    const codeOnly = stripComments(layoutSource)
+      .split('\n')
+      .filter((line) => !/^\s*import\s/.test(line))
+      .join('\n');
+    const occurrences = codeOnly.match(/\bmigrateDbIfNeeded\b/g) ?? [];
+    expect(occurrences).toHaveLength(1);
   });
 
   it('Test 3: useFonts(newsreaderFonts)와 SplashScreen.preventAutoHideAsync()를 포함한다', () => {
     expect(layoutSource).toMatch(/useFonts\(newsreaderFonts\)/);
     expect(layoutSource).toMatch(/SplashScreen\.preventAutoHideAsync\(\)/);
+  });
+
+  it('Test 8: GestureHandlerRootView로 트리를 감싼다 (제스처 기반 UI를 쓰는 이후 phase 대비)', () => {
+    expect(layoutSource).toMatch(/GestureHandlerRootView/);
+  });
+});
+
+describe('src/app/+not-found.tsx', () => {
+  it('Test 9: app.json의 footlog:// 스킴에 대응하는 not-found 라우트가 존재한다', () => {
+    const notFoundPath = path.join(APP_DIR, '+not-found.tsx');
+    expect(fs.existsSync(notFoundPath)).toBe(true);
   });
 });
 

@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import { JOURNAL_FONT_FAMILY, newsreaderFonts } from './fonts';
 import { typography } from './tokens';
+import { stripComments } from '../test-utils/stripComments';
 
 describe('fonts.JOURNAL_FONT_FAMILY', () => {
   it("'Newsreader_400Regular_Italic' 이다", () => {
@@ -36,10 +37,7 @@ describe('tokens.ts ↔ fonts.ts 교차검증', () => {
 describe('fonts.ts 오프라인 우선 원칙 (엣지케이스)', () => {
   it('런타임 CDN fetch 관련 문자열이 코드 라인에 존재하지 않는다', () => {
     const source = fs.readFileSync(path.join(__dirname, 'fonts.ts'), 'utf-8');
-    const codeLines = source
-      .split('\n')
-      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line));
-    const codeOnly = codeLines.join('\n');
+    const codeOnly = stripComments(source);
     expect(codeOnly).not.toMatch(/fonts\.googleapis\.com/);
     expect(codeOnly).not.toMatch(/fetch\(/);
     expect(codeOnly).not.toMatch(/https?:\/\//);

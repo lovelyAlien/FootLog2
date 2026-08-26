@@ -11,6 +11,9 @@ import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { SQLiteProvider } from 'expo-sqlite';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StyleSheet } from 'react-native';
 import { useEffect } from 'react';
 import { DATABASE_NAME, migrateDbIfNeeded } from '../db/migrations';
 import { newsreaderFonts } from '../theme/fonts';
@@ -31,8 +34,21 @@ export default function RootLayout() {
   }
 
   return (
-    <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
-      <Stack screenOptions={{ headerShown: false }} />
-    </SQLiteProvider>
+    // GestureHandlerRootView: react-native-gesture-handler/reanimated/worklets가 이미
+    // Phase 6(캘린더 스크러버)·바텀시트용으로 설치돼 있어, 그 시점에 처음 필요해지기 전에
+    // 루트에서 미리 감싸둔다 — 없으면 특히 Android에서 제스처 인식이 예측 불가능하게
+    // 깨질 수 있다.
+    <GestureHandlerRootView style={styles.flex}>
+      <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
+        <StatusBar style="auto" />
+        <Stack screenOptions={{ headerShown: false }} />
+      </SQLiteProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+});
