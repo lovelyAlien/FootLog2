@@ -114,3 +114,14 @@ None - no external service configuration required.
 ---
 *Phase: 02-notification-infrastructure*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+- FOUND: src/app/_layout.tsx
+- FOUND: src/app/index.tsx
+- FOUND: src/app/__tests__/notification-wiring.test.ts
+- FOUND: .planning/phases/02-notification-infrastructure/02-07-SUMMARY.md
+- FOUND commit: 9f58e38
+- FOUND commit: 7be4c91
+- FOUND commit: b396577
+- FOUND commit: 0718b4b
