@@ -40,7 +40,12 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
   1. 창업자가 EAS Dev Client 빌드를 자신의 iPhone에 설치하고 실행할 수 있다.
   2. 앱 화면들이 DESIGN.md와 일치하는 단일 상수 파일에서 공유 디자인 토큰(컬러, 타입, 스페이싱, 모션)을 import할 수 있다.
   3. SQLite 데이터베이스가 마이그레이션 프레임워크(`PRAGMA user_version` + 마이그레이션 함수)를 통해 초기화되며, 이후 기존 데이터를 지우지 않고 테이블/컬럼을 추가할 수 있다.
-**Plans**: TBD
+**Plans**: 5 plans (4 waves)
+- [ ] 01-01-PLAN.md — Expo SDK 57 스캐폴드 + 런타임 의존성 + jest-expo 테스트 인프라 (wave 1)
+- [ ] 01-02-PLAN.md — DESIGN.md 디자인 토큰 단일 상수 파일 + Newsreader 번들 폰트 (wave 2)
+- [ ] 01-03-PLAN.md — PRAGMA user_version SQLite 마이그레이션 프레임워크 + 실엔진 회귀 테스트 (wave 2)
+- [ ] 01-04-PLAN.md — 루트 레이아웃 배선(폰트 게이팅 + onInit 마이그레이션) + 부팅 확인 화면 (wave 3)
+- [ ] 01-05-PLAN.md — EAS Dev Client 빌드 + 창업자 iPhone 실기기 설치·실행 검증 (wave 4)
 
 ### Phase 2: Notification Infrastructure
 **Goal**: 앱이 체크인/회고 리마인더를 신뢰성 있게 스케줄링하고 스스로 복구하며, 확정된 권한 프롬프트 문구와 거부 상태 UI 패턴을 갖춘다.
@@ -134,7 +139,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/5 | Planned | - |
 | 2. Notification Infrastructure | 0/TBD | Not started | - |
 | 3. Check-in Core Loop | 0/TBD | Not started | - |
 | 4. Today View | 0/TBD | Not started | - |
