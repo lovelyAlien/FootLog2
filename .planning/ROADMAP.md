@@ -48,7 +48,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 
 - [x] 01-01-PLAN.md — Expo SDK 57 스캐폴드 + 런타임 의존성 + jest-expo 테스트 인프라 (wave 1)
 - [x] 01-02-PLAN.md — DESIGN.md 디자인 토큰 단일 상수 파일 + Newsreader 번들 폰트 (wave 2)
-- [ ] 01-03-PLAN.md — PRAGMA user_version SQLite 마이그레이션 프레임워크 + 실엔진 회귀 테스트 (wave 2)
+- [x] 01-03-PLAN.md — PRAGMA user_version SQLite 마이그레이션 프레임워크 + 실엔진 회귀 테스트 (wave 2)
 - [ ] 01-04-PLAN.md — 루트 레이아웃 배선(폰트 게이팅 + onInit 마이그레이션) + 부팅 확인 화면 (wave 3)
 - [ ] 01-05-PLAN.md — EAS Dev Client 빌드 + 창업자 iPhone 실기기 설치·실행 검증 (wave 4)
 
@@ -165,7 +165,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 2/5 | In Progress|  |
+| 1. Foundation | 3/5 | In Progress|  |
 | 2. Notification Infrastructure | 0/TBD | Not started | - |
 | 3. Check-in Core Loop | 0/TBD | Not started | - |
 | 4. Today View | 0/TBD | Not started | - |

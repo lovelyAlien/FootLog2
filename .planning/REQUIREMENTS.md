@@ -16,7 +16,7 @@
 
 - [x] **REQ-foundation-setup** (M1, PD-T1): Expo 프로젝트가 초기화되고, 창업자의 iPhone에 설치·실행되는 EAS Dev Client를 빌드한다.
 - [x] **REQ-design-tokens** (M2, PD-T21): DESIGN.md의 타이포그래피/컬러/스페이싱/모션 토큰이 모든 화면에서 import 가능한 단일 상수 파일로 export된다.
-- [ ] **REQ-sqlite-migrations** (M3, PD-T23): 스키마를 쓰는 태스크가 실행되기 전에 SQLite 마이그레이션 프레임워크(`PRAGMA user_version` + 마이그레이션 함수)가 먼저 존재한다.
+- [x] **REQ-sqlite-migrations** (M3, PD-T23): 스키마를 쓰는 태스크가 실행되기 전에 SQLite 마이그레이션 프레임워크(`PRAGMA user_version` + 마이그레이션 함수)가 먼저 존재한다.
 
 ### Notification infrastructure
 
@@ -112,7 +112,7 @@
 |-------------|-------|--------|
 | REQ-foundation-setup | Phase 1 | Complete |
 | REQ-design-tokens | Phase 1 | Complete |
-| REQ-sqlite-migrations | Phase 1 | Pending |
+| REQ-sqlite-migrations | Phase 1 | Complete |
 | REQ-notification-scheduling | Phase 2 | Pending |
 | REQ-permission-copy | Phase 2 | Pending |
 | REQ-notification-denied-flow | Phase 2 | Pending |
