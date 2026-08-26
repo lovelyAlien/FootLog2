@@ -7,7 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "footlog",
     "userInterfaceStyle": "light",
-    "platforms": ["ios"],
+    "platforms": [
+      "ios"
+    ],
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.jaeseungchoun.footlog",
@@ -33,6 +35,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ddae6f8e-f890-459e-bfcb-cc3f47478260"
+      }
+    },
+    "owner": "jaeseungchoun"
   }
 }
