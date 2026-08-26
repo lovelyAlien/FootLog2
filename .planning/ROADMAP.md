@@ -64,7 +64,16 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
   3. 알림 권한이 거부되면 사용자는 (오류가 아닌) 조용한 상태 배너와 설정 딥링크를 보며, 앱이 포그라운드로 돌아올 때 권한 상태를 재확인한다.
   4. 예정된 트리거가 조용히 사라지면(알려진 iOS 실패 모드), 자가진단 레지스트리가 앱이 다음에 포그라운드로 올 때 이를 감지해 재생성하며, 매일 재스케줄링 방식으로 되돌아가지 않는다.
 
-**Plans**: TBD
+**Plans**: 8 plans (5 waves)
+
+- [ ] 02-01-PLAN.md — expo-notifications 설치 + 타입/문구/deps 계약 + 인메모리 테스트 더블 (wave 1)
+- [ ] 02-02-PLAN.md — iOS 권한 문구 3종 app.json 반영 + plugin 덮어쓰기 회귀 가드 (wave 1)
+- [ ] 02-03-PLAN.md — 반복 캘린더 트리거 스케줄링 + 기대 id 집합 + 고아 정리 (wave 2)
+- [ ] 02-04-PLAN.md — 권한 조회/요청 + 배너 판정 + 포그라운드 재확인 + priming 세션 (wave 2)
+- [ ] 02-05-PLAN.md — 자가진단 레지스트리 selfHeal + 포그라운드 오케스트레이터 (wave 3)
+- [ ] 02-06-PLAN.md — 알림 priming 화면 + 거부 배너 컴포넌트 + UI 계약 테스트 (wave 3)
+- [ ] 02-07-PLAN.md — _layout/index 배선(SafeAreaProvider, AppState 리스너, 배너, priming 게이트) (wave 4)
+- [ ] 02-08-PLAN.md — EAS Dev Client 재빌드 + 창업자 iPhone 실기기 검증 (wave 5)
 
 ### Phase 3: Check-in Core Loop
 
@@ -166,7 +175,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete   | 2026-08-26 |
-| 2. Notification Infrastructure | 0/TBD | Not started | - |
+| 2. Notification Infrastructure | 0/8 | Planned | - |
 | 3. Check-in Core Loop | 0/TBD | Not started | - |
 | 4. Today View | 0/TBD | Not started | - |
 | 5. Check-in Detail & Edit | 0/TBD | Not started | - |
