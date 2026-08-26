@@ -129,3 +129,11 @@ None - 외부 서비스 설정 불필요.
 ---
 *Phase: 02-notification-infrastructure*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+- FOUND: src/app/priming.tsx
+- FOUND: src/components/NotificationDeniedBanner.tsx
+- FOUND: src/components/__tests__/notificationUi.test.ts
+- FOUND: .planning/phases/02-notification-infrastructure/02-06-SUMMARY.md
+- FOUND: 23a6cbd, 4809662, 355e81d, eb8bb59 (git log --oneline --all 확인)
