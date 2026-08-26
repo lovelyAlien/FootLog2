@@ -146,3 +146,10 @@ None - 외부 서비스 설정 불필요.
 ---
 *Phase: 02-notification-infrastructure*
 *Completed: 2026-08-26*
+
+## Self-Check: PASSED
+
+- FOUND: src/notifications/scheduling.ts
+- FOUND: src/notifications/scheduling.test.ts
+- FOUND: .planning/phases/02-notification-infrastructure/02-03-SUMMARY.md
+- FOUND: b96fca2, 316f7ad, 673da12 (git log --oneline -5 확인)
