@@ -50,7 +50,7 @@ import {
 } from '../checkin/checkinFlow';
 import { requestLocationPermission } from '../checkin/permissions';
 import { resolveCheckinLocation } from '../checkin/location';
-import type { FallbackSources } from '../checkin/location';
+import type { FallbackSources, ResolvedLocation } from '../checkin/location';
 import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
 import {
   commitCheckin,
@@ -213,6 +213,12 @@ export default function Index() {
     dispatch({ type: 'TAP_CHECKIN' });
 
     (async () => {
+      // WR-05 리뷰 대응 — 이 catch는 "아직 되돌릴 게 없는" 단계(권한 요청 ~
+      // 드래프트 upsert)의 실패만 책임진다. CAPTURE_RESOLVED dispatch와
+      // upsertDraft가 이미 성공했다면 SQLite에는 복구 가능한 드래프트가 남아있는
+      // 상태이므로, 이 지점 이후 실패로 그 진행 상황 전체를 DISMISS로 지워버리면
+      // 안 된다(T-3-24는 "캡처 중 예외"만 다루도록 스코프를 좁힌다).
+      let location: ResolvedLocation;
       try {
         const nextPermission = await requestLocationPermission();
         const latestCheckinCoordinate = await getLatestCheckinCoordinate(db);
@@ -220,7 +226,7 @@ export default function Index() {
           latestCheckinCoordinate,
           lastMapCoordinate: lastMapCoordinateRef.current,
         };
-        const location = await resolveCheckinLocation({
+        location = await resolveCheckinLocation({
           permission: nextPermission,
           fallbackSources,
         });
@@ -238,13 +244,6 @@ export default function Index() {
           timezoneAtCapture: resolveTimeZone(),
           now,
         });
-
-        mapRef.current?.animateToRegion({
-          latitude: location.lat,
-          longitude: location.lng,
-          latitudeDelta: MAP_REGION_DELTA,
-          longitudeDelta: MAP_REGION_DELTA,
-        });
       } catch (error) {
         // 프로미스 미삼킴 규약 — 캡처 중 예외가 나도 CAPTURING에 갇히지 않도록
         // DISMISS를 dispatch해 IDLE로 되돌린다(T-3-24).
@@ -252,6 +251,21 @@ export default function Index() {
         if (isMountedRef.current) {
           dispatch({ type: 'DISMISS' });
         }
+        return;
+      }
+
+      // 여기 도달했다는 것은 확인 핀이 이미 CONFIRM 상태로 떠 있고 드래프트도
+      // SQLite에 안전하게 저장됐다는 뜻이다 — 카메라 이동은 순수 시각 효과이므로
+      // 실패해도 로그만 남기고 진행 상황은 그대로 둔다.
+      try {
+        mapRef.current?.animateToRegion({
+          latitude: location.lat,
+          longitude: location.lng,
+          latitudeDelta: MAP_REGION_DELTA,
+          longitudeDelta: MAP_REGION_DELTA,
+        });
+      } catch (error) {
+        console.error('Failed to animate map to captured check-in location', error);
       }
     })();
   }, [db, state.phase]);
