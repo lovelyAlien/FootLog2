@@ -1,53 +1,83 @@
 // src/app/index.tsx
-// 부팅 확인용 임시 플레이스홀더 화면 — 제품 UI가 아니다.
-// Phase 4(REQ-today-view)가 이 화면을 오늘 뷰로 완전히 대체한다.
+// Phase 3(체크인 코어 루프, 03-09-PLAN.md) — Phase 1의 부팅 확인 플레이스홀더를
+// 대체하는 최소 지도 화면(03-CONTEXT.md D-06). 원래 Phase 4(오늘 뷰)가 이 자리를
+// 채울 예정이었지만, 오늘 뷰가 아직 없어 체크인 버튼과 확인 핀 플로우를 얹을 화면이
+// 필요해 Phase 3가 먼저 이 자리를 쓴다. Phase 4는 이 지도 위에 바텀시트와 리스트를
+// 씌우면 되므로 지도 렌더링, GPS 캡처, 확인 핀 드래그 로직을 그대로 재사용한다.
 //
-// 목적: Foundation phase(Plan 01-02 디자인 토큰, 01-03 SQLite 마이그레이션)의 산출물이
-// 실제 화면 계층에서 소비됨을 실기기에서 육안으로 확인할 수 있게 한다 — SF Pro / SF Mono
-// (ui-monospace) / Newsreader 이탤릭 세리프 3계층 타이포와 DB 스키마 버전을 동시에 표시한다.
-// 표시하는 유일한 숫자는 DB 스키마 버전(진단값)이며, 진행률/완료 수치가 아니다
-// (PROJECT.md CRITICAL 원칙).
+// 배너 스택(NotificationDeniedBanner 위, LocationDeniedBanner 아래)의 현재 위치
+// (지도 상단, 세이프에어리어 아래)도 최종 위치가 아니다 — Phase 4가 오늘 뷰를 만들
+// 때 두 배너 모두 탭바 위로 이관한다.
 //
-// 임시 배선(Plan 02-07): 알림 거부 배너를 이 화면 상단에 임시로 렌더링한다.
-// 02-UI-SPEC.md가 확정한 대로, Phase 4가 오늘 뷰를 만들 때 배너를 지도 상단
-// (탭바 위, 세이프에어리어 아래)으로 이관해야 하며, 그때 이 파일의 배너 렌더링은
-// 제거된다. 권한이 아직 결정되지 않은 상태(undetermined)면 priming 화면으로
-// 리다이렉트하는 게이트도 함께 배선한다.
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+// 지도 스타일 토큰 결정(03-09-PLAN.md 지도 스타일 토큰 결정 항목): colors.mapLand,
+// colors.mapRoad, colors.mapWater는 이 화면에서 쓰지 않는다. react-native-maps의
+// customMapStyle prop은 구글 지도 provider 전용이고 이 phase는 API 키가 필요 없는
+// 애플 지도 기본 provider를 쓴다(provider 미지정). accent 예산은 체크인 버튼과
+// 지도 위 확인 핀(DESIGN.md 승인 6개 용도 중 "체크인 버튼"과 "지도 마크")에만 쓴다.
+//
+// Task 2(체크인 탭 → 권한 요청 → 위치 캡처 → 확인 핀 드롭 → 드래프트 upsert):
+// "확인"/재시도/사진/메모 배선은 03-10에서 채운다. 이 화면은 지도, 캡처, 핀 드래그,
+// 드래프트 즉시 영속화까지만 담당한다.
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Redirect } from 'expo-router';
-import { colors, spacing, typography } from '../theme/tokens';
+import MapView, { Marker } from 'react-native-maps';
+import type { MarkerDragStartEndEvent, Region } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, motion, radius, spacing, typography } from '../theme/tokens';
 import { fetchNotificationPermission, shouldShowPriming } from '../notifications/permissions';
 import type { PermissionSnapshot } from '../notifications/permissions';
 import { NotificationDeniedBanner } from '../components/NotificationDeniedBanner';
+import { LocationDeniedBanner } from '../components/LocationDeniedBanner';
+import { CheckinActionCard } from '../components/CheckinActionCard';
+import { checkinReducer, initialCheckinState, CHECKIN_COPY } from '../checkin/checkinFlow';
+import { requestLocationPermission } from '../checkin/permissions';
+import { resolveCheckinLocation } from '../checkin/location';
+import type { FallbackSources } from '../checkin/location';
+import { upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
+import { getLatestCheckinCoordinate } from '../checkin/checkinRepo';
+import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../checkin/localDate';
+import type { LocationSource } from '../db/schema';
+
+// 확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 — GPS 좌표 근방을 자연스럽게 보여줄
+// 정도의 값이며, 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
+const MAP_REGION_DELTA = 0.01;
+
+// 확인 핀 히트 영역 확장값 — 24px 원을 최소 터치 타겟 크기까지 넓힌다.
+const PIN_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
+
+// 핀 시각 상태 — 03-UI-SPEC.md 확인 핀 시각 상태 절의 확정 매핑을 그대로 스타일로 옮긴다.
+function pinStyleForSource(locationSource: LocationSource) {
+  if (locationSource === 'gps_auto') {
+    return styles.pinConfident;
+  }
+  if (locationSource === 'gps_dragged') {
+    return styles.pinDragged;
+  }
+  // 'gps_low_accuracy_fallback' | 'manual_denied' | 'manual_no_signal'
+  return styles.pinFallback;
+}
 
 export default function Index() {
   const db = useSQLiteContext();
-  const [schemaVersion, setSchemaVersion] = useState<number | null>(null);
+  const insets = useSafeAreaInsets();
   const [permission, setPermission] = useState<PermissionSnapshot | null>(null);
+  const [state, dispatch] = useReducer(checkinReducer, initialCheckinState);
+
+  const mapRef = useRef<MapView>(null);
+  const lastMapCoordinateRef = useRef<{ lat: number; lng: number } | null>(null);
+  const isMountedRef = useRef(true);
+  const buttonContentOpacity = useState(() => new Animated.Value(1))[0];
 
   useEffect(() => {
-    let isMounted = true;
-    db.getFirstAsync<{ user_version: number }>('PRAGMA user_version')
-      .then((row) => {
-        if (isMounted) {
-          setSchemaVersion(row?.user_version ?? null);
-        }
-      })
-      .catch((error) => {
-        // 진단 화면이라 UI를 별도 에러 상태로 분기하지 않지만, 쿼리 실패를 조용히
-        // 삼키면 unhandled promise rejection이 되므로 최소한 로그는 남긴다.
-        if (isMounted) {
-          console.error('Failed to read PRAGMA user_version', error);
-        }
-      });
+    isMountedRef.current = true;
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
     };
-  }, [db]);
+  }, []);
 
-  // priming 리다이렉트 게이트 — 위 이펙트와 동일한 isMounted 가드 형태를 따른다.
+  // priming 리다이렉트 게이트 — isMounted 가드 형태를 그대로 따른다.
   useEffect(() => {
     let isMounted = true;
     fetchNotificationPermission()
@@ -66,64 +96,224 @@ export default function Index() {
     };
   }, []);
 
-  // permission이 아직 null인 초기 프레임에는 아래 판정 함수가 false를 반환하므로
-  // (Plan 04 Test 16) 화면이 깜빡이며 리다이렉트되지 않는다. router.replace()를
-  // 이펙트 안에서 명령형으로 호출하지 않는다 — 마운트 타이밍에 따라 네비게이션
-  // 준비 전 호출로 경고가 나며, 선언형 <Redirect>가 expo-router의 권장 형태다.
+  const isCapturing = state.phase === 'CAPTURING';
+  const showActionCard = state.phase !== 'IDLE' && !isCapturing;
+
+  // 체크인 버튼과 로딩 인디케이터 사이 전환에 크로스페이드를 적용한다
+  // (motion.saveStateCrossfadeMs, 03-UI-SPEC.md 체크인 알약버튼 절).
+  useEffect(() => {
+    buttonContentOpacity.setValue(0);
+    Animated.timing(buttonContentOpacity, {
+      toValue: 1,
+      duration: motion.saveStateCrossfadeMs,
+      useNativeDriver: true,
+    }).start();
+  }, [isCapturing, buttonContentOpacity]);
+
+  const handleRegionChangeComplete = useCallback((region: Region) => {
+    lastMapCoordinateRef.current = { lat: region.latitude, lng: region.longitude };
+  }, []);
+
+  // 체크인 탭 → 권한 요청 → 위치 캡처 → 확인 핀 드롭 → 드래프트 upsert(D-03: 확인
+  // 핀이 뜨는 즉시 영속화). Phase 3가 requestForegroundPermissionsAsync 호출을
+  // 소유한다(03-05가 확정한 책임 경계) — requestLocationPermission 내부의
+  // undetermined 가드가 반복 프롬프트를 막는다(T-3-15).
+  const handleCheckinPress = useCallback(() => {
+    if (state.phase !== 'IDLE') return;
+    dispatch({ type: 'TAP_CHECKIN' });
+
+    (async () => {
+      try {
+        const nextPermission = await requestLocationPermission();
+        const latestCheckinCoordinate = await getLatestCheckinCoordinate(db);
+        const fallbackSources: FallbackSources = {
+          latestCheckinCoordinate,
+          lastMapCoordinate: lastMapCoordinateRef.current,
+        };
+        const location = await resolveCheckinLocation({
+          permission: nextPermission,
+          fallbackSources,
+        });
+        if (!isMountedRef.current) return;
+
+        dispatch({ type: 'CAPTURE_RESOLVED', location });
+
+        const now = toIsoTimestamp();
+        await upsertDraft(db, {
+          lat: location.lat,
+          lng: location.lng,
+          accuracyMeters: location.accuracyMeters,
+          locationSource: location.locationSource,
+          localDateKey: resolveLocalDateKey(new Date()),
+          timezoneAtCapture: resolveTimeZone(),
+          now,
+        });
+
+        mapRef.current?.animateToRegion({
+          latitude: location.lat,
+          longitude: location.lng,
+          latitudeDelta: MAP_REGION_DELTA,
+          longitudeDelta: MAP_REGION_DELTA,
+        });
+      } catch (error) {
+        // 프로미스 미삼킴 규약 — 캡처 중 예외가 나도 CAPTURING에 갇히지 않도록
+        // DISMISS를 dispatch해 IDLE로 되돌린다(T-3-24).
+        console.error('Failed to capture check-in location', error);
+        if (isMountedRef.current) {
+          dispatch({ type: 'DISMISS' });
+        }
+      }
+    })();
+  }, [db, state.phase]);
+
+  // 드래그가 끝나면 리듀서(applyDraggedSource)가 gps_dragged 전이를 담당하고,
+  // 같은 좌표를 드래프트에도 즉시 반영한다(.catch(console.error) — 미삼킴 규약).
+  const handleDragEnd = useCallback(
+    (event: MarkerDragStartEndEvent) => {
+      const { latitude, longitude } = event.nativeEvent.coordinate;
+      dispatch({ type: 'DRAG_PIN', lat: latitude, lng: longitude });
+      updateDraftCoordinate(db, { lat: latitude, lng: longitude, now: toIsoTimestamp() }).catch(
+        (error) => {
+          console.error('Failed to update draft coordinate after drag', error);
+        }
+      );
+    },
+    [db]
+  );
+
+  // TODO(03-10): onConfirm/onRetry/onPickPhoto/onChangeNote를 실제 저장·사진
+  // 플로우로 교체한다. 이 plan은 지도, 캡처, 핀 드래그, 드래프트 즉시 영속화까지만
+  // 배선한다.
+  const handleConfirmNoop = useCallback(() => {}, []);
+  const handleRetryNoop = useCallback(() => {}, []);
+  const handlePickPhotoNoop = useCallback(() => {}, []);
+  const handleChangeNoteNoop = useCallback((_note: string) => {}, []);
+
   if (shouldShowPriming(permission)) {
     return <Redirect href="/priming" />;
   }
 
   return (
     <View style={styles.screen}>
-      <NotificationDeniedBanner />
-      <View style={styles.content}>
-        <Text style={[typography.screenTitle, styles.textPrimary]}>FootLog</Text>
-        <Text style={[styles.timestampText, schemaVersion === null ? styles.textFaint : styles.textMuted]}>
-          {schemaVersion === null ? '···' : `schema v${schemaVersion}`}
-        </Text>
-        {/* 예외(DESIGN.md 타이포그래피 규칙): 저널체(이탤릭 세리프)는 원래 "사용자가 직접
-            쓴 텍스트"에만 쓰는 게 원칙이지만, 이 화면은 Foundation phase의 임시 부팅
-            확인용 진단 화면(Phase 4에서 완전히 대체·삭제됨)이라 Newsreader 번들 폰트
-            로딩 성공 여부를 육안으로 확인하기 위해 의도적으로 하드코딩된 예시 문장에
-            적용했다. 실제 제품 화면에는 이 예외를 적용하지 않는다. */}
-        <Text style={[typography.journalEntry, styles.textPrimary]}>
-          오늘도 걸었던 길을 조용히 남겨둔다.
-        </Text>
-        <Text style={[typography.helperText, styles.textMuted]}>
-          이 화면은 Foundation phase의 부팅 확인용 임시 화면입니다.
-        </Text>
+      {/* StyleSheet.absoluteFillObject는 이 RN 버전에 존재하지 않는다(타입 정의 기준
+          absoluteFill만 export됨) — 동일한 절대위치 전체채움 스타일 객체인
+          absoluteFill을 대신 쓴다. */}
+      <MapView
+        ref={mapRef}
+        style={StyleSheet.absoluteFill}
+        showsUserLocation
+        onRegionChangeComplete={handleRegionChangeComplete}
+      >
+        {state.pin && showActionCard && (
+          <Marker
+            draggable
+            coordinate={{ latitude: state.pin.lat, longitude: state.pin.lng }}
+            anchor={{ x: 0.5, y: 0.5 }}
+            hitSlop={PIN_HIT_SLOP}
+            onDragEnd={handleDragEnd}
+          >
+            <View style={[styles.pinBase, pinStyleForSource(state.pin.locationSource)]} />
+          </Marker>
+        )}
+      </MapView>
+
+      <View style={[styles.bannerStack, { paddingTop: insets.top }]}>
+        <NotificationDeniedBanner />
+        <LocationDeniedBanner />
       </View>
+
+      {showActionCard ? (
+        <View style={styles.actionCardContainer}>
+          <CheckinActionCard
+            phase={state.phase}
+            onConfirm={handleConfirmNoop}
+            onRetry={handleRetryNoop}
+            photo={state.photo}
+            photoError={state.photoError}
+            note={state.note}
+            onPickPhoto={handlePickPhotoNoop}
+            onChangeNote={handleChangeNoteNoop}
+          />
+        </View>
+      ) : (
+        <View style={[styles.checkinButtonContainer, { bottom: insets.bottom + spacing.xl }]}>
+          <Pressable
+            onPress={handleCheckinPress}
+            disabled={isCapturing}
+            accessibilityRole="button"
+            accessibilityLabel="체크인"
+            style={[styles.checkinButton, isCapturing && styles.checkinButtonCapturing]}
+          >
+            <Animated.View style={{ opacity: buttonContentOpacity }}>
+              {isCapturing ? (
+                <ActivityIndicator color={colors.accent} />
+              ) : (
+                <Text style={[typography.placeName, styles.checkinButtonLabel]}>
+                  {CHECKIN_COPY.checkinCta}
+                </Text>
+              )}
+            </Animated.View>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // 배너는 화면 상단 고정, 기존 부팅 확인 내용은 세로 중앙 — 컨테이너를 두 겹으로
-  // 나눈다. 배경색은 바깥 screen으로 옮기고 안쪽 content에서는 중복 지정하지 않는다.
   screen: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
-    flex: 1,
+  bannerStack: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  checkinButtonContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  checkinButton: {
+    height: 48,
+    minWidth: 44,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.full,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.lg,
   },
-  // typography.timestamp의 fontVariant는 `as const`로 readonly 배열이라 RN의
-  // TextStyle(mutable FontVariant[])에 그대로 넣으면 타입 에러가 난다 — 캐스트 대신
-  // fontVariant만 얕은 복사해 스타일 시트에 고정한다(01-04 Task 2, tsconfig strict 대응).
-  timestampText: {
-    ...typography.timestamp,
-    fontVariant: [...typography.timestamp.fontVariant],
+  checkinButtonCapturing: {
+    backgroundColor: colors.accentSoft,
   },
-  textPrimary: {
-    color: colors.textPrimary,
+  checkinButtonLabel: {
+    color: colors.surface,
   },
-  textMuted: {
-    color: colors.textMuted,
+  actionCardContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  textFaint: {
-    color: colors.textFaint,
+  pinBase: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  pinConfident: {
+    backgroundColor: colors.accent,
+  },
+  pinFallback: {
+    backgroundColor: colors.accentSoft,
+    borderWidth: 2,
+    borderColor: colors.accent,
+  },
+  pinDragged: {
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.accentSoft,
   },
 });
