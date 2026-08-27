@@ -107,3 +107,9 @@ Task 1이 발급한 EAS 빌드(`https://expo.dev/accounts/jaeseungchoun/projects
 ---
 *Phase: 03-check-in-core-loop*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/03-check-in-core-loop/03-11-SUMMARY.md`
+- FOUND: commit `4839877` (docs(03-11): EAS Dev Client 재빌드 + 실기기 검증 결과 기록)
+- No unexpected file deletions in the commit
