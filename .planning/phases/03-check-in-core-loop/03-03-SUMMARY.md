@@ -96,3 +96,13 @@ None - no external service configuration required.
 ---
 *Phase: 03-check-in-core-loop*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+- FOUND: src/db/schema.ts
+- FOUND: src/db/migrations.ts
+- FOUND: src/db/migrations.test.ts
+- FOUND: .planning/phases/03-check-in-core-loop/03-03-SUMMARY.md
+- FOUND commit: 33f5c22
+- FOUND commit: 501f84e
+- FOUND commit: ed37b63
