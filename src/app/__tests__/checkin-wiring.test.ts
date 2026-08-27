@@ -82,3 +82,31 @@ describe('src/app/index.tsx 체크인 배선 계약 (Plan 03-09)', () => {
     expect(codeOnly).not.toMatch(/from ['"]expo-crypto['"]/);
   });
 });
+
+describe('src/app/index.tsx 저장 배선 계약 (Plan 03-10 Task 1)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 14: commitCheckin 식별자가 등장한다', () => {
+    expect(indexSource).toMatch(/\bcommitCheckin\b/);
+  });
+
+  it('Test 15: 재시도 카운터 패턴(retryCount/attempts/setRetry)이 등장하지 않는다 (Pitfall 4 — 재시도는 리포지토리 소관)', () => {
+    expect(codeOnly).not.toMatch(/\bretryCount\b/);
+    expect(codeOnly).not.toMatch(/\battempts\b/);
+    expect(codeOnly).not.toMatch(/\bsetRetry\b/);
+  });
+
+  it('Test 16: Alert.alert가 등장하고 CHECKIN_COPY.unsavedExitAlert 참조가 존재한다', () => {
+    expect(indexSource).toMatch(/\bAlert\.alert\b/);
+    expect(indexSource).toMatch(/CHECKIN_COPY\.unsavedExitAlert\b/);
+  });
+
+  it('Test 17: deleteDraft가 파일 전체에서 등장하지 않는다 (삭제는 commitCheckin 트랜잭션 내부와 loadRecoverableDraft 만료 처리에만 존재)', () => {
+    expect(codeOnly).not.toMatch(/\bdeleteDraft\b/);
+  });
+
+  it('Test 18: randomUUID 식별자가 등장한다', () => {
+    expect(indexSource).toMatch(/\brandomUUID\b/);
+  });
+});

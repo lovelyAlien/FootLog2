@@ -15,11 +15,20 @@
 // 애플 지도 기본 provider를 쓴다(provider 미지정). accent 예산은 체크인 버튼과
 // 지도 위 확인 핀(DESIGN.md 승인 6개 용도 중 "체크인 버튼"과 "지도 마크")에만 쓴다.
 //
-// Task 2(체크인 탭 → 권한 요청 → 위치 캡처 → 확인 핀 드롭 → 드래프트 upsert):
-// "확인"/재시도/사진/메모 배선은 03-10에서 채운다. 이 화면은 지도, 캡처, 핀 드래그,
-// 드래프트 즉시 영속화까지만 담당한다.
+// 03-09: 체크인 탭 → 권한 요청 → 위치 캡처 → 확인 핀 드롭 → 드래프트 upsert.
+// 03-10 Task 1: "확인"/"다시 시도" → commitCheckin 배선 + 미저장 이탈 안내.
+// 사진/메모 배선(03-10 Task 2)과 드래프트 복구(03-10 Task 3)는 아래 각 절 참고.
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  AppState,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Redirect } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
@@ -36,7 +45,9 @@ import { requestLocationPermission } from '../checkin/permissions';
 import { resolveCheckinLocation } from '../checkin/location';
 import type { FallbackSources } from '../checkin/location';
 import { upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
-import { getLatestCheckinCoordinate } from '../checkin/checkinRepo';
+import { commitCheckin, getLatestCheckinCoordinate } from '../checkin/checkinRepo';
+import type { NewCheckinParams } from '../checkin/checkinRepo';
+import { defaultCryptoDeps } from '../checkin/deps';
 import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../checkin/localDate';
 import type { LocationSource } from '../db/schema';
 
@@ -69,6 +80,13 @@ export default function Index() {
   const lastMapCoordinateRef = useRef<{ lat: number; lng: number } | null>(null);
   const isMountedRef = useRef(true);
   const buttonContentOpacity = useState(() => new Animated.Value(1))[0];
+
+  // 첫 TAP_CONFIRM 시점에 만든 체크인 id — "다시 시도"가 같은 id를 재사용해 중복 row를
+  // 만들지 않도록 리듀서 상태가 아니라 ref에 보관한다(T-3-25). commitCheckin이
+  // ok:true를 반환한 뒤 다음 체크인 사이클을 위해 초기화한다.
+  const pendingCheckinIdRef = useRef<string | null>(null);
+  // 미저장 이탈 안내(Alert)를 정확히 1회만 노출하기 위한 플래그.
+  const unsavedExitAlertShownRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -181,11 +199,85 @@ export default function Index() {
     [db]
   );
 
-  // TODO(03-10): onConfirm/onRetry/onPickPhoto/onChangeNote를 실제 저장·사진
-  // 플로우로 교체한다. 이 plan은 지도, 캡처, 핀 드래그, 드래프트 즉시 영속화까지만
-  // 배선한다.
-  const handleConfirmNoop = useCallback(() => {}, []);
-  const handleRetryNoop = useCallback(() => {}, []);
+  // "확인"/"다시 시도"가 공유하는 단일 저장 함수(03-10-PLAN.md Task 1). 자동 재시도
+  // 1회는 commitCheckin 내부(runWithSingleRetry)에 이미 캡슐화돼 있으므로 여기서는
+  // 재시도 카운터를 두지 않는다(03-RESEARCH.md Pitfall 4) — "다시 시도" 버튼은 이
+  // 함수를 그대로 재호출할 뿐이다.
+  const handleSaveCheckin = useCallback(() => {
+    // SAVING 중 중복 탭 방지 가드.
+    if (state.phase === 'SAVING') return;
+    if (state.phase !== 'CONFIRM' && state.phase !== 'SAVE_FAILED') return;
+    if (!state.pin) return;
+
+    const pin = state.pin;
+    dispatch({ type: state.phase === 'CONFIRM' ? 'TAP_CONFIRM' : 'TAP_RETRY' });
+
+    // 재시도 시 첫 TAP_CONFIRM에서 만든 id를 재사용한다 — 새 id를 매번 만들면 재시도가
+    // 중복 체크인 row를 만든다(T-3-25).
+    if (!pendingCheckinIdRef.current) {
+      pendingCheckinIdRef.current = defaultCryptoDeps.randomUUID();
+    }
+    const id = pendingCheckinIdRef.current;
+
+    // "확인"(또는 "다시 시도") 탭 시점이 곧 최종 타임스탬프를 확정하는 시점이다
+    // (03-RESEARCH.md Pattern 4) — GPS 캡처 시점이 아니라 여기서 timestampUtc를 새로
+    // 읽는다.
+    const params: NewCheckinParams = {
+      id,
+      timestampUtc: toIsoTimestamp(),
+      localDateKey: resolveLocalDateKey(new Date()),
+      timezoneAtCapture: resolveTimeZone(),
+      lat: pin.lat,
+      lng: pin.lng,
+      accuracyMeters: pin.accuracyMeters,
+      locationSource: pin.locationSource,
+    };
+
+    commitCheckin(db, params)
+      .then((result) => {
+        if (!isMountedRef.current) return;
+        if (result.ok) {
+          // 다음 체크인 사이클을 위해 초기화 — 이 체크인은 이제 SAVED 상태로
+          // 확정됐으므로 더 이상 재사용할 id가 아니다.
+          pendingCheckinIdRef.current = null;
+          dispatch({ type: 'SAVE_SUCCEEDED', id: result.id });
+        } else {
+          dispatch({ type: 'SAVE_FAILED' });
+        }
+      })
+      .catch((error) => {
+        // 프로미스 미삼킴 규약 — 예외도 SAVE_FAILED로 흡수한다.
+        console.error('Failed to commit check-in', error);
+        if (isMountedRef.current) {
+          dispatch({ type: 'SAVE_FAILED' });
+        }
+      });
+  }, [db, state.phase, state.pin]);
+
+  // 미저장 이탈 안내 — SAVE_FAILED 상태에서 앱이 백그라운드로 전환되면(화면을
+  // 벗어나는 것과 동등하게 취급) OS 네이티브 Alert을 정확히 1회 노출한다(정보 제공
+  // 목적, 이탈 자체를 막지 않는다). 드래프트 row 삭제 함수는 여기서 호출하지 않는다 —
+  // 드래프트는 SQLite에 그대로 남아 다음 실행 시 복구 제안으로 이어진다(D-05).
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (
+        nextAppState !== 'active' &&
+        state.phase === 'SAVE_FAILED' &&
+        !unsavedExitAlertShownRef.current
+      ) {
+        unsavedExitAlertShownRef.current = true;
+        Alert.alert(CHECKIN_COPY.unsavedExitAlert, undefined, [
+          { text: CHECKIN_COPY.unsavedExitAlertButton },
+        ]);
+      }
+      if (nextAppState === 'active') {
+        unsavedExitAlertShownRef.current = false;
+      }
+    });
+    return () => subscription.remove();
+  }, [state.phase]);
+
+  // TODO(03-10 Task 2): onPickPhoto/onChangeNote를 실제 사진/메모 배선으로 교체한다.
   const handlePickPhotoNoop = useCallback(() => {}, []);
   const handleChangeNoteNoop = useCallback((_note: string) => {}, []);
 
@@ -226,8 +318,8 @@ export default function Index() {
         <View style={styles.actionCardContainer}>
           <CheckinActionCard
             phase={state.phase}
-            onConfirm={handleConfirmNoop}
-            onRetry={handleRetryNoop}
+            onConfirm={handleSaveCheckin}
+            onRetry={handleSaveCheckin}
             photo={state.photo}
             photoError={state.photoError}
             note={state.note}
