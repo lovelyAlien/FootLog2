@@ -23,7 +23,7 @@ REQUIREMENTS.md의 v2 섹션과 PROJECT.md의 Out of Scope 참고.
 Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니다.
 
 - [x] **Phase 1: Foundation** - Expo/EAS 스캐폴드, 디자인 토큰, 그리고 나머지 전부를 그 위에 지을 수 있는 SQLite 마이그레이션 프레임워크가 존재한다. (completed 2026-08-26)
-- [ ] **Phase 2: Notification Infrastructure** - 앱이 체크인/회고 리마인더를 신뢰성 있게 스케줄링하고 스스로 복구하며, 확정된 권한 프롬프트 문구와 거부 상태 UI 패턴을 갖춘다.
+- [x] **Phase 2: Notification Infrastructure** - 앱이 체크인/회고 리마인더를 신뢰성 있게 스케줄링하고 스스로 복구하며, 확정된 권한 프롬프트 문구와 거부 상태 UI 패턴을 갖춘다. (completed 2026-08-27)
 - [ ] **Phase 3: Check-in Core Loop** - 사용자가 자유형 체크인(위치 + 선택적 사진/메모)을 GPS·저장 실패를 포함해 안정적으로 남길 수 있다.
 - [ ] **Phase 4: Today View** - 사용자가 오늘의 체크인들을 지도에서 보여주는 홈 화면과, 새 체크인을 위한 마찰 낮은 진입점을 갖는다.
 - [ ] **Phase 5: Check-in Detail & Edit** - 사용자가 기록된 개별 체크인을 조회·수정·삭제할 수 있다.
@@ -73,7 +73,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] 02-05-PLAN.md — 자가진단 레지스트리 selfHeal + 포그라운드 오케스트레이터 (wave 3)
 - [x] 02-06-PLAN.md — 알림 priming 화면 + 거부 배너 컴포넌트 + UI 계약 테스트 (wave 3)
 - [x] 02-07-PLAN.md — _layout/index 배선(SafeAreaProvider, AppState 리스너, 배너, priming 게이트) (wave 4)
-- [ ] 02-08-PLAN.md — EAS Dev Client 재빌드 + 창업자 iPhone 실기기 검증 (wave 5)
+- [x] 02-08-PLAN.md — EAS Dev Client 재빌드 + 창업자 iPhone 실기기 검증 (wave 5)
 
 ### Phase 3: Check-in Core Loop
 
@@ -175,7 +175,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete   | 2026-08-26 |
-| 2. Notification Infrastructure | 7/8 | In Progress|  |
+| 2. Notification Infrastructure | 8/8 | Complete   | 2026-08-27 |
 | 3. Check-in Core Loop | 0/TBD | Not started | - |
 | 4. Today View | 0/TBD | Not started | - |
 | 5. Check-in Detail & Edit | 0/TBD | Not started | - |
