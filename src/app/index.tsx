@@ -335,6 +335,21 @@ export default function Index() {
     });
   }, [db]);
 
+  // CR-01 리뷰 대응 — SAVED 카드를 닫고 다음 체크인을 시작할 수 있는 유일한 경로.
+  // 리듀서의 DISMISS는 이미 존재하지만(IDLE 초기화), 이전에는 캡처 실패 catch
+  // 블록에서만 dispatch돼 SAVED 도달 이후에는 세션 안에서 다시 IDLE로 돌아갈 방법이
+  // 없었다(SAVED 카드가 영구적으로 남아 체크인 버튼이 다시 뜨지 않음). 03-UI-SPEC.md에
+  // 정의된 별도 "닫기" 버튼/카피가 없으므로 새 문구를 발명하는 대신, 지도 위 빈 영역
+  // 탭을 "이 체크인은 끝났다"는 기존 제스처(바텀시트/카드 바깥 탭으로 닫기)로 재사용한다
+  // — note/photo는 이미 각자 시점에 flush됐지만(TextInput blur, 사진 선택 즉시 반영)
+  // 방어적으로 한 번 더 flush한 뒤 DISMISS한다. SAVE_FAILED/CONFIRM 등 다른 phase는
+  // 각자의 명시적 버튼(확인/다시 시도)이 있으므로 건드리지 않는다.
+  const handleMapPress = useCallback(() => {
+    if (stateRef.current.phase !== 'SAVED') return;
+    flushNoteAndPhoto();
+    dispatch({ type: 'DISMISS' });
+  }, [flushNoteAndPhoto]);
+
   // 미저장 이탈 안내 + 메모/사진 백그라운드 flush를 한 구독으로 처리한다. 이 리스너는
   // src/app/_layout.tsx의 알림 자가진단 리스너와 목적이 다르다 — 그쪽은 'active' 진입만
   // 감지해 알림 스케줄 무결성을 재검사하고, 이 리스너는 'active'를 벗어나는 전환(배경
@@ -430,6 +445,7 @@ export default function Index() {
         style={StyleSheet.absoluteFill}
         showsUserLocation
         onRegionChangeComplete={handleRegionChangeComplete}
+        onPress={handleMapPress}
       >
         {state.pin && showActionCard && (
           <Marker
