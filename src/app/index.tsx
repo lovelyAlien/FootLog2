@@ -255,11 +255,19 @@ export default function Index() {
     (event: MarkerDragStartEndEvent) => {
       const { latitude, longitude } = event.nativeEvent.coordinate;
       dispatch({ type: 'DRAG_PIN', lat: latitude, lng: longitude });
-      updateDraftCoordinate(db, { lat: latitude, lng: longitude, now: toIsoTimestamp() }).catch(
-        (error) => {
-          console.error('Failed to update draft coordinate after drag', error);
-        }
-      );
+      // WR-01 리뷰 대응 — applyDraggedSource(location.ts)는 드래그된 핀의
+      // accuracyMeters를 항상 null로 만든다("손으로 옮긴 위치라 GPS 정확도 수치가
+      // 더 이상 의미를 갖지 않기 때문"). 드래프트에도 그 무효화를 명시적으로 반영해야
+      // 앱이 드래그 직후 강제종료됐다가 복구됐을 때 stale한 accuracy 값이 checkins에
+      // 영구히 남는 것을 막는다.
+      updateDraftCoordinate(db, {
+        lat: latitude,
+        lng: longitude,
+        accuracyMeters: null,
+        now: toIsoTimestamp(),
+      }).catch((error) => {
+        console.error('Failed to update draft coordinate after drag', error);
+      });
     },
     [db]
   );
