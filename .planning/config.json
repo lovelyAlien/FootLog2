@@ -9,5 +9,8 @@
   "workflow": {
     "code_review": true,
     "ui_review": true
+  },
+  "git": {
+    "branching_strategy": "phase"
   }
 }
