@@ -105,6 +105,13 @@ export default function Index() {
   const pendingCheckinIdRef = useRef<string | null>(null);
   // 미저장 이탈 안내(Alert)를 정확히 1회만 노출하기 위한 플래그.
   const unsavedExitAlertShownRef = useRef(false);
+  // WR-04 리뷰 대응 — handleSaveCheckin의 state.phase 가드는 마지막 렌더에서 캡처된
+  // 클로저 값을 읽으므로, 리렌더가 끼어들기 전에 도착한 두 번째 탭 이벤트는 같은
+  // "CONFIRM"(혹은 "SAVE_FAILED")을 보고 가드를 통과할 수 있다. dispatch와 무관하게
+  // 동기적으로 즉시 갱신되는 이 ref로 실제 중복 실행을 막는다(CheckinActionCard.tsx는
+  // "비활성화가 아니라 미마운트" 계약 때문에 disabled prop을 둘 수 없다 —
+  // checkinCardUi.test.ts Test 11 참고).
+  const isSaveInFlightRef = useRef(false);
   // AppState 리스너(구독은 한 번만 생성)가 항상 최신 state를 읽을 수 있도록 미러링하는
   // ref — 매 렌더마다 구독을 다시 만들지 않기 위한 용도(리스너 자체는 [flushNoteAndPhoto]
   // 에만 의존).
@@ -277,11 +284,15 @@ export default function Index() {
   // 재시도 카운터를 두지 않는다(03-RESEARCH.md Pitfall 4) — "다시 시도" 버튼은 이
   // 함수를 그대로 재호출할 뿐이다.
   const handleSaveCheckin = useCallback(() => {
+    // WR-04 리뷰 대응 — 아래 state.phase 가드보다 먼저, 리렌더 유무와 무관하게
+    // 즉시 갱신되는 ref로 이미 진행 중인 저장을 걸러낸다(더블탭 레이스 방지).
+    if (isSaveInFlightRef.current) return;
     // SAVING 중 중복 탭 방지 가드.
     if (state.phase === 'SAVING') return;
     if (state.phase !== 'CONFIRM' && state.phase !== 'SAVE_FAILED') return;
     if (!state.pin) return;
 
+    isSaveInFlightRef.current = true;
     const pin = state.pin;
     dispatch({ type: state.phase === 'CONFIRM' ? 'TAP_CONFIRM' : 'TAP_RETRY' });
 
@@ -308,6 +319,7 @@ export default function Index() {
 
     commitCheckin(db, params)
       .then((result) => {
+        isSaveInFlightRef.current = false;
         if (!isMountedRef.current) return;
         if (result.ok) {
           // 다음 체크인 사이클을 위해 초기화 — 이 체크인은 이제 SAVED 상태로
@@ -319,6 +331,7 @@ export default function Index() {
         }
       })
       .catch((error) => {
+        isSaveInFlightRef.current = false;
         // 프로미스 미삼킴 규약 — 예외도 SAVE_FAILED로 흡수한다.
         console.error('Failed to commit check-in', error);
         if (isMountedRef.current) {
