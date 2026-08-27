@@ -460,20 +460,23 @@ if (currentDbVersion === 1) {
 
 ## Open Questions
 
-1. **`location_source` enum 5개 값의 정확한 트리거 조건 매핑**
+1. **(RESOLVED — 03-07-PLAN.md) `location_source` enum 5개 값의 정확한 트리거 조건 매핑**
    - What we know: enum 자체(`gps_auto`/`gps_dragged`/`gps_low_accuracy_fallback`/`manual_denied`/`manual_no_signal`)는 `schema.ts`에 이미 고정돼 있고, 각 값의 "의미"는 product-design.md 여러 곳에 산재된 산문에서 유추 가능.
    - What's unclear: `gps_low_accuracy_fallback`과 `manual_no_signal`을 정확히 어떤 코드 경로에서 나누는지(둘 다 "위치를 못 잡은 경우"로 읽힐 수 있음) — Assumptions Log A1 참고.
    - Recommendation: 계획 단계에서 아래 매핑을 명시적으로 확정해 PLAN.md에 못박을 것을 권장: `gps_auto`=권한 허용+5초 내 성공+드래그 안 함, `gps_low_accuracy_fallback`=권한 허용+5초 타임아웃+OS 캐시 성공+드래그 안 함, `manual_denied`=권한 거부(자체 폴백 체인 진입)+드래그 안 함, `manual_no_signal`=권한 허용했지만 5초 타임아웃+OS 캐시도 없어 자체 폴백 체인 진입+드래그 안 함, `gps_dragged`=원래 소스 무관하게 사용자가 핀을 드래그한 모든 경우.
+   - Resolved by: `03-07-PLAN.md`가 위 매핑을 `LOCATION_SOURCE_MAPPING_NOTE` 상수 + 값별 유닛 테스트로 확정.
 
-2. **Phase 3 vs Phase 4의 위치 권한 요청 호출 책임 경계**
+2. **(RESOLVED — 03-05-PLAN.md) Phase 3 vs Phase 4의 위치 권한 요청 호출 책임 경계**
    - What we know: REQ-location-denied-flow(Phase 3)는 권한 거부/배너를 다루고, REQ-onboarding-empty-state(Phase 4)는 "위치 권한은 첫 체크인 탭 시점에 맥락적으로 요청된다"는 문구를 포함한다. D-06에 따라 체크인 버튼 자체는 Phase 3에 존재한다.
    - What's unclear: `requestForegroundPermissionsAsync()`를 실제로 호출하는 코드가 Phase 3 산출물인지, Phase 4가 온보딩 흐름의 일부로 나중에 추가하는지.
    - Recommendation: Phase 3가 이 호출을 소유해야 함(체크인 버튼이 동작하려면 필수) — Phase 4는 그 위에 온보딩 내러티브/empty state 문구만 얹는 것으로 계획할 것을 권장. 계획 단계에서 창업자에게 이 경계를 명시적으로 확인.
+   - Resolved by: `03-05-PLAN.md`가 Phase 3 소유로 확정, 헤더 주석 + acceptance criterion(`grep "Phase 3가 소유"`)으로 검증.
 
-3. **D-07 하드코딩 기본 좌표의 정확한 위경도 값**
+3. **(RESOLVED — 03-02-PLAN.md) D-07 하드코딩 기본 좌표의 정확한 위경도 값**
    - What we know: CONTEXT.md가 "창업자 본인의 집/자주 가는 고정 장소"로 결정했고, 정확한 값은 계획/구현 단계에서 확인하기로 명시함.
    - What's unclear: 실제 lat/lng 숫자.
    - Recommendation: 이 리서치는 값을 임의로 만들어내지 않는다 — 계획 단계에서 `checkpoint:human-verify` 태스크로 창업자에게 직접 확인받을 것을 권장.
+   - Resolved by: `03-02-PLAN.md` Task 1의 `checkpoint:decision`(blocking)이 창업자 입력을 강제하며, `lat: 0`/`lng: 0` 잔존 시 자동 실패하는 회귀 게이트를 포함. 실제 좌표값은 실행 단계에서 창업자가 제공.
 
 ## Environment Availability
 

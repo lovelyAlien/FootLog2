@@ -196,11 +196,13 @@ DESIGN.md/`tokens.ts`의 기존 팔레트를 그대로 사용 — 이 phase는 �
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: FLAG (non-blocking — "확인" 버튼 라벨과 사진 실패 문구에 개선 권고, 계획/구현 단계에서 선택 반영)
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+Verified by `gsd-ui-checker` (`## UI-SPEC VERIFIED`, `APPROVED`, 2026-08-27).
+
+**Approval:** approved 2026-08-27
