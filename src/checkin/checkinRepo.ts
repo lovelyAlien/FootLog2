@@ -85,8 +85,17 @@ export async function commitCheckin(
     } catch (err) {
       try {
         await db.execAsync('ROLLBACK');
-      } catch {
-        // ROLLBACK 자체의 실패는 흡수한다 — 원래 에러를 재시도 로직에 그대로 전달한다.
+      } catch (rollbackErr) {
+        // WR-03 리뷰 대응 — ROLLBACK 자체의 실패는 여전히 흡수해 원래 에러를
+        // 재시도 로직에 그대로 전달하지만, 이 경우 연결이 열린 트랜잭션 상태로
+        // 남아 이후 모든 commitCheckin 호출이 "cannot start a transaction within
+        // a transaction" 류로 연쇄 실패할 위험이 있다. 일반 쓰기 실패와 구분되는
+        // 로그를 남겨 이 세션의 이후 실패들이 이 근본 원인 때문일 수 있음을 추적할
+        // 수 있게 한다.
+        console.error(
+          'commitCheckin: ROLLBACK failed after a write error — the connection may be left in an open transaction for the rest of this session',
+          rollbackErr
+        );
       }
       throw err;
     }
