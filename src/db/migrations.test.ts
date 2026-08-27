@@ -9,6 +9,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { createTestDb } from './testing/nodeSqliteAdapter';
 import { DATABASE_VERSION, migrateDbIfNeeded } from './migrations';
+import { CREATE_DRAFTS_TABLE_SQL } from './schema';
 import { stripComments } from '../test-utils/stripComments';
 
 const CHECKINS_COLUMNS = [
@@ -32,6 +33,18 @@ const DAILY_REFLECTIONS_COLUMNS = [
   'date',
   'new_place_answer',
   'free_reflection',
+  'created_at',
+  'updated_at',
+];
+
+const DRAFTS_COLUMNS = [
+  'id',
+  'lat',
+  'lng',
+  'accuracy_meters',
+  'location_source',
+  'local_date_key',
+  'timezone_at_capture',
   'created_at',
   'updated_at',
 ];
@@ -273,6 +286,138 @@ describe('migrateDbIfNeeded', () => {
       for (const suffix of ['', '-wal', '-shm', '-journal']) {
         fs.rmSync(`${tmpPath}${suffix}`, { force: true });
       }
+    }
+  });
+
+  it('Test 10: CREATE_DRAFTS_TABLE_SQL 실행 후 drafts 테이블이 sqlite_master에 존재한다', () => {
+    const { raw, close } = createTestDb();
+    try {
+      raw.exec(CREATE_DRAFTS_TABLE_SQL);
+
+      const tables = raw
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .all() as { name: string }[];
+      const tableNames = tables.map((t) => t.name);
+      expect(tableNames).toContain('drafts');
+    } finally {
+      close();
+    }
+  });
+
+  it('Test 11: drafts 테이블이 정확히 9개 컬럼을 계약대로 갖는다', () => {
+    const { raw, close } = createTestDb();
+    try {
+      raw.exec(CREATE_DRAFTS_TABLE_SQL);
+
+      const columns = raw.prepare('PRAGMA table_info(drafts)').all() as { name: string }[];
+      expect(columns).toHaveLength(9);
+
+      const columnNames = new Set(columns.map((c) => c.name));
+      expect(columnNames).toEqual(new Set(DRAFTS_COLUMNS));
+    } finally {
+      close();
+    }
+  });
+
+  it('Test 12: id가 PRIMARY KEY이고 NOT NULL이다 (id 없이 insert하면 실패한다)', () => {
+    const { raw, close } = createTestDb();
+    try {
+      raw.exec(CREATE_DRAFTS_TABLE_SQL);
+
+      expect(() => {
+        raw
+          .prepare(
+            `INSERT INTO drafts (
+               lat, lng, location_source, local_date_key, timezone_at_capture,
+               created_at, updated_at
+             ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(
+            37.5665,
+            126.978,
+            'gps_auto',
+            '2026-08-26',
+            'Asia/Seoul',
+            '2026-08-26T00:00:00Z',
+            '2026-08-26T00:00:00Z'
+          );
+      }).toThrow();
+    } finally {
+      close();
+    }
+  });
+
+  it('Test 13: lat/lng/location_source/local_date_key/timezone_at_capture/created_at/updated_at에 NULL을 넣으면 실패한다', () => {
+    const { raw, close } = createTestDb();
+    try {
+      raw.exec(CREATE_DRAFTS_TABLE_SQL);
+
+      const baseRow: Record<string, unknown> = {
+        id: 'draft',
+        lat: 37.5665,
+        lng: 126.978,
+        location_source: 'gps_auto',
+        local_date_key: '2026-08-26',
+        timezone_at_capture: 'Asia/Seoul',
+        created_at: '2026-08-26T00:00:00Z',
+        updated_at: '2026-08-26T00:00:00Z',
+      };
+
+      const notNullColumns = [
+        'lat',
+        'lng',
+        'location_source',
+        'local_date_key',
+        'timezone_at_capture',
+        'created_at',
+        'updated_at',
+      ];
+
+      for (const column of notNullColumns) {
+        const row = { ...baseRow, [column]: null };
+        const columns = Object.keys(row);
+        const placeholders = columns.map(() => '?').join(', ');
+        expect(() => {
+          raw
+            .prepare(`INSERT INTO drafts (${columns.join(', ')}) VALUES (${placeholders})`)
+            .run(...columns.map((c) => row[c] as never));
+        }).toThrow();
+      }
+    } finally {
+      close();
+    }
+  });
+
+  it('Test 14: accuracy_meters에는 NULL을 넣을 수 있다', () => {
+    const { raw, close } = createTestDb();
+    try {
+      raw.exec(CREATE_DRAFTS_TABLE_SQL);
+
+      expect(() => {
+        raw
+          .prepare(
+            `INSERT INTO drafts (
+               id, lat, lng, accuracy_meters, location_source, local_date_key,
+               timezone_at_capture, created_at, updated_at
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(
+            'draft',
+            37.5665,
+            126.978,
+            null,
+            'gps_auto',
+            '2026-08-26',
+            'Asia/Seoul',
+            '2026-08-26T00:00:00Z',
+            '2026-08-26T00:00:00Z'
+          );
+      }).not.toThrow();
+
+      const rows = raw.prepare('SELECT * FROM drafts').all();
+      expect(rows).toHaveLength(1);
+    } finally {
+      close();
     }
   });
 });
