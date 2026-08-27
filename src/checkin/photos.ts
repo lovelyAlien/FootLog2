@@ -6,8 +6,8 @@
 // 이 파일은 'expo-image-picker'/'expo-file-system'/'expo-crypto'를 직접 import하지
 // 않는다 — deps.ts가 조립한 기본 구현을 인자 기본값으로만 받는다(config.ts 헤더 규약,
 // 03-01이 세운 격리 회귀 가드).
-import type { ImagePickerDeps } from './config';
-import { defaultImagePickerDeps } from './deps';
+import type { ImagePickerDeps, CryptoDeps, PhotoStorageDeps } from './config';
+import { defaultImagePickerDeps, defaultCryptoDeps, defaultPhotoStorageDeps } from './deps';
 
 export type PhotoSource = 'camera' | 'library';
 
@@ -42,4 +42,57 @@ export async function ensurePhotoPermission(
       ? await deps.requestCameraPermissionsAsync()
       : await deps.requestMediaLibraryPermissionsAsync();
   return response.granted;
+}
+
+export type PickedPhoto = { uri: string; source: PhotoSource; fileName: string };
+export type PickPhotoResult =
+  | PickedPhoto
+  | null
+  | { error: 'permission_denied' | 'copy_failed' };
+
+export async function pickAndCopyPhoto(
+  source: PhotoSource,
+  deps: {
+    picker?: ImagePickerDeps;
+    storage?: PhotoStorageDeps;
+    crypto?: CryptoDeps;
+  } = {}
+): Promise<PickPhotoResult> {
+  const picker = deps.picker ?? defaultImagePickerDeps;
+  const storage = deps.storage ?? defaultPhotoStorageDeps;
+  const crypto = deps.crypto ?? defaultCryptoDeps;
+
+  const granted = await ensurePhotoPermission(source, picker);
+  if (!granted) {
+    return { error: 'permission_denied' };
+  }
+
+  // 이미지 전용 필터 옵션을 반드시 명시한다 — 미지정 시 기본값이 동영상까지 포함할 수
+  // 있어 REQ 스코프(사진만) 밖 파일이 documentDirectory에 복사될 위험이 있다
+  // (03-RESEARCH.md Assumptions Log A5). deprecated된 열거형 옵션(구 SDK 방식)은 쓰지 않는다.
+  const result =
+    source === 'camera'
+      ? await picker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 })
+      : await picker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+
+  if (result.canceled || !result.assets?.[0]) {
+    return null;
+  }
+
+  const asset = result.assets[0];
+
+  // 목적지 파일명은 항상 UUID 기반이며 picker가 반환한 assets[0].uri/fileName을
+  // 목적지 경로에 절대 쓰지 않는다 — 경로 조작 방어(03-RESEARCH.md Security Domain
+  // "사진 파일 경로 조작" 완화, threat T-3-04).
+  const uuid = crypto.randomUUID();
+  const fileName = buildPhotoFileName(source, uuid);
+
+  try {
+    const destinationUri = await storage.copyIntoDocumentDirectory(asset.uri, fileName);
+    return { uri: destinationUri, source, fileName };
+  } catch (error) {
+    // 예외를 밖으로 던지지 않되 로그는 남긴다(프로미스/에러 미삼킴 규약).
+    console.error('Failed to copy photo into documentDirectory', error);
+    return { error: 'copy_failed' };
+  }
 }
