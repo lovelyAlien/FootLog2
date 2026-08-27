@@ -114,3 +114,12 @@ None - no external service configuration required.
 ---
 *Phase: 03-check-in-core-loop*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+- FOUND: src/checkin/checkinFlow.ts
+- FOUND: src/checkin/checkinFlow.test.ts
+- FOUND: src/components/CheckinActionCard.tsx
+- FOUND: src/components/__tests__/checkinCardUi.test.ts
+- FOUND: .planning/phases/03-check-in-core-loop/03-08-SUMMARY.md
+- FOUND: all 7 commit hashes (61b9bd6, 7782360, 2cf3956, 35f6b06, 0f49f09, 9ee1428, f166ad3)
