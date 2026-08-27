@@ -90,9 +90,9 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 
 **Plans**: 11 plans (7 waves)
 
-- [ ] 03-01-PLAN.md — 네이티브 모듈 5종 설치 + checkin DI 골격(config/deps) + 테스트 더블 3종 (wave 1)
-- [ ] 03-02-PLAN.md — D-07 최종 폴백 좌표 창업자 확정 체크포인트 + fallbackLocation 상수 모듈 (wave 1)
-- [ ] 03-03-PLAN.md — drafts 테이블 DDL + DATABASE_VERSION 2 마이그레이션 + 데이터 보존 회귀 (wave 1)
+- [x] 03-01-PLAN.md — 네이티브 모듈 5종 설치 + checkin DI 골격(config/deps) + 테스트 더블 3종 (wave 1)
+- [x] 03-02-PLAN.md — D-07 최종 폴백 좌표 창업자 확정 체크포인트 + fallbackLocation 상수 모듈 (wave 1)
+- [x] 03-03-PLAN.md — drafts 테이블 DDL + DATABASE_VERSION 2 마이그레이션 + 데이터 보존 회귀 (wave 1)
 - [ ] 03-04-PLAN.md — localDate/draftRepo/checkinRepo (1회 자동 재시도 + insert 성공 후에만 드래프트 삭제) (wave 2)
 - [ ] 03-05-PLAN.md — 위치 권한 모듈 + LocationDeniedBanner + UI 계약 테스트 (wave 2)
 - [ ] 03-06-PLAN.md — 사진 액션시트 + documentDirectory 복사(UUID 파일명, 출처 보존) (wave 2)
@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete   | 2026-08-26 |
 | 2. Notification Infrastructure | 8/8 | Complete   | 2026-08-27 |
-| 3. Check-in Core Loop | 0/11 | Not started | - |
+| 3. Check-in Core Loop | 3/11 | In Progress|  |
 | 4. Today View | 0/TBD | Not started | - |
 | 5. Check-in Detail & Edit | 0/TBD | Not started | - |
 | 6. Calendar Tab | 0/TBD | Not started | - |
