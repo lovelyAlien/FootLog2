@@ -85,12 +85,18 @@ export function checkinReducer(state: CheckinState, event: CheckinEvent): Checki
       return { ...state, phase: 'CONFIRM', pin: event.location };
 
     case 'PHOTO_PICKED':
+      // WR-02 리뷰 대응 — "정의되지 않은 전이는 no-op" 방어를 이 세 케이스에도
+      // 적용해, canEditNoteAndPhoto와 동치인 SAVED 가드를 리듀서 자신이 강제한다
+      // (호출부 가드에만 의존하지 않는 defense-in-depth).
+      if (state.phase !== 'SAVED') return state;
       return { ...state, photo: event.photo, photoError: false };
 
     case 'PHOTO_FAILED':
+      if (state.phase !== 'SAVED') return state;
       return { ...state, photoError: true };
 
     case 'NOTE_CHANGED':
+      if (state.phase !== 'SAVED') return state;
       return { ...state, note: event.note };
 
     case 'DISMISS':
