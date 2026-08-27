@@ -117,6 +117,10 @@ None - no external service configuration required.
 - Phase 5(T13 상세화면 메모 저장 실패)는 `runWithSingleRetry`를 그대로 재사용해 동일한 재시도 패턴을 구현할 수 있다.
 - 워크트리 로컬 `node_modules` 설치는 이 워크트리에 한정된 조치이며, 병렬로 실행 중인 다른 wave-2 워크트리 에이전트(03-05~03-11)도 동일한 공유 `node_modules` 미비 문제를 겪을 수 있음 — 각 워크트리가 독립적으로 동일한 조치를 반복해야 할 수 있다는 점을 오케스트레이터가 인지할 필요가 있다(비차단, 각 워크트리에서 자동 해결 가능).
 
+## Self-Check: PASSED
+
+All 6 created source files and the SUMMARY.md itself found on disk. All 7 commit hashes (test/feat pairs for Task 1-3 plus the SUMMARY commit) found in git log.
+
 ---
 *Phase: 03-check-in-core-loop*
 *Completed: 2026-08-27*
