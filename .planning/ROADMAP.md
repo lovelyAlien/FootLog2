@@ -24,7 +24,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 
 - [x] **Phase 1: Foundation** - Expo/EAS 스캐폴드, 디자인 토큰, 그리고 나머지 전부를 그 위에 지을 수 있는 SQLite 마이그레이션 프레임워크가 존재한다. (completed 2026-08-26)
 - [x] **Phase 2: Notification Infrastructure** - 앱이 체크인/회고 리마인더를 신뢰성 있게 스케줄링하고 스스로 복구하며, 확정된 권한 프롬프트 문구와 거부 상태 UI 패턴을 갖춘다. (completed 2026-08-27)
-- [ ] **Phase 3: Check-in Core Loop** - 사용자가 자유형 체크인(위치 + 선택적 사진/메모)을 GPS·저장 실패를 포함해 안정적으로 남길 수 있다.
+- [x] **Phase 3: Check-in Core Loop** - 사용자가 자유형 체크인(위치 + 선택적 사진/메모)을 GPS·저장 실패를 포함해 안정적으로 남길 수 있다. (completed 2026-08-27)
 - [ ] **Phase 4: Today View** - 사용자가 오늘의 체크인들을 지도에서 보여주는 홈 화면과, 새 체크인을 위한 마찰 낮은 진입점을 갖는다.
 - [ ] **Phase 5: Check-in Detail & Edit** - 사용자가 기록된 개별 체크인을 조회·수정·삭제할 수 있다.
 - [ ] **Phase 6: Calendar Tab** - 사용자가 월 그리드와 빠른 날짜별 스크러버로 과거 날짜를 훑어볼 수 있다.
@@ -100,7 +100,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] 03-08-PLAN.md — 체크인 상태 머신 리듀서 + 액션 카드(메모/사진은 SAVED에서만 마운트) (wave 4)
 - [x] 03-09-PLAN.md — 최소 지도 화면 배선(MapView + 배너 스택 + 알약버튼 + 확인 핀 드래그 + 드래프트 upsert) (wave 5)
 - [x] 03-10-PLAN.md — 저장 커밋 + 메모/사진 저장 + 드래프트 복구 + 미저장 이탈 안내 + 키보드 회피 (wave 6)
-- [ ] 03-11-PLAN.md — EAS Dev Client 재빌드 + 창업자 iPhone 실기기 검증 5종 (wave 7)
+- [x] 03-11-PLAN.md — EAS Dev Client 재빌드 + 창업자 iPhone 실기기 검증 5종 (wave 7)
 
 ### Phase 4: Today View
 
@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete   | 2026-08-26 |
 | 2. Notification Infrastructure | 8/8 | Complete   | 2026-08-27 |
-| 3. Check-in Core Loop | 10/11 | In Progress|  |
+| 3. Check-in Core Loop | 11/11 | Complete   | 2026-08-27 |
 | 4. Today View | 0/TBD | Not started | - |
 | 5. Check-in Detail & Edit | 0/TBD | Not started | - |
 | 6. Calendar Tab | 0/TBD | Not started | - |
