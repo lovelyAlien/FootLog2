@@ -37,6 +37,10 @@ export type CheckinActionCardProps = {
   note: string;
   onPickPhoto: () => void;
   onChangeNote: (note: string) => void;
+  // 03-10-PLAN.md Task 2 — 메모 DB 반영은 매 키 입력이 아니라 블러(포커스 이탈)
+  // 시점에만 일어난다(디바운스 자동저장은 Phase 7 스코프). 이 콜백은 값을 받지 않는다 —
+  // 최신 note 값은 부모(src/app/index.tsx)가 이미 갖고 있다.
+  onNoteBlur: () => void;
 };
 
 export function CheckinActionCard({
@@ -48,6 +52,7 @@ export function CheckinActionCard({
   note,
   onPickPhoto,
   onChangeNote,
+  onNoteBlur,
 }: CheckinActionCardProps) {
   // CAPTURING/IDLE: 카드 없음 — 로딩은 체크인 버튼 자체가 표현한다(03-UI-SPEC.md).
   if (phase === 'CAPTURING' || phase === 'IDLE') {
@@ -115,6 +120,7 @@ export function CheckinActionCard({
             multiline
             value={note}
             onChangeText={onChangeNote}
+            onBlur={onNoteBlur}
             placeholder={CHECKIN_COPY.notePlaceholder}
             placeholderTextColor={colors.textFaint}
             style={[typography.journalEntry, styles.noteInput]}

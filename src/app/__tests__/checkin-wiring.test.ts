@@ -110,3 +110,34 @@ describe('src/app/index.tsx 저장 배선 계약 (Plan 03-10 Task 1)', () => {
     expect(indexSource).toMatch(/\brandomUUID\b/);
   });
 });
+
+describe('src/app/index.tsx 사진/메모/키보드 배선 계약 (Plan 03-10 Task 2)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 19: ActionSheetIOS가 등장하고 photos.ts 상수 참조가 존재한다', () => {
+    expect(indexSource).toMatch(/\bActionSheetIOS\b/);
+    expect(indexSource).toMatch(/\bPHOTO_ACTION_SHEET_OPTIONS\b/);
+    expect(indexSource).toMatch(/\bPHOTO_ACTION_SHEET_CANCEL_INDEX\b/);
+    expect(indexSource).toMatch(/\bPHOTO_SOURCE_BY_ACTION_SHEET_INDEX\b/);
+  });
+
+  it('Test 20: 사진 액션시트 문구 리터럴이 index.tsx에 중복 하드코딩되지 않는다 (photos.ts 상수 소비)', () => {
+    expect(codeOnly).not.toContain('사진 촬영');
+    expect(codeOnly).not.toContain('앨범에서 선택');
+  });
+
+  it('Test 21: pickAndCopyPhoto / updateCheckinNoteAndPhoto 식별자가 등장한다', () => {
+    expect(indexSource).toMatch(/\bpickAndCopyPhoto\b/);
+    expect(indexSource).toMatch(/\bupdateCheckinNoteAndPhoto\b/);
+  });
+
+  it('Test 22: KeyboardAvoidingView가 등장하고 behavior="padding"이 지정된다', () => {
+    expect(indexSource).toMatch(/\bKeyboardAvoidingView\b/);
+    expect(indexSource).toMatch(/behavior="padding"/);
+  });
+
+  it('Test 23: Platform.OS가 등장하지 않는다 (iOS 전용 프로젝트, 플랫폼 분기 금지)', () => {
+    expect(codeOnly).not.toMatch(/Platform\.OS/);
+  });
+});

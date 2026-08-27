@@ -20,10 +20,12 @@
 // 사진/메모 배선(03-10 Task 2)과 드래프트 복구(03-10 Task 3)는 아래 각 절 참고.
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   Animated,
   AppState,
+  KeyboardAvoidingView,
   Pressable,
   StyleSheet,
   Text,
@@ -40,16 +42,32 @@ import type { PermissionSnapshot } from '../notifications/permissions';
 import { NotificationDeniedBanner } from '../components/NotificationDeniedBanner';
 import { LocationDeniedBanner } from '../components/LocationDeniedBanner';
 import { CheckinActionCard } from '../components/CheckinActionCard';
-import { checkinReducer, initialCheckinState, CHECKIN_COPY } from '../checkin/checkinFlow';
+import {
+  checkinReducer,
+  initialCheckinState,
+  canEditNoteAndPhoto,
+  CHECKIN_COPY,
+} from '../checkin/checkinFlow';
 import { requestLocationPermission } from '../checkin/permissions';
 import { resolveCheckinLocation } from '../checkin/location';
 import type { FallbackSources } from '../checkin/location';
 import { upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
-import { commitCheckin, getLatestCheckinCoordinate } from '../checkin/checkinRepo';
+import {
+  commitCheckin,
+  getLatestCheckinCoordinate,
+  updateCheckinNoteAndPhoto,
+} from '../checkin/checkinRepo';
 import type { NewCheckinParams } from '../checkin/checkinRepo';
 import { defaultCryptoDeps } from '../checkin/deps';
+import {
+  PHOTO_ACTION_SHEET_CANCEL_INDEX,
+  PHOTO_ACTION_SHEET_OPTIONS,
+  PHOTO_SOURCE_BY_ACTION_SHEET_INDEX,
+  pickAndCopyPhoto,
+} from '../checkin/photos';
 import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../checkin/localDate';
 import type { LocationSource } from '../db/schema';
+import type { CheckinState } from '../checkin/checkinFlow';
 
 // 확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 — GPS 좌표 근방을 자연스럽게 보여줄
 // 정도의 값이며, 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
@@ -87,6 +105,13 @@ export default function Index() {
   const pendingCheckinIdRef = useRef<string | null>(null);
   // 미저장 이탈 안내(Alert)를 정확히 1회만 노출하기 위한 플래그.
   const unsavedExitAlertShownRef = useRef(false);
+  // AppState 리스너(구독은 한 번만 생성)가 항상 최신 state를 읽을 수 있도록 미러링하는
+  // ref — 매 렌더마다 구독을 다시 만들지 않기 위한 용도(리스너 자체는 [flushNoteAndPhoto]
+  // 에만 의존).
+  const stateRef = useRef<CheckinState>(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -254,32 +279,102 @@ export default function Index() {
       });
   }, [db, state.phase, state.pin]);
 
-  // 미저장 이탈 안내 — SAVE_FAILED 상태에서 앱이 백그라운드로 전환되면(화면을
-  // 벗어나는 것과 동등하게 취급) OS 네이티브 Alert을 정확히 1회 노출한다(정보 제공
-  // 목적, 이탈 자체를 막지 않는다). 드래프트 row 삭제 함수는 여기서 호출하지 않는다 —
-  // 드래프트는 SQLite에 그대로 남아 다음 실행 시 복구 제안으로 이어진다(D-05).
+  // 메모/사진을 현재 checkinId row에 flush한다 — TextInput 블러 시점과 앱 백그라운드
+  // 전환 시점 두 곳에서 호출된다(디바운스 자동저장은 Phase 7 REQ-reflection-autosave
+  // 스코프이므로 여기서 만들지 않는다). canEditNoteAndPhoto(state)가 true인 SAVED
+  // 상태에서만 checkinId가 존재하므로 그 가드로 충분하다.
+  const flushNoteAndPhoto = useCallback(() => {
+    const current = stateRef.current;
+    if (!current.checkinId) return;
+    updateCheckinNoteAndPhoto(db, current.checkinId, {
+      note: current.note || null,
+      photoPath: current.photo?.uri ?? null,
+      now: toIsoTimestamp(),
+    }).catch((error) => {
+      console.error('Failed to flush check-in note/photo', error);
+    });
+  }, [db]);
+
+  // 미저장 이탈 안내 + 메모/사진 백그라운드 flush를 한 구독으로 처리한다. 이 리스너는
+  // src/app/_layout.tsx의 알림 자가진단 리스너와 목적이 다르다 — 그쪽은 'active' 진입만
+  // 감지해 알림 스케줄 무결성을 재검사하고, 이 리스너는 'active'를 벗어나는 전환(배경
+  // 전환)에 반응해 (1) SAVE_FAILED 상태의 미저장 이탈 안내와 (2) SAVED 상태의 메모/사진
+  // flush를 수행한다. 드래프트 row 삭제 함수는 여기서 호출하지 않는다 — 드래프트는
+  // SQLite에 그대로 남아 다음 실행 시 복구 제안으로 이어진다(D-05).
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (
-        nextAppState !== 'active' &&
-        state.phase === 'SAVE_FAILED' &&
-        !unsavedExitAlertShownRef.current
-      ) {
+      if (nextAppState === 'active') {
+        unsavedExitAlertShownRef.current = false;
+        return;
+      }
+      const current = stateRef.current;
+      if (current.phase === 'SAVE_FAILED' && !unsavedExitAlertShownRef.current) {
         unsavedExitAlertShownRef.current = true;
         Alert.alert(CHECKIN_COPY.unsavedExitAlert, undefined, [
           { text: CHECKIN_COPY.unsavedExitAlertButton },
         ]);
       }
-      if (nextAppState === 'active') {
-        unsavedExitAlertShownRef.current = false;
+      if (canEditNoteAndPhoto(current)) {
+        flushNoteAndPhoto();
       }
     });
     return () => subscription.remove();
-  }, [state.phase]);
+  }, [flushNoteAndPhoto]);
 
-  // TODO(03-10 Task 2): onPickPhoto/onChangeNote를 실제 사진/메모 배선으로 교체한다.
-  const handlePickPhotoNoop = useCallback(() => {}, []);
-  const handleChangeNoteNoop = useCallback((_note: string) => {}, []);
+  // 사진 액션시트 — photos.ts의 옵션/취소 인덱스/출처 매핑 상수를 그대로 소비한다
+  // (문자열/인덱스를 화면에 하드코딩하지 않는다). ActionSheetIOS는 OS 네이티브
+  // 컴포넌트이며 커스텀 리테마하지 않는다(03-UI-SPEC.md 확정).
+  const handlePickPhoto = useCallback(() => {
+    if (!state.checkinId) return;
+    const checkinId = state.checkinId;
+
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: [...PHOTO_ACTION_SHEET_OPTIONS],
+        cancelButtonIndex: PHOTO_ACTION_SHEET_CANCEL_INDEX,
+      },
+      (buttonIndex) => {
+        const source = PHOTO_SOURCE_BY_ACTION_SHEET_INDEX[buttonIndex];
+        if (!source) return;
+
+        pickAndCopyPhoto(source)
+          .then((result) => {
+            if (!isMountedRef.current || result === null) return;
+            if ('error' in result) {
+              dispatch({ type: 'PHOTO_FAILED' });
+              return;
+            }
+            dispatch({ type: 'PHOTO_PICKED', photo: result });
+            // 사진 선택 즉시 체크인 row에 반영한다 — 메모는 그 시점의 최신 값을
+            // stateRef에서 읽어 함께 기록한다(updateCheckinNoteAndPhoto가 두 필드를
+            // 함께 받는 계약이기 때문).
+            updateCheckinNoteAndPhoto(db, checkinId, {
+              note: stateRef.current.note || null,
+              photoPath: result.uri,
+              now: toIsoTimestamp(),
+            }).catch((error) => {
+              console.error('Failed to persist picked photo to checkin row', error);
+            });
+          })
+          .catch((error) => {
+            console.error('Failed to pick and copy photo', error);
+            if (isMountedRef.current) {
+              dispatch({ type: 'PHOTO_FAILED' });
+            }
+          });
+      }
+    );
+  }, [db, state.checkinId]);
+
+  // 메모 입력 — 로컬 상태는 매 키 입력마다 갱신하되(카드가 이미 controlled input으로
+  // 렌더), DB 반영은 flushNoteAndPhoto가 블러/백그라운드 시점에만 수행한다.
+  const handleChangeNote = useCallback(
+    (note: string) => {
+      if (!state.checkinId) return;
+      dispatch({ type: 'NOTE_CHANGED', note });
+    },
+    [state.checkinId]
+  );
 
   if (shouldShowPriming(permission)) {
     return <Redirect href="/priming" />;
@@ -315,7 +410,10 @@ export default function Index() {
       </View>
 
       {showActionCard ? (
-        <View style={styles.actionCardContainer}>
+        // 카드가 화면 하단 고정이라 iOS 키보드에 가려질 수 있다 — 카드 컨테이너에만
+        // KeyboardAvoidingView를 적용해 MapView 전체화면 레이아웃은 건드리지 않는다.
+        // 이 프로젝트는 iOS 전용이라 플랫폼별 분기 자체를 두지 않는다(PROJECT.md 확정).
+        <KeyboardAvoidingView behavior="padding" style={styles.actionCardContainer}>
           <CheckinActionCard
             phase={state.phase}
             onConfirm={handleSaveCheckin}
@@ -323,10 +421,11 @@ export default function Index() {
             photo={state.photo}
             photoError={state.photoError}
             note={state.note}
-            onPickPhoto={handlePickPhotoNoop}
-            onChangeNote={handleChangeNoteNoop}
+            onPickPhoto={handlePickPhoto}
+            onChangeNote={handleChangeNote}
+            onNoteBlur={flushNoteAndPhoto}
           />
-        </View>
+        </KeyboardAvoidingView>
       ) : (
         <View style={[styles.checkinButtonContainer, { bottom: insets.bottom + spacing.xl }]}>
           <Pressable
