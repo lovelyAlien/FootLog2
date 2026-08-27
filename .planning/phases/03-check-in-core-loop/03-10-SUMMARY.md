@@ -129,3 +129,13 @@ None - 외부 서비스 설정 없음.
 ---
 *Phase: 03-check-in-core-loop*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+- FOUND: src/app/index.tsx
+- FOUND: src/app/__tests__/checkin-wiring.test.ts
+- FOUND: src/components/CheckinActionCard.tsx
+- FOUND commit: 357899a (feat(03-10): 확인 탭 → commitCheckin 배선 + 재시도 + 미저장 이탈 안내)
+- FOUND commit: b52c910 (feat(03-10): 메모/사진 저장 배선 + 액션시트 + 키보드 회피)
+- FOUND commit: 4807048 (feat(03-10): 앱 부팅 시 드래프트 복구 + 날짜 경계 만료 배선)
+- All 275 tests pass (`npm test`), `npx tsc --noEmit` exit 0
