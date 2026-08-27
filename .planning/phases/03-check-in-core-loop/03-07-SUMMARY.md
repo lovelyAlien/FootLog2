@@ -118,3 +118,10 @@ None - 외부 서비스 설정 불필요.
 ---
 *Phase: 03-check-in-core-loop*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+- FOUND: src/checkin/location.ts
+- FOUND: src/checkin/location.test.ts
+- FOUND: .planning/phases/03-check-in-core-loop/03-07-SUMMARY.md
+- FOUND: 62fa8bd, 96e3e8f, 7f23c77, 0ee7865 (task commits)
