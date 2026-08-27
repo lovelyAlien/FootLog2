@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 // src/components/__tests__/checkinCardUi.test.ts
-// 03-08-PLAN.md Task 2 — CheckinActionCard 상태별 렌더링 UI 계약 회귀 가드.
+// 03-08-PLAN.md Task 2/3 — CheckinActionCard 상태별 렌더링 UI 계약 회귀 가드.
 // RN 렌더 환경이 필요 없는 정적 소스 분석만 수행한다 — fs.readFileSync로 소스를 읽어
 // 문자열/정규식으로 카피/토큰/접근성/미마운트 계약을 단언한다(notificationUi.test.ts와 동일 패턴).
 import fs from 'fs';
@@ -63,5 +63,40 @@ describe('CheckinActionCard 접근성/터치 타겟', () => {
 describe('CheckinActionCard SAVE_FAILED 미마운트 계약', () => {
   it('Test 8: SAVE_FAILED 분기에서 canEditNoteAndPhoto 또는 phase === \'SAVED\' 가드가 메모/사진 JSX를 감싼다', () => {
     expect(cardSource).toMatch(/canEditNoteAndPhoto|phase === 'SAVED'/);
+  });
+});
+
+describe('CheckinActionCard 메모/사진 입력 영역 (SAVED 전용, Task 3)', () => {
+  it('Test 9: CHECKIN_COPY.notePlaceholder / photoPlaceholderLabel / photoFailed 참조가 존재한다', () => {
+    expect(cardSource).toMatch(/CHECKIN_COPY\.notePlaceholder/);
+    expect(cardSource).toMatch(/CHECKIN_COPY\.photoPlaceholderLabel/);
+    expect(cardSource).toMatch(/CHECKIN_COPY\.photoFailed/);
+  });
+
+  it('Test 10: typography.journalEntry가 소스에 정확히 1회 등장한다 (메모 TextInput 전용)', () => {
+    const occurrences = cardSource.match(/typography\.journalEntry/g) ?? [];
+    expect(occurrences).toHaveLength(1);
+  });
+
+  it('Test 11: stripComments 적용 후 disabled=와 pointerEvents가 등장하지 않는다 (미마운트 계약)', () => {
+    expect(codeOnly).not.toMatch(/disabled=/);
+    expect(codeOnly).not.toMatch(/pointerEvents/);
+  });
+
+  it('Test 12: expo-symbols import가 정확히 1회 등장한다', () => {
+    const occurrences = cardSource.match(/expo-symbols/g) ?? [];
+    expect(occurrences).toHaveLength(1);
+  });
+
+  it('Test 13: multiline이 등장한다', () => {
+    expect(cardSource).toMatch(/multiline/);
+  });
+
+  it('Test 14: placeholderTextColor에 colors.textFaint가 지정된다', () => {
+    expect(cardSource).toMatch(/placeholderTextColor=\{colors\.textFaint\}/);
+  });
+
+  it('Test 15: minHeight: 68이 등장한다', () => {
+    expect(cardSource).toMatch(/minHeight: 68/);
   });
 });
