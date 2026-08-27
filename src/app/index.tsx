@@ -15,11 +15,22 @@
 // 애플 지도 기본 provider를 쓴다(provider 미지정). accent 예산은 체크인 버튼과
 // 지도 위 확인 핀(DESIGN.md 승인 6개 용도 중 "체크인 버튼"과 "지도 마크")에만 쓴다.
 //
-// Task 2(체크인 탭 → 권한 요청 → 위치 캡처 → 확인 핀 드롭 → 드래프트 upsert):
-// "확인"/재시도/사진/메모 배선은 03-10에서 채운다. 이 화면은 지도, 캡처, 핀 드래그,
-// 드래프트 즉시 영속화까지만 담당한다.
+// 03-09: 체크인 탭 → 권한 요청 → 위치 캡처 → 확인 핀 드롭 → 드래프트 upsert.
+// 03-10 Task 1: "확인"/"다시 시도" → commitCheckin 배선 + 미저장 이탈 안내.
+// 사진/메모 배선(03-10 Task 2)과 드래프트 복구(03-10 Task 3)는 아래 각 절 참고.
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActionSheetIOS,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  AppState,
+  KeyboardAvoidingView,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Redirect } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
@@ -31,14 +42,32 @@ import type { PermissionSnapshot } from '../notifications/permissions';
 import { NotificationDeniedBanner } from '../components/NotificationDeniedBanner';
 import { LocationDeniedBanner } from '../components/LocationDeniedBanner';
 import { CheckinActionCard } from '../components/CheckinActionCard';
-import { checkinReducer, initialCheckinState, CHECKIN_COPY } from '../checkin/checkinFlow';
+import {
+  checkinReducer,
+  initialCheckinState,
+  canEditNoteAndPhoto,
+  CHECKIN_COPY,
+} from '../checkin/checkinFlow';
 import { requestLocationPermission } from '../checkin/permissions';
 import { resolveCheckinLocation } from '../checkin/location';
 import type { FallbackSources } from '../checkin/location';
-import { upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
-import { getLatestCheckinCoordinate } from '../checkin/checkinRepo';
+import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
+import {
+  commitCheckin,
+  getLatestCheckinCoordinate,
+  updateCheckinNoteAndPhoto,
+} from '../checkin/checkinRepo';
+import type { NewCheckinParams } from '../checkin/checkinRepo';
+import { defaultCryptoDeps } from '../checkin/deps';
+import {
+  PHOTO_ACTION_SHEET_CANCEL_INDEX,
+  PHOTO_ACTION_SHEET_OPTIONS,
+  PHOTO_SOURCE_BY_ACTION_SHEET_INDEX,
+  pickAndCopyPhoto,
+} from '../checkin/photos';
 import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../checkin/localDate';
 import type { LocationSource } from '../db/schema';
+import type { CheckinState } from '../checkin/checkinFlow';
 
 // 확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 — GPS 좌표 근방을 자연스럽게 보여줄
 // 정도의 값이며, 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
@@ -70,6 +99,20 @@ export default function Index() {
   const isMountedRef = useRef(true);
   const buttonContentOpacity = useState(() => new Animated.Value(1))[0];
 
+  // 첫 TAP_CONFIRM 시점에 만든 체크인 id — "다시 시도"가 같은 id를 재사용해 중복 row를
+  // 만들지 않도록 리듀서 상태가 아니라 ref에 보관한다(T-3-25). commitCheckin이
+  // ok:true를 반환한 뒤 다음 체크인 사이클을 위해 초기화한다.
+  const pendingCheckinIdRef = useRef<string | null>(null);
+  // 미저장 이탈 안내(Alert)를 정확히 1회만 노출하기 위한 플래그.
+  const unsavedExitAlertShownRef = useRef(false);
+  // AppState 리스너(구독은 한 번만 생성)가 항상 최신 state를 읽을 수 있도록 미러링하는
+  // ref — 매 렌더마다 구독을 다시 만들지 않기 위한 용도(리스너 자체는 [flushNoteAndPhoto]
+  // 에만 의존).
+  const stateRef = useRef<CheckinState>(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -95,6 +138,46 @@ export default function Index() {
       isMounted = false;
     };
   }, []);
+
+  // 앱 부팅 시 드래프트 복구(03-10-PLAN.md Task 3, T24 엣지케이스 1번과 4번). 결과가 null이면
+  // 드래프트가 아예 없거나, 날짜가 바뀌어 loadRecoverableDraft가 이미 조용히 삭제한
+  // 경우다 — 두 경우 모두 화면에 어떤 안내도 표시하지 않는다(복구 프롬프트 없음).
+  // 결과가 있으면 곧장 CONFIRM 상태로 진입시킨다 — 확인 핀 화면 재진입 자체가 복구
+  // 제안이며, 계속 진행할지 묻는 별도의 확인 다이얼로그 문구를 두지 않는다
+  // (03-UI-SPEC.md §Copywriting Contract: 저장 전이라 파괴적 액션이 아님).
+  //
+  // 복구 시 위치 권한을 재확인하거나 GPS를 다시 잡지 않는다 — 드래프트는 이미 확정된
+  // lat/lng를 갖고 있다(T24 edge case 4, 권한 변경 강건성). 그래서 이 useEffect
+  // 블록 안에서는 requestLocationPermission/resolveCheckinLocation을 호출하지 않는다.
+  //
+  // D-05 커버리지: "확인" 탭 이후 저장 재시도 중 앱이 강제종료돼도 commitCheckin이
+  // 성공하기 전까지 드래프트 row가 살아있으므로, 이 복구 경로가 그 케이스까지 자동으로
+  // 처리한다 — 별도의 "저장 실패" 상태 플래그를 만들지 않는다.
+  useEffect(() => {
+    let isMounted = true;
+    loadRecoverableDraft(db, resolveLocalDateKey(new Date()))
+      .then((draft) => {
+        if (!isMounted || draft === null) return;
+
+        const location = {
+          lat: draft.lat,
+          lng: draft.lng,
+          accuracyMeters: draft.accuracy_meters,
+          locationSource: draft.location_source,
+        };
+        dispatch({ type: 'RESTORE_DRAFT', location });
+        mapRef.current?.animateToRegion({
+          latitude: draft.lat,
+          longitude: draft.lng,
+          latitudeDelta: MAP_REGION_DELTA,
+          longitudeDelta: MAP_REGION_DELTA,
+        });
+      })
+      .catch(console.error);
+    return () => {
+      isMounted = false;
+    };
+  }, [db]);
 
   const isCapturing = state.phase === 'CAPTURING';
   const showActionCard = state.phase !== 'IDLE' && !isCapturing;
@@ -181,13 +264,157 @@ export default function Index() {
     [db]
   );
 
-  // TODO(03-10): onConfirm/onRetry/onPickPhoto/onChangeNote를 실제 저장·사진
-  // 플로우로 교체한다. 이 plan은 지도, 캡처, 핀 드래그, 드래프트 즉시 영속화까지만
-  // 배선한다.
-  const handleConfirmNoop = useCallback(() => {}, []);
-  const handleRetryNoop = useCallback(() => {}, []);
-  const handlePickPhotoNoop = useCallback(() => {}, []);
-  const handleChangeNoteNoop = useCallback((_note: string) => {}, []);
+  // "확인"/"다시 시도"가 공유하는 단일 저장 함수(03-10-PLAN.md Task 1). 자동 재시도
+  // 1회는 commitCheckin 내부(runWithSingleRetry)에 이미 캡슐화돼 있으므로 여기서는
+  // 재시도 카운터를 두지 않는다(03-RESEARCH.md Pitfall 4) — "다시 시도" 버튼은 이
+  // 함수를 그대로 재호출할 뿐이다.
+  const handleSaveCheckin = useCallback(() => {
+    // SAVING 중 중복 탭 방지 가드.
+    if (state.phase === 'SAVING') return;
+    if (state.phase !== 'CONFIRM' && state.phase !== 'SAVE_FAILED') return;
+    if (!state.pin) return;
+
+    const pin = state.pin;
+    dispatch({ type: state.phase === 'CONFIRM' ? 'TAP_CONFIRM' : 'TAP_RETRY' });
+
+    // 재시도 시 첫 TAP_CONFIRM에서 만든 id를 재사용한다 — 새 id를 매번 만들면 재시도가
+    // 중복 체크인 row를 만든다(T-3-25).
+    if (!pendingCheckinIdRef.current) {
+      pendingCheckinIdRef.current = defaultCryptoDeps.randomUUID();
+    }
+    const id = pendingCheckinIdRef.current;
+
+    // "확인"(또는 "다시 시도") 탭 시점이 곧 최종 타임스탬프를 확정하는 시점이다
+    // (03-RESEARCH.md Pattern 4) — GPS 캡처 시점이 아니라 여기서 timestampUtc를 새로
+    // 읽는다.
+    const params: NewCheckinParams = {
+      id,
+      timestampUtc: toIsoTimestamp(),
+      localDateKey: resolveLocalDateKey(new Date()),
+      timezoneAtCapture: resolveTimeZone(),
+      lat: pin.lat,
+      lng: pin.lng,
+      accuracyMeters: pin.accuracyMeters,
+      locationSource: pin.locationSource,
+    };
+
+    commitCheckin(db, params)
+      .then((result) => {
+        if (!isMountedRef.current) return;
+        if (result.ok) {
+          // 다음 체크인 사이클을 위해 초기화 — 이 체크인은 이제 SAVED 상태로
+          // 확정됐으므로 더 이상 재사용할 id가 아니다.
+          pendingCheckinIdRef.current = null;
+          dispatch({ type: 'SAVE_SUCCEEDED', id: result.id });
+        } else {
+          dispatch({ type: 'SAVE_FAILED' });
+        }
+      })
+      .catch((error) => {
+        // 프로미스 미삼킴 규약 — 예외도 SAVE_FAILED로 흡수한다.
+        console.error('Failed to commit check-in', error);
+        if (isMountedRef.current) {
+          dispatch({ type: 'SAVE_FAILED' });
+        }
+      });
+  }, [db, state.phase, state.pin]);
+
+  // 메모/사진을 현재 checkinId row에 flush한다 — TextInput 블러 시점과 앱 백그라운드
+  // 전환 시점 두 곳에서 호출된다(디바운스 자동저장은 Phase 7 REQ-reflection-autosave
+  // 스코프이므로 여기서 만들지 않는다). canEditNoteAndPhoto(state)가 true인 SAVED
+  // 상태에서만 checkinId가 존재하므로 그 가드로 충분하다.
+  const flushNoteAndPhoto = useCallback(() => {
+    const current = stateRef.current;
+    if (!current.checkinId) return;
+    updateCheckinNoteAndPhoto(db, current.checkinId, {
+      note: current.note || null,
+      photoPath: current.photo?.uri ?? null,
+      now: toIsoTimestamp(),
+    }).catch((error) => {
+      console.error('Failed to flush check-in note/photo', error);
+    });
+  }, [db]);
+
+  // 미저장 이탈 안내 + 메모/사진 백그라운드 flush를 한 구독으로 처리한다. 이 리스너는
+  // src/app/_layout.tsx의 알림 자가진단 리스너와 목적이 다르다 — 그쪽은 'active' 진입만
+  // 감지해 알림 스케줄 무결성을 재검사하고, 이 리스너는 'active'를 벗어나는 전환(배경
+  // 전환)에 반응해 (1) SAVE_FAILED 상태의 미저장 이탈 안내와 (2) SAVED 상태의 메모/사진
+  // flush를 수행한다. 드래프트 row 삭제 함수는 여기서 호출하지 않는다 — 드래프트는
+  // SQLite에 그대로 남아 다음 실행 시 복구 제안으로 이어진다(D-05).
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        unsavedExitAlertShownRef.current = false;
+        return;
+      }
+      const current = stateRef.current;
+      if (current.phase === 'SAVE_FAILED' && !unsavedExitAlertShownRef.current) {
+        unsavedExitAlertShownRef.current = true;
+        Alert.alert(CHECKIN_COPY.unsavedExitAlert, undefined, [
+          { text: CHECKIN_COPY.unsavedExitAlertButton },
+        ]);
+      }
+      if (canEditNoteAndPhoto(current)) {
+        flushNoteAndPhoto();
+      }
+    });
+    return () => subscription.remove();
+  }, [flushNoteAndPhoto]);
+
+  // 사진 액션시트 — photos.ts의 옵션/취소 인덱스/출처 매핑 상수를 그대로 소비한다
+  // (문자열/인덱스를 화면에 하드코딩하지 않는다). ActionSheetIOS는 OS 네이티브
+  // 컴포넌트이며 커스텀 리테마하지 않는다(03-UI-SPEC.md 확정).
+  const handlePickPhoto = useCallback(() => {
+    if (!state.checkinId) return;
+    const checkinId = state.checkinId;
+
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: [...PHOTO_ACTION_SHEET_OPTIONS],
+        cancelButtonIndex: PHOTO_ACTION_SHEET_CANCEL_INDEX,
+      },
+      (buttonIndex) => {
+        const source = PHOTO_SOURCE_BY_ACTION_SHEET_INDEX[buttonIndex];
+        if (!source) return;
+
+        pickAndCopyPhoto(source)
+          .then((result) => {
+            if (!isMountedRef.current || result === null) return;
+            if ('error' in result) {
+              dispatch({ type: 'PHOTO_FAILED' });
+              return;
+            }
+            dispatch({ type: 'PHOTO_PICKED', photo: result });
+            // 사진 선택 즉시 체크인 row에 반영한다 — 메모는 그 시점의 최신 값을
+            // stateRef에서 읽어 함께 기록한다(updateCheckinNoteAndPhoto가 두 필드를
+            // 함께 받는 계약이기 때문).
+            updateCheckinNoteAndPhoto(db, checkinId, {
+              note: stateRef.current.note || null,
+              photoPath: result.uri,
+              now: toIsoTimestamp(),
+            }).catch((error) => {
+              console.error('Failed to persist picked photo to checkin row', error);
+            });
+          })
+          .catch((error) => {
+            console.error('Failed to pick and copy photo', error);
+            if (isMountedRef.current) {
+              dispatch({ type: 'PHOTO_FAILED' });
+            }
+          });
+      }
+    );
+  }, [db, state.checkinId]);
+
+  // 메모 입력 — 로컬 상태는 매 키 입력마다 갱신하되(카드가 이미 controlled input으로
+  // 렌더), DB 반영은 flushNoteAndPhoto가 블러/백그라운드 시점에만 수행한다.
+  const handleChangeNote = useCallback(
+    (note: string) => {
+      if (!state.checkinId) return;
+      dispatch({ type: 'NOTE_CHANGED', note });
+    },
+    [state.checkinId]
+  );
 
   if (shouldShowPriming(permission)) {
     return <Redirect href="/priming" />;
@@ -223,18 +450,22 @@ export default function Index() {
       </View>
 
       {showActionCard ? (
-        <View style={styles.actionCardContainer}>
+        // 카드가 화면 하단 고정이라 iOS 키보드에 가려질 수 있다 — 카드 컨테이너에만
+        // KeyboardAvoidingView를 적용해 MapView 전체화면 레이아웃은 건드리지 않는다.
+        // 이 프로젝트는 iOS 전용이라 플랫폼별 분기 자체를 두지 않는다(PROJECT.md 확정).
+        <KeyboardAvoidingView behavior="padding" style={styles.actionCardContainer}>
           <CheckinActionCard
             phase={state.phase}
-            onConfirm={handleConfirmNoop}
-            onRetry={handleRetryNoop}
+            onConfirm={handleSaveCheckin}
+            onRetry={handleSaveCheckin}
             photo={state.photo}
             photoError={state.photoError}
             note={state.note}
-            onPickPhoto={handlePickPhotoNoop}
-            onChangeNote={handleChangeNoteNoop}
+            onPickPhoto={handlePickPhoto}
+            onChangeNote={handleChangeNote}
+            onNoteBlur={flushNoteAndPhoto}
           />
-        </View>
+        </KeyboardAvoidingView>
       ) : (
         <View style={[styles.checkinButtonContainer, { bottom: insets.bottom + spacing.xl }]}>
           <Pressable

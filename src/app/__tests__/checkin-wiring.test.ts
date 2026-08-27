@@ -82,3 +82,97 @@ describe('src/app/index.tsx 체크인 배선 계약 (Plan 03-09)', () => {
     expect(codeOnly).not.toMatch(/from ['"]expo-crypto['"]/);
   });
 });
+
+describe('src/app/index.tsx 저장 배선 계약 (Plan 03-10 Task 1)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 14: commitCheckin 식별자가 등장한다', () => {
+    expect(indexSource).toMatch(/\bcommitCheckin\b/);
+  });
+
+  it('Test 15: 재시도 카운터 패턴(retryCount/attempts/setRetry)이 등장하지 않는다 (Pitfall 4 — 재시도는 리포지토리 소관)', () => {
+    expect(codeOnly).not.toMatch(/\bretryCount\b/);
+    expect(codeOnly).not.toMatch(/\battempts\b/);
+    expect(codeOnly).not.toMatch(/\bsetRetry\b/);
+  });
+
+  it('Test 16: Alert.alert가 등장하고 CHECKIN_COPY.unsavedExitAlert 참조가 존재한다', () => {
+    expect(indexSource).toMatch(/\bAlert\.alert\b/);
+    expect(indexSource).toMatch(/CHECKIN_COPY\.unsavedExitAlert\b/);
+  });
+
+  it('Test 17: deleteDraft가 파일 전체에서 등장하지 않는다 (삭제는 commitCheckin 트랜잭션 내부와 loadRecoverableDraft 만료 처리에만 존재)', () => {
+    expect(codeOnly).not.toMatch(/\bdeleteDraft\b/);
+  });
+
+  it('Test 18: randomUUID 식별자가 등장한다', () => {
+    expect(indexSource).toMatch(/\brandomUUID\b/);
+  });
+});
+
+describe('src/app/index.tsx 사진/메모/키보드 배선 계약 (Plan 03-10 Task 2)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 19: ActionSheetIOS가 등장하고 photos.ts 상수 참조가 존재한다', () => {
+    expect(indexSource).toMatch(/\bActionSheetIOS\b/);
+    expect(indexSource).toMatch(/\bPHOTO_ACTION_SHEET_OPTIONS\b/);
+    expect(indexSource).toMatch(/\bPHOTO_ACTION_SHEET_CANCEL_INDEX\b/);
+    expect(indexSource).toMatch(/\bPHOTO_SOURCE_BY_ACTION_SHEET_INDEX\b/);
+  });
+
+  it('Test 20: 사진 액션시트 문구 리터럴이 index.tsx에 중복 하드코딩되지 않는다 (photos.ts 상수 소비)', () => {
+    expect(codeOnly).not.toContain('사진 촬영');
+    expect(codeOnly).not.toContain('앨범에서 선택');
+  });
+
+  it('Test 21: pickAndCopyPhoto / updateCheckinNoteAndPhoto 식별자가 등장한다', () => {
+    expect(indexSource).toMatch(/\bpickAndCopyPhoto\b/);
+    expect(indexSource).toMatch(/\bupdateCheckinNoteAndPhoto\b/);
+  });
+
+  it('Test 22: KeyboardAvoidingView가 등장하고 behavior="padding"이 지정된다', () => {
+    expect(indexSource).toMatch(/\bKeyboardAvoidingView\b/);
+    expect(indexSource).toMatch(/behavior="padding"/);
+  });
+
+  it('Test 23: Platform.OS가 등장하지 않는다 (iOS 전용 프로젝트, 플랫폼 분기 금지)', () => {
+    expect(codeOnly).not.toMatch(/Platform\.OS/);
+  });
+});
+
+describe('src/app/index.tsx 드래프트 복구 배선 계약 (Plan 03-10 Task 3)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 24: loadRecoverableDraft 식별자가 등장한다', () => {
+    expect(indexSource).toMatch(/\bloadRecoverableDraft\b/);
+  });
+
+  it('Test 25: RESTORE_DRAFT 이벤트 dispatch가 등장한다', () => {
+    expect(indexSource).toMatch(/type:\s*'RESTORE_DRAFT'/);
+  });
+
+  it('Test 26: stripComments 적용 후 복구 확인 다이얼로그 문구(이어서/계속하시겠)가 등장하지 않는다', () => {
+    expect(codeOnly).not.toMatch(/이어서/);
+    expect(codeOnly).not.toMatch(/계속하시겠/);
+  });
+
+  it('Test 27: loadRecoverableDraft를 호출하는 useEffect 블록 안에 requestLocationPermission/resolveCheckinLocation이 등장하지 않는다', () => {
+    // 앵커를 "let isMounted = true;" 직후 loadRecoverableDraft 호출로 좁혀, 그 앞의
+    // 다른 useEffect 블록들(같은 파일 안의 여러 "useEffect(() => {" 시작점)을
+    // 실수로 포함하지 않게 한다.
+    const match = codeOnly.match(
+      /let isMounted = true;\s*loadRecoverableDraft[\s\S]*?\}, \[db\]\);/
+    );
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).not.toMatch(/requestLocationPermission/);
+    expect(block).not.toMatch(/resolveCheckinLocation/);
+  });
+
+  it('Test 28: isMounted 가드가 존재한다', () => {
+    expect(indexSource).toMatch(/\bisMounted\b/);
+  });
+});
