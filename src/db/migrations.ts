@@ -10,10 +10,11 @@ import {
   CREATE_CHECKINS_INDEXES_SQL,
   CREATE_CHECKINS_TABLE_SQL,
   CREATE_DAILY_REFLECTIONS_TABLE_SQL,
+  CREATE_DRAFTS_TABLE_SQL,
 } from './schema';
 
 export const DATABASE_NAME = 'footlog.db';
-export const DATABASE_VERSION = 1;
+export const DATABASE_VERSION = 2;
 
 export type MigratableDb = Pick<SQLiteDatabase, 'getFirstAsync' | 'execAsync' | 'runAsync'>;
 
@@ -33,9 +34,14 @@ export async function migrateDbIfNeeded(db: MigratableDb): Promise<void> {
     currentDbVersion = 1;
   }
 
+  if (currentDbVersion === 1) {
+    await db.execAsync(CREATE_DRAFTS_TABLE_SQL);
+    currentDbVersion = 2;
+  }
+
   // 다음 phase에서 컬럼/테이블 추가가 필요하면 여기에 새 블록을 append한다:
-  // if (currentDbVersion === 1) { await db.execAsync('ALTER TABLE ...'); currentDbVersion = 2; }
-  // 기존 블록(위 `if (currentDbVersion === 0)`)은 절대 사후 수정하지 않는다 — 이미 그
+  // if (currentDbVersion === 2) { await db.execAsync('ALTER TABLE ...'); currentDbVersion = 3; }
+  // 이전 버전 블록 두 개(위쪽 두 개의 if문)는 절대 사후 수정하지 않는다 — 이미 그
   // 버전을 통과한 기기는 변경분을 받지 못한다(migration_discipline #2).
 
   // 보안 주석(T-1-01): SQLite PRAGMA는 바인딩 파라미터를 받지 않으므로, 이 한 줄만

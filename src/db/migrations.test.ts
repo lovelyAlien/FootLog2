@@ -9,7 +9,12 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { createTestDb } from './testing/nodeSqliteAdapter';
 import { DATABASE_VERSION, migrateDbIfNeeded } from './migrations';
-import { CREATE_DRAFTS_TABLE_SQL } from './schema';
+import {
+  CREATE_CHECKINS_INDEXES_SQL,
+  CREATE_CHECKINS_TABLE_SQL,
+  CREATE_DAILY_REFLECTIONS_TABLE_SQL,
+  CREATE_DRAFTS_TABLE_SQL,
+} from './schema';
 import { stripComments } from '../test-utils/stripComments';
 
 const CHECKINS_COLUMNS = [
@@ -50,7 +55,7 @@ const DRAFTS_COLUMNS = [
 ];
 
 describe('migrateDbIfNeeded', () => {
-  it('Test 1: 빈 DB에서 checkins/daily_reflections 테이블을 생성하고 user_version을 1로 올린다', async () => {
+  it('Test 1: 빈 DB에서 checkins/daily_reflections/drafts 테이블을 생성하고 user_version을 2로 올린다', async () => {
     const { db, raw, close } = createTestDb();
     try {
       await migrateDbIfNeeded(db);
@@ -61,12 +66,13 @@ describe('migrateDbIfNeeded', () => {
       const tableNames = tables.map((t) => t.name);
       expect(tableNames).toContain('checkins');
       expect(tableNames).toContain('daily_reflections');
+      expect(tableNames).toContain('drafts');
 
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
       expect(versionRow.user_version).toBe(DATABASE_VERSION);
-      expect(DATABASE_VERSION).toBe(1);
+      expect(DATABASE_VERSION).toBe(2);
     } finally {
       close();
     }
@@ -204,7 +210,7 @@ describe('migrateDbIfNeeded', () => {
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
-      expect(versionRow.user_version).toBe(1);
+      expect(versionRow.user_version).toBe(2);
     } finally {
       close();
     }
@@ -416,6 +422,74 @@ describe('migrateDbIfNeeded', () => {
 
       const rows = raw.prepare('SELECT * FROM drafts').all();
       expect(rows).toHaveLength(1);
+    } finally {
+      close();
+    }
+  });
+
+  it('Test 15: user_version=1 기기를 업그레이드해도 기존 checkins 데이터가 보존되고 drafts가 추가된다', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      // v1 기기 재현: migrateDbIfNeeded 대신 v1 시점의 DDL을 직접 실행하고
+      // user_version을 1로 세팅한다 (drafts 테이블은 아직 없는 상태).
+      raw.exec(CREATE_CHECKINS_TABLE_SQL);
+      raw.exec(CREATE_DAILY_REFLECTIONS_TABLE_SQL);
+      raw.exec(CREATE_CHECKINS_INDEXES_SQL);
+      raw.exec('PRAGMA user_version = 1');
+
+      await db.runAsync(
+        `INSERT INTO checkins (
+           id, timestamp_utc, local_date_key, timezone_at_capture,
+           lat, lng, location_source, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        'c1',
+        '2026-08-26T00:00:00Z',
+        '2026-08-26',
+        'Asia/Seoul',
+        37.5665,
+        126.978,
+        'gps_auto',
+        '2026-08-26T00:00:00Z',
+        '2026-08-26T00:00:00Z'
+      );
+
+      await migrateDbIfNeeded(db);
+
+      const tables = raw
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .all() as { name: string }[];
+      expect(tables.map((t) => t.name)).toContain('drafts');
+
+      const checkins = raw.prepare('SELECT * FROM checkins').all();
+      expect(checkins).toHaveLength(1);
+
+      const versionRow = raw.prepare('PRAGMA user_version').get() as {
+        user_version: number;
+      };
+      expect(versionRow.user_version).toBe(2);
+    } finally {
+      close();
+    }
+  });
+
+  it('Test 16: migrateDbIfNeeded를 연속 2회 실행해도 결과가 동일하다 (idempotent, v2)', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      await migrateDbIfNeeded(db);
+
+      const tables = raw
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .all() as { name: string }[];
+      const tableNames = tables.map((t) => t.name);
+      expect(tableNames).toContain('checkins');
+      expect(tableNames).toContain('daily_reflections');
+      expect(tableNames).toContain('drafts');
+
+      const versionRow = raw.prepare('PRAGMA user_version').get() as {
+        user_version: number;
+      };
+      expect(versionRow.user_version).toBe(2);
     } finally {
       close();
     }
