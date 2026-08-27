@@ -77,9 +77,13 @@ describe('src/app/index.tsx 배선 계약', () => {
     expect(indexSource).toMatch(/spacing/);
   });
 
-  it('Test 6: colors.accent를 사용하지 않는다 (DESIGN.md 승인된 6개 용도에 이 화면이 없음)', () => {
+  it('Test 6 (03-09 갱신): colors.accent가 체크인 알약버튼 스타일 정의에만 등장한다 — Phase 3에서 index.tsx가 체크인 지도 화면이 되면서 DESIGN.md 승인 accent 6개 용도 중 첫 번째("체크인 버튼")가 정확히 이 화면의 알약버튼이 됐다. 삭제 대신 "accent가 그 외 용도로 확장되지 않는다"로 범위를 좁혀 갱신한다', () => {
     const codeOnly = stripComments(indexSource);
-    expect(codeOnly).not.toMatch(/colors\.accent/);
+    // colors.accentSoft는 별도 토큰이라 단어 경계(\b)가 accent와 Soft 사이에서
+    // 끊기지 않으므로 이 정규식에 걸리지 않는다 — colors.accent만 정확히 센다.
+    const occurrences = codeOnly.match(/\bcolors\.accent\b/g) ?? [];
+    // 버튼 배경(1) + 로딩 인디케이터 색(1) = 2개까지만 허용한다.
+    expect(occurrences.length).toBeLessThanOrEqual(2);
   });
 
   it('Test 7: 진행률 패턴(N/M)이 등장하지 않는다 (PROJECT.md CRITICAL 원칙 회귀 가드)', () => {
