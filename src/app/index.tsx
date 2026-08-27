@@ -51,7 +51,7 @@ import {
 import { requestLocationPermission } from '../checkin/permissions';
 import { resolveCheckinLocation } from '../checkin/location';
 import type { FallbackSources } from '../checkin/location';
-import { upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
+import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
 import {
   commitCheckin,
   getLatestCheckinCoordinate,
@@ -138,6 +138,46 @@ export default function Index() {
       isMounted = false;
     };
   }, []);
+
+  // 앱 부팅 시 드래프트 복구(03-10-PLAN.md Task 3, T24 엣지케이스 1번과 4번). 결과가 null이면
+  // 드래프트가 아예 없거나, 날짜가 바뀌어 loadRecoverableDraft가 이미 조용히 삭제한
+  // 경우다 — 두 경우 모두 화면에 어떤 안내도 표시하지 않는다(복구 프롬프트 없음).
+  // 결과가 있으면 곧장 CONFIRM 상태로 진입시킨다 — 확인 핀 화면 재진입 자체가 복구
+  // 제안이며, 계속 진행할지 묻는 별도의 확인 다이얼로그 문구를 두지 않는다
+  // (03-UI-SPEC.md §Copywriting Contract: 저장 전이라 파괴적 액션이 아님).
+  //
+  // 복구 시 위치 권한을 재확인하거나 GPS를 다시 잡지 않는다 — 드래프트는 이미 확정된
+  // lat/lng를 갖고 있다(T24 edge case 4, 권한 변경 강건성). 그래서 이 useEffect
+  // 블록 안에서는 requestLocationPermission/resolveCheckinLocation을 호출하지 않는다.
+  //
+  // D-05 커버리지: "확인" 탭 이후 저장 재시도 중 앱이 강제종료돼도 commitCheckin이
+  // 성공하기 전까지 드래프트 row가 살아있으므로, 이 복구 경로가 그 케이스까지 자동으로
+  // 처리한다 — 별도의 "저장 실패" 상태 플래그를 만들지 않는다.
+  useEffect(() => {
+    let isMounted = true;
+    loadRecoverableDraft(db, resolveLocalDateKey(new Date()))
+      .then((draft) => {
+        if (!isMounted || draft === null) return;
+
+        const location = {
+          lat: draft.lat,
+          lng: draft.lng,
+          accuracyMeters: draft.accuracy_meters,
+          locationSource: draft.location_source,
+        };
+        dispatch({ type: 'RESTORE_DRAFT', location });
+        mapRef.current?.animateToRegion({
+          latitude: draft.lat,
+          longitude: draft.lng,
+          latitudeDelta: MAP_REGION_DELTA,
+          longitudeDelta: MAP_REGION_DELTA,
+        });
+      })
+      .catch(console.error);
+    return () => {
+      isMounted = false;
+    };
+  }, [db]);
 
   const isCapturing = state.phase === 'CAPTURING';
   const showActionCard = state.phase !== 'IDLE' && !isCapturing;

@@ -141,3 +141,38 @@ describe('src/app/index.tsx 사진/메모/키보드 배선 계약 (Plan 03-10 Ta
     expect(codeOnly).not.toMatch(/Platform\.OS/);
   });
 });
+
+describe('src/app/index.tsx 드래프트 복구 배선 계약 (Plan 03-10 Task 3)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 24: loadRecoverableDraft 식별자가 등장한다', () => {
+    expect(indexSource).toMatch(/\bloadRecoverableDraft\b/);
+  });
+
+  it('Test 25: RESTORE_DRAFT 이벤트 dispatch가 등장한다', () => {
+    expect(indexSource).toMatch(/type:\s*'RESTORE_DRAFT'/);
+  });
+
+  it('Test 26: stripComments 적용 후 복구 확인 다이얼로그 문구(이어서/계속하시겠)가 등장하지 않는다', () => {
+    expect(codeOnly).not.toMatch(/이어서/);
+    expect(codeOnly).not.toMatch(/계속하시겠/);
+  });
+
+  it('Test 27: loadRecoverableDraft를 호출하는 useEffect 블록 안에 requestLocationPermission/resolveCheckinLocation이 등장하지 않는다', () => {
+    // 앵커를 "let isMounted = true;" 직후 loadRecoverableDraft 호출로 좁혀, 그 앞의
+    // 다른 useEffect 블록들(같은 파일 안의 여러 "useEffect(() => {" 시작점)을
+    // 실수로 포함하지 않게 한다.
+    const match = codeOnly.match(
+      /let isMounted = true;\s*loadRecoverableDraft[\s\S]*?\}, \[db\]\);/
+    );
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).not.toMatch(/requestLocationPermission/);
+    expect(block).not.toMatch(/resolveCheckinLocation/);
+  });
+
+  it('Test 28: isMounted 가드가 존재한다', () => {
+    expect(indexSource).toMatch(/\bisMounted\b/);
+  });
+});
