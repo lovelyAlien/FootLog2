@@ -287,3 +287,27 @@ describe('src/app/index.tsx "완료" 버튼 배선 계약 (2026-08-28 추가 —
     expect(block).toMatch(/dispatch\(\{ type: 'DISMISS' \}\)/);
   });
 });
+
+describe('src/app/index.tsx 체크인 버튼 크로스페이드 회귀 가드 (Plan 03-12)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 43: 크로스페이드 effect가 버튼 마운트 여부(showActionCard)에 의존하고, 마운트 안 됐을 때 early return한다', () => {
+    expect(codeOnly).toMatch(/\[\s*showActionCard,\s*isCapturing,\s*buttonContentOpacity\s*\]/);
+    expect(codeOnly).toMatch(/if \(showActionCard\)\s*(\{[\s\S]{0,40}?)?return;/);
+  });
+
+  it('Test 44 (03-HUMAN-UAT.md gap — SAVED→IDLE에서 라벨이 사라지던 의존성 배열 형태): 옛 의존성 배열 [isCapturing, buttonContentOpacity]가 재등장하지 않는다', () => {
+    expect(codeOnly).not.toMatch(/\[\s*isCapturing,\s*buttonContentOpacity\s*\]/);
+  });
+
+  it('Test 45: cleanup이 애니메이션을 멈추고 값을 1로 park한다', () => {
+    expect(codeOnly).toMatch(/buttonContentOpacity\.setValue\(1\)/);
+    expect(codeOnly).toMatch(/\.stop\(\)/);
+  });
+
+  it('Test 46: 크로스페이드 자체는 제거되지 않았다 (180ms, native driver 유지)', () => {
+    expect(codeOnly).toMatch(/Animated\.timing\([\s\S]*?duration: motion\.saveStateCrossfadeMs/);
+    expect(codeOnly).toMatch(/useNativeDriver: true/);
+  });
+});

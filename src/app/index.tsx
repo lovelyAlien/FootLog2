@@ -213,14 +213,34 @@ export default function Index() {
 
   // 체크인 버튼과 로딩 인디케이터 사이 전환에 크로스페이드를 적용한다
   // (motion.saveStateCrossfadeMs, 03-UI-SPEC.md 체크인 알약버튼 절).
+  //
+  // Plan 03-12 — 근본 원인: 이 effect가 원래 [isCapturing, buttonContentOpacity]에만
+  // 의존해서, isCapturing이 내내 false인 SAVED→IDLE(지도 탭 DISMISS) 전환에서는
+  // 재실행되지 않았다. 그 사이 알약버튼의 Animated.View는 CONFIRM~SAVED 구간
+  // 내내 언마운트돼 있다가 재마운트되는데, RN의 알려진 native-driver 리마운트
+  // 한계(facebook/react-native #28114, #38510, #23712, #23621) 때문에 마지막
+  // setValue(0)(크로스페이드 시작값)을 그대로 물려받아 라벨이 투명하게 렌더됐다.
+  // 채택한 수정: 의존성에 showActionCard를 추가(버튼 마운트 여부와 직결)하고,
+  // cleanup에서 stop() + setValue(1)로 항상 1에 park해 이중으로 방어한다.
+  // Animated.View를 조건부 언마운트 대신 항상 마운트해두고 visibility만 토글하는
+  // 대안은 채택하지 않았다 — 03-UI-SPEC.md line 150이 버튼↔액션카드 교체를 "단순
+  // 조건부 렌더링"으로 이미 확정했고, 항상 마운트해두면 액션 카드 아래 히트 영역이
+  // 남아 오탭 위험이 생기며, cleanup park만으로 리마운트 함정이 이미 무력화되므로
+  // 추가 복잡도를 들일 이유가 없다.
   useEffect(() => {
+    if (showActionCard) return;
     buttonContentOpacity.setValue(0);
-    Animated.timing(buttonContentOpacity, {
+    const crossfade = Animated.timing(buttonContentOpacity, {
       toValue: 1,
       duration: motion.saveStateCrossfadeMs,
       useNativeDriver: true,
-    }).start();
-  }, [isCapturing, buttonContentOpacity]);
+    });
+    crossfade.start();
+    return () => {
+      crossfade.stop();
+      buttonContentOpacity.setValue(1);
+    };
+  }, [showActionCard, isCapturing, buttonContentOpacity]);
 
   const handleRegionChangeComplete = useCallback((region: Region) => {
     lastMapCoordinateRef.current = { lat: region.latitude, lng: region.longitude };
@@ -563,7 +583,7 @@ export default function Index() {
       >
         {state.pin && showActionCard && (
           <Marker
-            draggable
+            draggable={state.phase === 'CONFIRM'}
             coordinate={{ latitude: state.pin.lat, longitude: state.pin.lng }}
             anchor={{ x: 0.5, y: 1 }}
             hitSlop={PIN_HIT_SLOP}
