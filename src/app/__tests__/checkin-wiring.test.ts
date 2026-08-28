@@ -265,3 +265,25 @@ describe('src/app/index.tsx 나침반 모드 토글 배선 계약 (재센터링 
     expect(block).toMatch(/!hasCenteredOnceRef\.current\s*\n?\s*\?\s*'north'/);
   });
 });
+
+describe('src/app/index.tsx "완료" 버튼 배선 계약 (2026-08-28 추가 — 사진/메모 저장 확인 CTA)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 41: handleFinishCheckin이 지도 탭과 CheckinActionCard의 onComplete 양쪽에 배선된다', () => {
+    expect(codeOnly).toMatch(/const handleFinishCheckin = useCallback/);
+    expect(codeOnly).toMatch(/onPress=\{handleFinishCheckin\}/);
+    expect(codeOnly).toMatch(/onComplete=\{handleFinishCheckin\}/);
+    // 이전 이름(handleMapPress)이 리네임 후에도 잔존하지 않는다.
+    expect(codeOnly).not.toMatch(/\bhandleMapPress\b/);
+  });
+
+  it('Test 42: handleFinishCheckin은 SAVED phase 가드 뒤에 flushNoteAndPhoto와 DISMISS dispatch를 그대로 유지한다', () => {
+    const match = codeOnly.match(/const handleFinishCheckin[\s\S]*?\n  \}, \[flushNoteAndPhoto\]\);/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/phase !== 'SAVED'/);
+    expect(block).toMatch(/flushNoteAndPhoto\(\)/);
+    expect(block).toMatch(/dispatch\(\{ type: 'DISMISS' \}\)/);
+  });
+});
