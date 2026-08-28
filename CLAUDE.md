@@ -4,6 +4,23 @@ All font choices, colors, spacing, and aesthetic direction are defined there.
 Do not deviate without explicit user approval.
 In QA mode, flag any code that doesn't match DESIGN.md.
 
+## 실기기 확인이 필요한 검증 단계
+
+GSD 실행 중 `checkpoint:human-verify` 같은 사용자 확인 게이트나, QA/디자인 리뷰에서
+"실기기에서 확인" 항목을 만나면 무조건 사용자에게 넘기지 않는다.
+
+1. 먼저 iOS Simulator(iOS Simulator 도구)로 확인 가능한 항목인지 판단한다.
+   네이티브 모듈 구성이 최근 빌드와 동일하고(패키지 변경 없음), 검증 대상이
+   JS 레이어(화면 상태 전환, 애니메이션, 텍스트/색상 렌더링, 배선 동작 등)라면
+   시뮬레이터로 먼저 직접 확인한다.
+2. 순서: 시뮬레이터 패널 attach → 가장 최근 DerivedData 빌드 launch(없으면 빌드) →
+   이미 실행 중인 Metro dev server(`--dev-client`)에 연결 → 스크린샷/탭으로 항목별 검증.
+3. 실제 GPS 좌표, 카메라 촬영 결과물 품질, 실제 조도/화면에서의 색 인지, 실기기
+   고유 성능 특성(프레임 드랍 등)처럼 시뮬레이터로 원천 재현 불가능한 항목만
+   사용자에게 넘긴다.
+4. 결과 보고(SUMMARY.md 등)에는 어느 항목을 Claude가 시뮬레이터로 직접 확인했고
+   어느 항목이 사용자 확인이 필요한지 구분해서 명시한다.
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
