@@ -88,7 +88,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
   4. 위치 권한이 거부되면 사용자는 알림 거부와 동일한 조용한 배너+설정 딥링크 패턴을 보며, (OS 캐시가 아닌) 앱 소유의 폴백 위치가 뒷받침한다.
   5. 진행 중인 체크인 드래프트는 저장되거나 명시적으로 폐기될 때까지 앱 백그라운드 전환/재실행을 버텨내며, 날짜 경계 만료와 단일 드래프트 전용 엣지케이스를 포함한다.
 
-**Plans**: 11 plans (7 waves)
+**Plans**: 12 plans (8 waves)
 
 - [x] 03-01-PLAN.md — 네이티브 모듈 5종 설치 + checkin DI 골격(config/deps) + 테스트 더블 3종 (wave 1)
 - [x] 03-02-PLAN.md — D-07 최종 폴백 좌표 창업자 확정 체크포인트 + fallbackLocation 상수 모듈 (wave 1)
@@ -101,6 +101,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] 03-09-PLAN.md — 최소 지도 화면 배선(MapView + 배너 스택 + 알약버튼 + 확인 핀 드래그 + 드래프트 upsert) (wave 5)
 - [x] 03-10-PLAN.md — 저장 커밋 + 메모/사진 저장 + 드래프트 복구 + 미저장 이탈 안내 + 키보드 회피 (wave 6)
 - [x] 03-11-PLAN.md — EAS Dev Client 재빌드 + 창업자 iPhone 실기기 검증 5종 (wave 7)
+- [ ] 03-12-PLAN.md — [gap closure] 체크인 알약버튼 라벨 비가시 회귀 수정(크로스페이드 Animated.Value 재동기화) + 실기기 재검증 (wave 8)
 
 ### Phase 4: Today View
 
