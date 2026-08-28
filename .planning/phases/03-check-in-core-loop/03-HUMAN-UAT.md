@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 03-check-in-core-loop
 source: [03-VERIFICATION.md]
 started: 2026-08-27T16:45:24Z
@@ -34,7 +34,11 @@ blocked: 0
   reason: "User reported: 지도 탭하면 카드 닫히고 다시 체크인 버튼을 누를 수 있어. 그런데 체크인 버튼 색깔이 기존 체크인 버튼과 색깔이 다르고 체크인 문구도 안보여"
   severity: major
   test: 1
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "체크인 알약버튼의 크로스페이드 투명도(`buttonContentOpacity`, native-driver Animated.Value)가 `src/app/index.tsx`에서 checkinReducer 상태 밖에 선언돼 있고, 이를 1로 리셋하는 useEffect가 `isCapturing`에만 의존한다. CR-01의 DISMISS(SAVED→IDLE) 경로는 `isCapturing`을 전혀 거치지 않으므로 이 effect가 재실행되지 않는다. 그 사이 버튼은 CONFIRM~SAVED 구간 내내 언마운트돼 있다가 DISMISS로 다시 마운트되는데, 이때 RN의 알려진 프레임워크 한계(native-driven Animated.Value가 마지막 setValue() 값 — 여기선 크로스페이드 시작 직전의 0 — 으로 되돌아가는 현상, facebook/react-native #28114/#38510/#23712/#23621)에 걸려 opacity 0으로 렌더된다. 버튼 배경(accent 올리브)은 Animated.View 밖의 Pressable에 있어 정상 표시되지만, 그 안의 '체크인' Text 라벨은 투명해져 안 보인다 — 사용자에게는 '문구 없는 밋밋한 알약'으로 보여 색깔이 다르다고 인지됨."
+  artifacts:
+    - path: "src/app/index.tsx"
+      issue: "buttonContentOpacity 리셋 useEffect(약 192~201행)가 isCapturing에만 의존 — showActionCard(버튼 마운트/언마운트 여부)를 반영하지 않음"
+  missing:
+    - "SAVED→IDLE(DISMISS) 경로에서도 buttonContentOpacity가 1로 리셋되도록 effect 의존성에 showActionCard(또는 phase === 'IDLE') 추가, 또는 애니메이션 없이 동기적으로 1 설정"
+    - "장기적으로는 Animated.View를 phase 조건부 언마운트 대신 항상 마운트해두고 visibility만 토글하는 방식으로 native-driver 리마운트 함정 자체를 회피하는 것을 고려"
+  debug_session: ".planning/debug/checkin-button-color-label-regression.md"
