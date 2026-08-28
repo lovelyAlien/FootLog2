@@ -95,9 +95,17 @@ export default function Index() {
   const insets = useSafeAreaInsets();
   const [permission, setPermission] = useState<PermissionSnapshot | null>(null);
   const [state, dispatch] = useReducer(checkinReducer, initialCheckinState);
+  // 재센터링 버튼 연속 탭 토글(구글맵 스타일) — 아이콘 리렌더용 state. 토글 판정
+  // 자체는 아래 orientationModeRef가 동기적으로 담당한다(handleRecenterPress의
+  // useCallback deps를 []로 유지하기 위해 isSaveInFlightRef와 동일한 ref+state 짝 패턴 사용).
+  const [orientationMode, setOrientationMode] = useState<'north' | 'compass'>('north');
 
   const mapRef = useRef<MapView>(null);
   const lastMapCoordinateRef = useRef<{ lat: number; lng: number } | null>(null);
+  const orientationModeRef = useRef<'north' | 'compass'>('north');
+  const headingSubscriptionRef = useRef<Awaited<
+    ReturnType<typeof defaultLocationDeps.watchHeadingAsync>
+  > | null>(null);
   const isMountedRef = useRef(true);
   const buttonContentOpacity = useState(() => new Animated.Value(1))[0];
 
@@ -126,6 +134,14 @@ export default function Index() {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+    };
+  }, []);
+
+  // 나침반 모드로 전환된 채 화면을 벗어나면 구독이 계속 살아 배터리를 소모하므로
+  // 언마운트 시 반드시 정리한다(모드 전환 시 정리는 handleRecenterPress가 담당).
+  useEffect(() => {
+    return () => {
+      headingSubscriptionRef.current?.remove();
     };
   }, []);
 
@@ -211,6 +227,10 @@ export default function Index() {
   // 실제 프롬프트가 뜸 — requestLocationPermission의 기존 가드 재사용),
   // 거부 상태면 조용히 아무 것도 하지 않는다(별도 배너는 LocationDeniedBanner가
   // 이미 담당).
+  //
+  // 연속 탭 시 나침반 모드 ↔ 북쪽 고정 모드를 전환한다(구글맵 "내 위치" 버튼과 동일
+  // 동작). orientationModeRef가 동기적으로 최신 모드를 들고 있어 이 콜백의 deps를
+  // []로 유지할 수 있다 — orientationMode state는 아이콘 리렌더 전용이다.
   const handleRecenterPress = useCallback(() => {
     (async () => {
       try {
@@ -225,6 +245,27 @@ export default function Index() {
           latitudeDelta: MAP_REGION_DELTA,
           longitudeDelta: MAP_REGION_DELTA,
         });
+
+        const nextMode: 'north' | 'compass' =
+          orientationModeRef.current === 'north' ? 'compass' : 'north';
+        orientationModeRef.current = nextMode;
+        setOrientationMode(nextMode);
+
+        // 이전 모드의 구독은 두 분기 모두에서 정리한다 — compass 재진입 시 중복
+        // 구독을 남기지 않기 위함이다.
+        headingSubscriptionRef.current?.remove();
+        headingSubscriptionRef.current = null;
+
+        if (nextMode === 'compass') {
+          headingSubscriptionRef.current = await defaultLocationDeps.watchHeadingAsync(
+            (heading) => {
+              const degrees = heading.trueHeading >= 0 ? heading.trueHeading : heading.magHeading;
+              mapRef.current?.setCamera({ heading: degrees });
+            }
+          );
+        } else {
+          mapRef.current?.animateCamera({ heading: 0 });
+        }
       } catch (error) {
         console.error('Failed to recenter map to current location', error);
       }
@@ -577,7 +618,10 @@ export default function Index() {
               accessibilityLabel="현재 위치로 이동"
               style={styles.recenterButton}
             >
-              <SymbolView name="location.fill" tintColor={colors.textMuted} />
+              <SymbolView
+                name={orientationMode === 'compass' ? 'location.north.line.fill' : 'location.fill'}
+                tintColor={colors.textMuted}
+              />
             </Pressable>
           </View>
         </>
