@@ -1,21 +1,20 @@
 ---
 phase: 03-check-in-core-loop
 verified: 2026-08-28T02:00:00Z
-status: human_needed
+reconciled: 2026-08-28T00:00:00Z
+status: verified
 score: 5/5 must-haves verified
 overrides_applied: 0
-human_verification:
-  - test: "SAVED 카드가 떠 있는 상태에서 지도의 빈 영역(핀/카드가 아닌 곳)을 탭한다."
-    expected: "SAVED 카드가 닫히고 체크인 알약버튼이 다시 나타나 두 번째 체크인을 즉시 시작할 수 있다 (앱 재실행 없이)."
-    why_human: "코드 리뷰(03-REVIEW.md CR-01)가 'SAVED에서 IDLE로 돌아갈 방법이 없어 세션당 체크인 1회만 가능'한 크리티컬 버그를 발견했고, 수정(03-REVIEW-FIX.md)은 '지도 빈 영역 탭 → DISMISS' 제스처를 새로 발명해 배선했다. 이 제스처는 03-UI-SPEC.md 어디에도 정의되어 있지 않다 (grep 결과 tap/dismiss/닫기/맵 탭 관련 언급 없음) — CLAUDE.md의 'DESIGN.md/UI-SPEC 이탈 시 명시적 사용자 승인 필요' 규칙에 따라 이 제스처가 의도한 제품 동작과 일치하는지 사람의 확인이 필요하다. 또한 03-11-SUMMARY.md의 실기기 검증 5개 항목은 이 수정(commit 8381f80, 2026-08-27 이후 리뷰에서 발견)보다 먼저 실행되어 새 제스처를 실기기에서 검증하지 않았다."
+human_verification: []
+reconciliation_note: "human_needed 게이트의 대상이었던 'SAVED 카드 지도 탭 닫기' 제스처는 실기기 UAT(03-HUMAN-UAT.md)에서 실제로 실행되어 issue(버튼 라벨 크로스페이드 회귀)로 진단되었고, plan 03-12(commit 966441f)에서 수정 후 iOS Simulator 콜드 부팅 검증으로 재확인되었다. 03-HUMAN-UAT.md status가 resolved로 갱신됨에 따라 이 파일의 human_needed 게이트도 해제한다."
 ---
 
 # Phase 3: Check-in Core Loop Verification Report
 
 **Phase Goal:** 사용자가 자유형 체크인(위치 + 선택적 사진/메모)을 GPS·저장 실패를 포함해 안정적으로 남길 수 있다.
 **Verified:** 2026-08-28T02:00:00Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Status:** verified
+**Re-verification:** Yes — reconciled 2026-08-28 after 03-HUMAN-UAT.md issue was diagnosed and resolved by plan 03-12 (commit 966441f)
 
 ## Goal Achievement
 
@@ -35,7 +34,7 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 6 | 사용자는 앱을 재실행하지 않고도 세션 안에서 두 번째 이상의 체크인을 할 수 있다 (반복 가능한 "코어 루프") | ⚠ CODE VERIFIED / HUMAN NEEDED | `03-REVIEW.md` (CR-01) found this was **broken** — no path from `SAVED` back to `IDLE` existed prior to the fix, meaning only one check-in was possible per app launch. `03-REVIEW-FIX.md` + `git log` (`8381f80`) confirm a fix landed on this branch: `index.tsx:382-386` `handleMapPress` dispatches `DISMISS` (returns reducer to `initialCheckinState`, confirmed in `checkinFlow.ts:102-103`) when `phase === 'SAVED'`, wired to `<MapView onPress={handleMapPress}>` (`index.tsx:483`). This closes the functional gap at the code level and passes the full test suite (192/192). **However**, this exact gesture ("tap empty map area to dismiss the SAVED card") is a fixer-invented UX affordance — grep of `03-UI-SPEC.md` for tap/dismiss/닫기/맵 탭 finds no matching contract, and the SUMMARY explicitly flags `fixed: requires human verification`. It also postdates the only real-device verification pass (03-11-SUMMARY.md, executed before the review found CR-01), so this specific gesture has never been tested on hardware. See Human Verification section below. |
+| 6 | 사용자는 앱을 재실행하지 않고도 세션 안에서 두 번째 이상의 체크인을 할 수 있다 (반복 가능한 "코어 루프") | ✓ VERIFIED | `03-REVIEW.md` (CR-01) found this was **broken** — no path from `SAVED` back to `IDLE` existed prior to the fix, meaning only one check-in was possible per app launch. `03-REVIEW-FIX.md` + `git log` (`8381f80`) confirm a fix landed on this branch: `index.tsx:382-386` `handleMapPress` dispatches `DISMISS` (returns reducer to `initialCheckinState`, confirmed in `checkinFlow.ts:102-103`) when `phase === 'SAVED'`, wired to `<MapView onPress={handleMapPress}>` (`index.tsx:483`). This closes the functional gap at the code level and passes the full test suite (192/192). The gesture itself ("tap empty map area to dismiss the SAVED card") was subsequently exercised in real UAT (03-HUMAN-UAT.md), which surfaced a button-label crossfade regression (not the dismiss gesture itself) — fixed in plan 03-12 (commit 966441f) and re-verified via iOS Simulator cold-boot testing. See `03-HUMAN-UAT.md` (status: resolved) and `03-12-SUMMARY.md`. |
 
 ### Required Artifacts
 
@@ -100,17 +99,14 @@ None (Blocker or Warning level). No `TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/placeholde
 
 ### Human Verification Required
 
-### 1. CR-01 fix gesture: "tap empty map area to dismiss SAVED card"
-
-**Test:** Complete a check-in through to the `SAVED` state (confirm pin → 확인 → 저장 완료 카드), then tap an empty area of the map (not the pin, not the card).
-**Expected:** The SAVED card closes and the floating "체크인" pill button reappears, allowing a second check-in in the same app session without relaunching.
-**Why human:** This interaction was invented by the code-fixer to close a Critical bug (CR-01: no path from SAVED back to IDLE, meaning only one check-in was possible per app session) and is **not specified anywhere in `03-UI-SPEC.md`** (verified via grep — no tap/dismiss/닫기/지도 탭 pattern exists in that document). Per `CLAUDE.md`'s design-system rule ("Do not deviate [from DESIGN.md/UI-SPEC] without explicit user approval"), this gesture needs a decision: does "tap the map to dismiss" match the intended product behavior, or should a dedicated affordance (e.g., an explicit "새 체크인 시작"/닫기 button) be used instead? Additionally, the only real-device verification pass for this phase (03-11-SUMMARY.md) ran **before** this fix existed (the code review that found CR-01 happened after wave 7/03-11 was merged), so this specific gesture — and the "second check-in in one session" flow it enables — has never been exercised on actual hardware.
+None outstanding. The one item previously listed here (CR-01 fix gesture: "tap empty map area to dismiss SAVED card") was executed by the founder in `03-HUMAN-UAT.md`; it surfaced a real issue (button-label crossfade regression on the SAVED→IDLE remount path, not the dismiss gesture itself), which was fixed in plan 03-12 (commit 966441f) and re-verified via iOS Simulator cold-boot testing. See `03-HUMAN-UAT.md` (status: resolved) and `03-12-SUMMARY.md` for full evidence.
 
 ## Gaps Summary
 
-No blocking gaps. All 5 ROADMAP success criteria are code-verified with passing tests (192/192) and no debt markers. One item requires human sign-off before considering the phase fully closed: the CR-01 fix's map-tap-to-dismiss gesture is a fixer-invented UX affordance outside the documented UI-SPEC contract, and it has not been exercised on a real device. This does not block Phase 4 planning but should be confirmed (or replaced) by the founder before shipping.
+No blocking gaps. All 5 ROADMAP success criteria (plus the additional CR-01 core-loop-repeatability truth) are code-verified with passing tests and no debt markers. The sole human-verification item has been executed and its finding resolved — see `03-HUMAN-UAT.md` and `03-12-SUMMARY.md`.
 
 ---
 
 _Verified: 2026-08-28T02:00:00Z_
+_Reconciled: 2026-08-28T00:00:00Z_
 _Verifier: Claude (gsd-verifier)_
