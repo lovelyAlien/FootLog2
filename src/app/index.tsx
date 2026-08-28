@@ -99,11 +99,32 @@ const PIN_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
 // 수단으로 쓴다. 위치 권한 요청은 이 함수의 책임이 아니다 — 호출자가 이미
 // 허용된 상태에서만 불러야 한다(undetermined 상태에서 프롬프트를 띄우는 책임은
 // requestLocationPermission 호출부만 진다, 03-05 확정 경계).
-async function resolveInstantPosition(): Promise<{ latitude: number; longitude: number } | null> {
+//
+// onRefine — OS 캐시는 신선도(LAST_KNOWN_MAX_AGE_MS)만 검사할 뿐 정확도는
+// 검사하지 않는다. 앱을 막 켰거나 GPS가 막 신호를 다시 잡기 시작한 시점이면
+// 캐시에는 아직 부정확한 초기 추정치(Wi-Fi/기지국 기반)만 있을 수 있는데,
+// iOS가 백그라운드에서 이 캐시를 계속 정제하기 때문에 버튼을 여러 번 눌러야
+// 점점 실제 위치에 수렴하는 것처럼 보였다(회귀 아님 — 매번 그 시점의 OS
+// 추정치를 그대로 읽은 것뿐). 캐시를 썼을 때만, 화면에 캐시 값을 즉시 보여준
+// 뒤 백그라운드에서 실제 GPS를 한 번 더 떠서 onRefine으로 결과를 넘긴다 —
+// 한 번만 눌러도 잠시 후 정확한 위치로 자동 보정되게 한다(구글맵과 동일).
+// 이미 fresh GPS를 쓴 경로(캐시 없음)는 더 정확도가 나아질 대상이 없으므로
+// onRefine을 부르지 않는다.
+async function resolveInstantPosition(
+  onRefine?: (coords: { latitude: number; longitude: number }) => void
+): Promise<{ latitude: number; longitude: number } | null> {
   const freshCache = await defaultLocationDeps
     .getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS })
     .catch(() => null);
-  if (freshCache) return freshCache.coords;
+  if (freshCache) {
+    if (onRefine) {
+      defaultLocationDeps
+        .getCurrentPositionAsync({ accuracy: LOCATION_ACCURACY_BALANCED })
+        .then((position) => onRefine(position.coords))
+        .catch(() => {});
+    }
+    return freshCache.coords;
+  }
 
   const positionPromise = defaultLocationDeps.getCurrentPositionAsync({
     accuracy: LOCATION_ACCURACY_BALANCED,
@@ -154,6 +175,10 @@ export default function Index() {
   // 바로 들어가지 않는다. 이 ref가 false인 동안은 orientationModeRef가 이미 어떤
   // 값이든 무조건 'north'로 진입시키고, 두 번째 탭부터 north/compass를 토글한다.
   const hasCenteredOnceRef = useRef(false);
+  // resolveInstantPosition의 onRefine(백그라운드 GPS 보정)이 이미 지나가버린 재센터
+  // 탭의 결과로 뒤늦게 지도를 옮기지 않도록 하는 세대 번호. 새 재센터 탭이나 수동
+  // 팬이 일어날 때마다 증가시켜, 그 이전 보정 콜백이 도착해도 무시하게 만든다.
+  const recenterRequestIdRef = useRef(0);
   const headingSubscriptionRef = useRef<Awaited<
     ReturnType<typeof defaultLocationDeps.watchHeadingAsync>
   > | null>(null);
@@ -263,7 +288,19 @@ export default function Index() {
 
         const permission = await fetchLocationPermission();
         if (!isMounted || !permission.granted) return;
-        const coords = await resolveInstantPosition();
+        const initialRequestId = recenterRequestIdRef.current;
+        const coords = await resolveInstantPosition((refinedCoords) => {
+          if (!isMounted || recenterRequestIdRef.current !== initialRequestId) return;
+          mapRef.current?.animateToRegion(
+            {
+              latitude: refinedCoords.latitude,
+              longitude: refinedCoords.longitude,
+              latitudeDelta: MAP_REGION_DELTA,
+              longitudeDelta: MAP_REGION_DELTA,
+            },
+            RECENTER_ANIMATION_MS
+          );
+        });
         if (!isMounted || !coords) return;
         await waitForMapReady();
         if (!isMounted) return;
@@ -350,6 +387,11 @@ export default function Index() {
   // "북쪽 고정 재센터"부터 시작하도록 hasCenteredOnceRef를 리셋하고, 나침반
   // 구독이 살아있었다면 정리한 뒤 지도 방향도 북쪽으로 되돌린다.
   const handlePanDrag = useCallback(() => {
+    // 재센터 탭이 걸어둔 백그라운드 GPS 보정(resolveInstantPosition의 onRefine)이
+    // 아직 안 끝난 상태에서 사용자가 지도를 다시 손으로 옮기면, 그 보정 결과가
+    // 뒤늦게 도착해 방금 사용자가 옮긴 화면을 다시 잡아채면 안 된다.
+    recenterRequestIdRef.current += 1;
+
     if (!hasCenteredOnceRef.current) return;
 
     hasCenteredOnceRef.current = false;
@@ -380,13 +422,31 @@ export default function Index() {
   // 버튼은 항상 "내 위치 기준으로 확대된" 고정 줌 레벨로 되돌아간다(구글맵과
   // 동일 동작). 위치를 못 구하면(이 기기에서 한 번도 위치를 잡아본 적 없는
   // 극단적인 경우만) 조용히 아무 것도 하지 않는다.
+  //
+  // 회귀 가드 — "여러 번 눌러야 실제 위치로 맞춰지던" 문제: OS 캐시는 정확도를
+  // 검사하지 않아 초기 부정확한 값을 즉시 반응용으로 보여줄 수 있다. onRefine
+  // 콜백으로 백그라운드 GPS 보정 결과를 받아, 이 탭이 여전히 최신 탭일 때만
+  // (recenterRequestIdRef로 판정 — 그 사이 재탭하거나 손으로 지도를 옮겼으면
+  // 무시) 조용히 재보정한다. 한 번만 눌러도 잠시 후 정확한 위치로 수렴한다.
   const handleRecenterPress = useCallback(() => {
     (async () => {
+      const requestId = ++recenterRequestIdRef.current;
       try {
         const nextPermission = await requestLocationPermission();
         if (!nextPermission.granted) return;
 
-        const coords = await resolveInstantPosition();
+        const coords = await resolveInstantPosition((refinedCoords) => {
+          if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
+          mapRef.current?.animateToRegion(
+            {
+              latitude: refinedCoords.latitude,
+              longitude: refinedCoords.longitude,
+              latitudeDelta: MAP_REGION_DELTA,
+              longitudeDelta: MAP_REGION_DELTA,
+            },
+            RECENTER_ANIMATION_MS
+          );
+        });
         if (!coords) return;
 
         await waitForMapReady();

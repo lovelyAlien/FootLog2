@@ -390,7 +390,7 @@ describe('src/app/index.tsx resolveInstantPosition 배선 계약 (구글맵처�
   const indexSource = readSource('index.tsx');
   const codeOnly = stripComments(indexSource);
   const resolveBlockMatch = codeOnly.match(
-    /async function resolveInstantPosition\(\)[\s\S]*?\n\}/
+    /async function resolveInstantPosition\([\s\S]*?\n\}/
   );
   const resolveBlock = resolveBlockMatch ? resolveBlockMatch[0] : '';
 
@@ -425,8 +425,18 @@ describe('src/app/index.tsx resolveInstantPosition 배선 계약 (구글맵처�
     // 정의부(async function resolveInstantPosition() {...}) 1회 + 실제 호출 2곳(재센터, 최초 진입) = 3
     const occurrences = codeOnly.match(/resolveInstantPosition\(/g) ?? [];
     expect(occurrences.length).toBe(3);
-    const callSites = codeOnly.match(/const coords = await resolveInstantPosition\(\);/g) ?? [];
+    const callSites = codeOnly.match(/const coords = await resolveInstantPosition\(\(refinedCoords\) => \{/g) ?? [];
     expect(callSites.length).toBe(2);
+  });
+
+  it('Test 68 (회귀 가드 — 재센터 버튼을 여러 번 눌러야 실제 위치로 수렴하던 문제): resolveInstantPosition은 캐시를 썼을 때만 onRefine으로 백그라운드 GPS 보정 결과를 넘긴다', () => {
+    expect(resolveBlock).toMatch(/if \(onRefine\) \{/);
+    expect(resolveBlock).toMatch(/\.then\(\(position\) => onRefine\(position\.coords\)\)/);
+    // onRefine 호출은 freshCache 분기 안에 있다 — fresh GPS 경로(캐시 없음)는
+    // 이미 정확도가 나아질 대상이 없으므로 다시 부르지 않는다.
+    const freshCacheBranchMatch = resolveBlock.match(/if \(freshCache\) \{[\s\S]*?\n  \}/);
+    expect(freshCacheBranchMatch).not.toBeNull();
+    expect(freshCacheBranchMatch ? freshCacheBranchMatch[0] : '').toMatch(/onRefine/);
   });
 
   it('Test 63: handleRecenterPress는 항상 MAP_REGION_DELTA로 재확대한다 (구글맵처럼 팬/줌아웃 상태와 무관하게 항상 내 위치 기준으로 확대)', () => {
@@ -471,7 +481,7 @@ describe('src/app/index.tsx 최초 진입 시 내 위치 기준 확대 배선 �
     expect(draftEffectBlock).toMatch(/if \(draft !== null\) \{/);
     expect(draftEffectBlock).toMatch(/const permission = await fetchLocationPermission\(\);/);
     expect(draftEffectBlock).toMatch(/if \(!isMounted \|\| !permission\.granted\) return;/);
-    expect(draftEffectBlock).toMatch(/const coords = await resolveInstantPosition\(\);/);
+    expect(draftEffectBlock).toMatch(/const coords = await resolveInstantPosition\(\(refinedCoords\) => \{/);
   });
 
   it('Test 66: 이 경로는 requestLocationPermission(프롬프트를 띄울 수 있는 호출)을 쓰지 않는다 — 권한 요청은 여전히 "체크인" 첫 탭이 소유한다', () => {
