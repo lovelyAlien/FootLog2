@@ -103,6 +103,10 @@ export default function Index() {
   const mapRef = useRef<MapView>(null);
   const lastMapCoordinateRef = useRef<{ lat: number; lng: number } | null>(null);
   const orientationModeRef = useRef<'north' | 'compass'>('north');
+  // 구글맵 실제 동작 재현 — 첫 탭은 "북쪽 고정으로 확대·이동"만 하고 나침반 모드로
+  // 바로 들어가지 않는다. 이 ref가 false인 동안은 orientationModeRef가 이미 어떤
+  // 값이든 무조건 'north'로 진입시키고, 두 번째 탭부터 north/compass를 토글한다.
+  const hasCenteredOnceRef = useRef(false);
   const headingSubscriptionRef = useRef<Awaited<
     ReturnType<typeof defaultLocationDeps.watchHeadingAsync>
   > | null>(null);
@@ -246,8 +250,12 @@ export default function Index() {
           longitudeDelta: MAP_REGION_DELTA,
         });
 
-        const nextMode: 'north' | 'compass' =
-          orientationModeRef.current === 'north' ? 'compass' : 'north';
+        const nextMode: 'north' | 'compass' = !hasCenteredOnceRef.current
+          ? 'north'
+          : orientationModeRef.current === 'north'
+            ? 'compass'
+            : 'north';
+        hasCenteredOnceRef.current = true;
         orientationModeRef.current = nextMode;
         setOrientationMode(nextMode);
 

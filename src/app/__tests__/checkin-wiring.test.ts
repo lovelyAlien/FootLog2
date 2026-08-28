@@ -254,4 +254,14 @@ describe('src/app/index.tsx 나침반 모드 토글 배선 계약 (재센터링 
   it('Test 39: react-native-gesture-handler를 쓰지 않는다 (길게 누르기 대신 연속 탭 토글로 구현)', () => {
     expect(codeOnly).not.toMatch(/react-native-gesture-handler/);
   });
+
+  it('Test 40: 구글맵 실동작 재현 — 첫 탭은 나침반 모드로 바로 전환하지 않고 north로만 진입한다 (hasCenteredOnceRef 가드)', () => {
+    const match = codeOnly.match(/const handleRecenterPress[\s\S]*?\n  \}, \[\]\);/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/hasCenteredOnceRef/);
+    // 가드가 있어야: "아직 한 번도 활성화 안 됐으면 무조건 'north'" 형태의 삼항식이
+    // orientationModeRef를 직접 토글하는 삼항식보다 먼저 온다.
+    expect(block).toMatch(/!hasCenteredOnceRef\.current\s*\n?\s*\?\s*'north'/);
+  });
 });
