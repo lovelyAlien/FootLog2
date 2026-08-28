@@ -15,7 +15,6 @@ export const defaultLocationDeps: LocationDeps = {
   requestForegroundPermissionsAsync: Location.requestForegroundPermissionsAsync,
   getCurrentPositionAsync: Location.getCurrentPositionAsync,
   getLastKnownPositionAsync: Location.getLastKnownPositionAsync,
-  watchHeadingAsync: Location.watchHeadingAsync,
 };
 
 export const defaultImagePickerDeps: ImagePickerDeps = {

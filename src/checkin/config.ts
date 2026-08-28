@@ -18,7 +18,6 @@ export type LocationDeps = Pick<
   | 'requestForegroundPermissionsAsync'
   | 'getCurrentPositionAsync'
   | 'getLastKnownPositionAsync'
-  | 'watchHeadingAsync'
 >;
 
 export type ImagePickerDeps = Pick<

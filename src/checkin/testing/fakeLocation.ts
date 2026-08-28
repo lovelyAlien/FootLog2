@@ -19,8 +19,6 @@ import type { LocationDeps } from '../config';
 type PermissionsStatus = Awaited<ReturnType<LocationDeps['getForegroundPermissionsAsync']>>;
 type CurrentPosition = Awaited<ReturnType<LocationDeps['getCurrentPositionAsync']>>;
 type LastKnownPosition = Awaited<ReturnType<LocationDeps['getLastKnownPositionAsync']>>;
-type HeadingCallback = Parameters<LocationDeps['watchHeadingAsync']>[0];
-type HeadingSubscription = Awaited<ReturnType<LocationDeps['watchHeadingAsync']>>;
 
 type FakePermissionStatus = 'granted' | 'denied' | 'undetermined';
 
@@ -33,8 +31,6 @@ export type FakeLocation = LocationDeps & {
   __setDelayMs(ms: number): void;
   __currentPositionCallCount(): number;
   __requestCallCount(): number;
-  __emitHeading(trueHeading: number): void;
-  __activeHeadingWatcherCount(): number;
 };
 
 function delay(ms: number): Promise<void> {
@@ -48,7 +44,6 @@ export function createFakeLocation(): FakeLocation {
   let delayMs = 0;
   let currentPositionCallCount = 0;
   let requestCallCount = 0;
-  const headingWatchers = new Set<HeadingCallback>();
 
   // PermissionStatus(expo-modules-core)는 nominal string enum이라 리터럴
   // 'granted'/'denied'/'undetermined'가 구조적으로 호환돼 보여도 캐스트 없이는 대입되지
@@ -116,24 +111,11 @@ export function createFakeLocation(): FakeLocation {
     return buildLocationObject(lastKnownPosition) as unknown as LastKnownPosition;
   };
 
-  // 실제 SDK와 다르게 동작하는 지점(파일 상단 규율 4번째 항목): 나침반 이벤트를 실제
-  // 자력계로 생성하지 않는다 — 테스트가 __emitHeading으로 원하는 각도를 직접 밀어 넣는다.
-  const watchHeadingAsync: LocationDeps['watchHeadingAsync'] = async (callback) => {
-    headingWatchers.add(callback);
-    const subscription: HeadingSubscription = {
-      remove() {
-        headingWatchers.delete(callback);
-      },
-    };
-    return subscription;
-  };
-
   return {
     getForegroundPermissionsAsync,
     requestForegroundPermissionsAsync,
     getCurrentPositionAsync,
     getLastKnownPositionAsync,
-    watchHeadingAsync,
     __setPermission(status) {
       permissionStatus = status;
     },
@@ -151,14 +133,6 @@ export function createFakeLocation(): FakeLocation {
     },
     __requestCallCount() {
       return requestCallCount;
-    },
-    __emitHeading(trueHeading) {
-      headingWatchers.forEach((callback) => {
-        callback({ trueHeading, magHeading: trueHeading, accuracy: 3 });
-      });
-    },
-    __activeHeadingWatcherCount() {
-      return headingWatchers.size;
     },
   };
 }
