@@ -48,7 +48,7 @@ import {
   canEditNoteAndPhoto,
   CHECKIN_COPY,
 } from '../checkin/checkinFlow';
-import { requestLocationPermission } from '../checkin/permissions';
+import { fetchLocationPermission, requestLocationPermission } from '../checkin/permissions';
 import { resolveCheckinLocation } from '../checkin/location';
 import type { FallbackSources, ResolvedLocation } from '../checkin/location';
 import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
@@ -59,7 +59,11 @@ import {
 } from '../checkin/checkinRepo';
 import type { NewCheckinParams } from '../checkin/checkinRepo';
 import { defaultCryptoDeps, defaultLocationDeps } from '../checkin/deps';
-import { LOCATION_ACCURACY_BALANCED } from '../checkin/config';
+import {
+  CAPTURE_TIMEOUT_MS,
+  LAST_KNOWN_MAX_AGE_MS,
+  LOCATION_ACCURACY_BALANCED,
+} from '../checkin/config';
 import {
   PHOTO_ACTION_SHEET_CANCEL_INDEX,
   PHOTO_ACTION_SHEET_OPTIONS,
@@ -75,8 +79,51 @@ import { SymbolView } from 'expo-symbols';
 // 정도의 값이며, 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
 const MAP_REGION_DELTA = 0.01;
 
+// 나침반 모드 진입 시 지도를 기울이는 각도 — 구글맵 "나침반(3D 시선 회전)" 모드의
+// 살짝 눕는 느낌을 재현한다. 45도는 애플/구글 지도 모두에서 흔히 쓰는 관용적인 값.
+const COMPASS_PITCH_DEGREES = 45;
+
+// 재센터 버튼의 animateToRegion(위치+줌) 애니메이션 길이. handleRecenterPress가
+// 이 시간만큼 기다린 뒤에야 후속 animateCamera(heading/pitch)를 보낸다 —
+// react-native-maps 기본값(500ms)과 동일하게 맞춰 iOS 네이티브 카메라 애니메이션
+// 경합을 피한다(아래 handleRecenterPress 주석 참고).
+const RECENTER_ANIMATION_MS = 500;
+
 // 확인 핀 히트 영역 확장값 — 24px 원을 최소 터치 타겟 크기까지 넓힌다.
 const PIN_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
+
+// 재센터 버튼과 앱 최초 진입(내 위치 기준 확대 시작) 둘 다가 공유하는 위치 조회
+// 순서 — 구글맵처럼 즉시 반응하도록 신선한 OS 캐시를 먼저 쓰고, 없을 때만 새
+// GPS fix를 기다리되 무한정 기다리지 않는다(captureWithTimeout과 동일한
+// GPS-vs-타이머 레이스). 그마저 실패하면 나이 제한 없는 OS 캐시라도 마지막
+// 수단으로 쓴다. 위치 권한 요청은 이 함수의 책임이 아니다 — 호출자가 이미
+// 허용된 상태에서만 불러야 한다(undetermined 상태에서 프롬프트를 띄우는 책임은
+// requestLocationPermission 호출부만 진다, 03-05 확정 경계).
+async function resolveInstantPosition(): Promise<{ latitude: number; longitude: number } | null> {
+  const freshCache = await defaultLocationDeps
+    .getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS })
+    .catch(() => null);
+  if (freshCache) return freshCache.coords;
+
+  const positionPromise = defaultLocationDeps.getCurrentPositionAsync({
+    accuracy: LOCATION_ACCURACY_BALANCED,
+  });
+  const gpsOutcome = positionPromise.then(
+    (pos) => ({ tag: 'gps' as const, pos }),
+    () => ({ tag: 'gps_error' as const })
+  );
+  let timer: ReturnType<typeof setTimeout>;
+  const timerOutcome = new Promise<{ tag: 'timeout' }>((resolve) => {
+    timer = setTimeout(() => resolve({ tag: 'timeout' }), CAPTURE_TIMEOUT_MS);
+  });
+  const outcome = await Promise.race([gpsOutcome, timerOutcome]);
+  clearTimeout(timer!);
+
+  if (outcome.tag === 'gps') return outcome.pos.coords;
+
+  const staleCache = await defaultLocationDeps.getLastKnownPositionAsync().catch(() => null);
+  return staleCache ? staleCache.coords : null;
+}
 
 // 핀 시각 상태 — 03-UI-SPEC.md 확인 핀 시각 상태 절의 확정 매핑을 그대로 스타일로 옮긴다.
 function pinStyleForSource(locationSource: LocationSource) {
@@ -182,22 +229,47 @@ export default function Index() {
   // D-05 커버리지: "확인" 탭 이후 저장 재시도 중 앱이 강제종료돼도 commitCheckin이
   // 성공하기 전까지 드래프트 row가 살아있으므로, 이 복구 경로가 그 케이스까지 자동으로
   // 처리한다 — 별도의 "저장 실패" 상태 플래그를 만들지 않는다.
+  //
+  // 드래프트가 없는 정상적인 앱 진입에서는(네이버지도/구글맵과 동일하게) 내
+  // 위치 기준으로 확대된 상태로 시작한다. 위치 권한을 새로 요청하지는 않는다 —
+  // 이미 허용된 상태일 때만 적용하고, 아직 한 번도 물어보지 않은 상태라면
+  // 전국 축소 뷰를 그대로 둔다("체크인" 첫 탭이 권한 요청을 소유한다는 위
+  // 경계를 그대로 지킨다). 재센터 버튼과 동일한 resolveInstantPosition
+  // (캐시 우선 → GPS-vs-타임아웃 레이스 → 오래된 캐시)을 재사용한다.
   useEffect(() => {
     let isMounted = true;
     loadRecoverableDraft(db, resolveLocalDateKey(new Date()))
-      .then((draft) => {
-        if (!isMounted || draft === null) return;
+      .then(async (draft) => {
+        if (!isMounted) return;
 
-        const location = {
-          lat: draft.lat,
-          lng: draft.lng,
-          accuracyMeters: draft.accuracy_meters,
-          locationSource: draft.location_source,
-        };
-        dispatch({ type: 'RESTORE_DRAFT', location });
+        if (draft !== null) {
+          const location = {
+            lat: draft.lat,
+            lng: draft.lng,
+            accuracyMeters: draft.accuracy_meters,
+            locationSource: draft.location_source,
+          };
+          dispatch({ type: 'RESTORE_DRAFT', location });
+          await waitForMapReady();
+          if (!isMounted) return;
+          mapRef.current?.animateToRegion({
+            latitude: draft.lat,
+            longitude: draft.lng,
+            latitudeDelta: MAP_REGION_DELTA,
+            longitudeDelta: MAP_REGION_DELTA,
+          });
+          return;
+        }
+
+        const permission = await fetchLocationPermission();
+        if (!isMounted || !permission.granted) return;
+        const coords = await resolveInstantPosition();
+        if (!isMounted || !coords) return;
+        await waitForMapReady();
+        if (!isMounted) return;
         mapRef.current?.animateToRegion({
-          latitude: draft.lat,
-          longitude: draft.lng,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
           latitudeDelta: MAP_REGION_DELTA,
           longitudeDelta: MAP_REGION_DELTA,
         });
@@ -246,6 +318,51 @@ export default function Index() {
     lastMapCoordinateRef.current = { lat: region.latitude, lng: region.longitude };
   }, []);
 
+  // 콜드 부팅 직후 첫 상호작용 버그 가드 — 네이티브 MapView(iOS MKMapView)가
+  // 완전히 초기화되기 전에 animateToRegion 등 imperative 메서드를 호출하면
+  // 에러 없이 조용히 무시된다. 앱을 막 켜고 서두르며 재센터/체크인 버튼을 누르면
+  // 이 창(window)에 걸려 카메라가 전혀 움직이지 않는다(실기기·시뮬레이터 콜드
+  // 부팅으로 재현 확인됨 — Fast Refresh로 리셋한 상태는 네이티브 뷰가 이미
+  // 준비돼 있어 이 버그를 가리므로 재현되지 않았다). onMapReady가 최초 1회
+  // fire되기 전까지는 카메라를 움직이는 모든 imperative 호출을 여기서 대기시킨다.
+  const isMapReadyRef = useRef(false);
+  const mapReadyWaitersRef = useRef<Array<() => void>>([]);
+
+  const handleMapReady = useCallback(() => {
+    isMapReadyRef.current = true;
+    const waiters = mapReadyWaitersRef.current;
+    mapReadyWaitersRef.current = [];
+    waiters.forEach((resolve) => resolve());
+  }, []);
+
+  const waitForMapReady = useCallback(() => {
+    if (isMapReadyRef.current) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      mapReadyWaitersRef.current.push(resolve);
+    });
+  }, []);
+
+  // 사용자가 지도를 손가락으로 직접 움직이면 재센터 버튼의 "팔로우" 상태를 즉시
+  // 해제한다(구글맵과 동일 동작). 이게 없으면 예: 재센터 탭(north) → 지도를 다른
+  // 곳으로 수동 드래그 → 재센터 버튼을 다시 탭했을 때, 앱이 "사용자가 방금 시선을
+  // 옮겼다"는 사실을 모른 채 이전 토글 상태만 보고 곧장 나침반 모드로 건너뛰어
+  // 버렸다(hasCenteredOnceRef가 세션 내내 리셋되지 않는 문제). 다음 탭이 다시
+  // "북쪽 고정 재센터"부터 시작하도록 hasCenteredOnceRef를 리셋하고, 나침반
+  // 구독이 살아있었다면 정리한 뒤 지도 방향도 북쪽으로 되돌린다.
+  const handlePanDrag = useCallback(() => {
+    if (!hasCenteredOnceRef.current) return;
+
+    hasCenteredOnceRef.current = false;
+    headingSubscriptionRef.current?.remove();
+    headingSubscriptionRef.current = null;
+
+    if (orientationModeRef.current !== 'north') {
+      orientationModeRef.current = 'north';
+      setOrientationMode('north');
+      mapRef.current?.animateCamera({ heading: 0, pitch: 0 });
+    }
+  }, []);
+
   // 구글맵 스타일 "내 위치로 이동" 버튼 — 체크인 흐름과 무관하게 지도를 사용자의
   // 현재 위치로 재센터링한다. 권한이 아직 없으면 요청하고(undetermined일 때만
   // 실제 프롬프트가 뜸 — requestLocationPermission의 기존 가드 재사용),
@@ -255,20 +372,40 @@ export default function Index() {
   // 연속 탭 시 나침반 모드 ↔ 북쪽 고정 모드를 전환한다(구글맵 "내 위치" 버튼과 동일
   // 동작). orientationModeRef가 동기적으로 최신 모드를 들고 있어 이 콜백의 deps를
   // []로 유지할 수 있다 — orientationMode state는 아이콘 리렌더 전용이다.
+  //
+  // 즉시 반응 + 항상 내 위치 기준으로 재확대 — resolveInstantPosition(캐시 우선,
+  // 없으면 GPS-vs-타임아웃 레이스, 그마저 없으면 오래된 캐시)으로 좌표를 구한 뒤
+  // animateToRegion에 latitudeDelta/longitudeDelta를 매번 MAP_REGION_DELTA로
+  // 고정 전달한다 — 사용자가 지도를 아무리 멀리 팬하거나 줌아웃해놨어도, 이
+  // 버튼은 항상 "내 위치 기준으로 확대된" 고정 줌 레벨로 되돌아간다(구글맵과
+  // 동일 동작). 위치를 못 구하면(이 기기에서 한 번도 위치를 잡아본 적 없는
+  // 극단적인 경우만) 조용히 아무 것도 하지 않는다.
   const handleRecenterPress = useCallback(() => {
     (async () => {
       try {
         const nextPermission = await requestLocationPermission();
         if (!nextPermission.granted) return;
-        const position = await defaultLocationDeps.getCurrentPositionAsync({
-          accuracy: LOCATION_ACCURACY_BALANCED,
-        });
-        mapRef.current?.animateToRegion({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          latitudeDelta: MAP_REGION_DELTA,
-          longitudeDelta: MAP_REGION_DELTA,
-        });
+
+        const coords = await resolveInstantPosition();
+        if (!coords) return;
+
+        await waitForMapReady();
+        mapRef.current?.animateToRegion(
+          {
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            latitudeDelta: MAP_REGION_DELTA,
+            longitudeDelta: MAP_REGION_DELTA,
+          },
+          RECENTER_ANIMATION_MS
+        );
+        // 위치 이동 애니메이션이 끝나기 전에 아래에서 곧바로 animateCamera(heading/pitch)를
+        // 호출하면, iOS MKMapView가 진행 중이던 region 애니메이션을 그 순간의 중간값에서
+        // 취소하고 새 애니메이션으로 갈아타 버려 재센터가 목표 좌표에 도달하지 못한 채
+        // 각도만 바뀐 것처럼 보이는 문제가 있었다(region 기반 애니메이션과 camera 기반
+        // 애니메이션이 같은 네이티브 카메라 상태를 동시에 건드리며 경합). animateToRegion에
+        // 준 duration만큼 기다린 뒤에야 다음 카메라 명령을 보낸다.
+        await new Promise((resolve) => setTimeout(resolve, RECENTER_ANIMATION_MS));
 
         const nextMode: 'north' | 'compass' = !hasCenteredOnceRef.current
           ? 'north'
@@ -285,6 +422,11 @@ export default function Index() {
         headingSubscriptionRef.current = null;
 
         if (nextMode === 'compass') {
+          // 구글맵 나침반(3D 시선 회전) 모드 재현 — 진입 시 한 번 지도를 살짝
+          // 기울인다(pitch). 이후 setCamera({ heading })는 지정한 필드만
+          // 갱신하고 나머지 카메라 상태(pitch 포함)는 그대로 유지되므로, 매
+          // heading 업데이트마다 pitch를 다시 넘길 필요는 없다.
+          mapRef.current?.animateCamera({ pitch: COMPASS_PITCH_DEGREES });
           headingSubscriptionRef.current = await defaultLocationDeps.watchHeadingAsync(
             (heading) => {
               const degrees = heading.trueHeading >= 0 ? heading.trueHeading : heading.magHeading;
@@ -292,7 +434,7 @@ export default function Index() {
             }
           );
         } else {
-          mapRef.current?.animateCamera({ heading: 0 });
+          mapRef.current?.animateCamera({ heading: 0, pitch: 0 });
         }
       } catch (error) {
         console.error('Failed to recenter map to current location', error);
@@ -354,6 +496,7 @@ export default function Index() {
       // SQLite에 안전하게 저장됐다는 뜻이다 — 카메라 이동은 순수 시각 효과이므로
       // 실패해도 로그만 남기고 진행 상황은 그대로 둔다.
       try {
+        await waitForMapReady();
         mapRef.current?.animateToRegion({
           latitude: location.lat,
           longitude: location.lng,
@@ -579,6 +722,8 @@ export default function Index() {
         style={StyleSheet.absoluteFill}
         showsUserLocation
         onRegionChangeComplete={handleRegionChangeComplete}
+        onPanDrag={handlePanDrag}
+        onMapReady={handleMapReady}
         onPress={handleFinishCheckin}
       >
         {state.pin && showActionCard && (

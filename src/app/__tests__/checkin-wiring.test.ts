@@ -186,12 +186,12 @@ describe('src/app/index.tsx 내 위치 재센터링 버튼 배선 계약', () =>
     expect(indexSource).toMatch(/accessibilityLabel="현재 위치로 이동"/);
   });
 
-  it('Test 30: 재센터링 버튼이 requestLocationPermission → getCurrentPositionAsync → animateToRegion 순서로 배선된다', () => {
+  it('Test 30: 재센터링 버튼이 requestLocationPermission → resolveInstantPosition → animateToRegion 순서로 배선된다', () => {
     const match = codeOnly.match(/const handleRecenterPress[\s\S]*?\n  \}, \[\]\);/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
     expect(block).toMatch(/requestLocationPermission/);
-    expect(block).toMatch(/getCurrentPositionAsync/);
+    expect(block).toMatch(/resolveInstantPosition/);
     expect(block).toMatch(/animateToRegion/);
   });
 
@@ -241,12 +241,12 @@ describe('src/app/index.tsx 나침반 모드 토글 배선 계약 (재센터링 
     expect(block).not.toMatch(/colors\.accent\b/);
   });
 
-  it('Test 38: handleRecenterPress는 여전히 permission → getCurrentPositionAsync → animateToRegion 순서를 유지한 뒤 모드를 전환한다 (deps 배열은 [] 유지)', () => {
+  it('Test 38: handleRecenterPress는 여전히 permission → resolveInstantPosition → animateToRegion 순서를 유지한 뒤 모드를 전환한다 (deps 배열은 [] 유지)', () => {
     const match = codeOnly.match(/const handleRecenterPress[\s\S]*?\n  \}, \[\]\);/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
     expect(block).toMatch(/requestLocationPermission/);
-    expect(block).toMatch(/getCurrentPositionAsync/);
+    expect(block).toMatch(/resolveInstantPosition/);
     expect(block).toMatch(/animateToRegion/);
     expect(block).toMatch(/orientationModeRef/);
   });
@@ -309,5 +309,173 @@ describe('src/app/index.tsx 체크인 버튼 크로스페이드 회귀 가드 (P
   it('Test 46: 크로스페이드 자체는 제거되지 않았다 (180ms, native driver 유지)', () => {
     expect(codeOnly).toMatch(/Animated\.timing\([\s\S]*?duration: motion\.saveStateCrossfadeMs/);
     expect(codeOnly).toMatch(/useNativeDriver: true/);
+  });
+});
+
+describe('src/app/index.tsx 재센터 버튼 수동 팬 리셋 배선 계약 (구글맵 "팔로우 해제" 재현)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 47: MapView에 onPanDrag가 handlePanDrag로 배선된다', () => {
+    expect(codeOnly).toMatch(/<MapView[\s\S]*?onPanDrag=\{handlePanDrag\}[\s\S]*?>/);
+  });
+
+  it('Test 48 (회귀 가드 — 수동 팬 후 재센터 탭이 나침반으로 바로 점프하던 버그): handlePanDrag가 hasCenteredOnceRef를 false로 리셋한다', () => {
+    const match = codeOnly.match(/const handlePanDrag = useCallback\([\s\S]*?\n  \}, \[\]\);/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/hasCenteredOnceRef\.current = false/);
+  });
+
+  it('Test 49: handlePanDrag가 나침반 구독을 정리하고(remove) orientationMode를 north로 되돌린다', () => {
+    const match = codeOnly.match(/const handlePanDrag = useCallback\([\s\S]*?\n  \}, \[\]\);/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/headingSubscriptionRef\.current\?\.remove\(\)/);
+    expect(block).toMatch(/headingSubscriptionRef\.current = null/);
+    expect(block).toMatch(/setOrientationMode\('north'\)/);
+  });
+
+  it('Test 50: handlePanDrag의 useCallback deps 배열은 []로 고정된다 (배선 시점 리렌더 방지, 기존 패턴과 동일)', () => {
+    expect(codeOnly).toMatch(/const handlePanDrag = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/);
+  });
+});
+
+describe('src/app/index.tsx 지도 준비 대기 배선 계약 (콜드 부팅 첫 탭 무반응 회귀 가드)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 51: MapView에 onMapReady가 handleMapReady로 배선된다', () => {
+    expect(codeOnly).toMatch(/<MapView[\s\S]*?onMapReady=\{handleMapReady\}[\s\S]*?>/);
+  });
+
+  it('Test 52: handleMapReady가 isMapReadyRef를 true로 세팅하고 대기 중인 콜백들을 모두 resolve한다', () => {
+    const match = codeOnly.match(/const handleMapReady = useCallback\([\s\S]*?\n  \}, \[\]\);/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/isMapReadyRef\.current = true/);
+    expect(block).toMatch(/waiters\.forEach\(\(resolve\) => resolve\(\)\)/);
+  });
+
+  it('Test 53 (회귀 가드 — 콜드 부팅 직후 첫 재센터 탭이 무반응이던 버그): 지도 카메라를 옮기는 4개 지점(드래프트 복구/최초 진입 내 위치 확대/재센터/체크인 캡처) 모두 animateToRegion 앞에서 waitForMapReady를 await한다', () => {
+    const animateToRegionCalls = codeOnly.match(/await waitForMapReady\(\);\s*\n\s*(if \(!isMounted\) return;\s*\n\s*)?mapRef\.current\?\.animateToRegion\(/g) ?? [];
+    expect(animateToRegionCalls.length).toBe(4);
+  });
+
+  it('Test 54: waitForMapReady는 이미 준비됐으면 즉시 resolve하고, 아니면 handleMapReady가 resolve할 때까지 대기한다', () => {
+    const match = codeOnly.match(/const waitForMapReady = useCallback\([\s\S]*?\n  \}, \[\]\);/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/if \(isMapReadyRef\.current\) return Promise\.resolve\(\);/);
+    expect(block).toMatch(/mapReadyWaitersRef\.current\.push\(resolve\)/);
+  });
+});
+
+describe('src/app/index.tsx 나침반 모드 3D 틸트 배선 계약 (구글맵 나침반 모드 재현)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 55: 나침반 모드 진입 시 COMPASS_PITCH_DEGREES로 지도를 기울인다', () => {
+    expect(codeOnly).toMatch(/const COMPASS_PITCH_DEGREES = 45;/);
+    expect(codeOnly).toMatch(/animateCamera\(\{ pitch: COMPASS_PITCH_DEGREES \}\)/);
+  });
+
+  it('Test 56: 나침반 모드에서 빠져나올 때(재센터 버튼 north 복귀, 수동 팬 리셋) heading과 pitch를 모두 0으로 되돌린다', () => {
+    const resetCalls = codeOnly.match(/animateCamera\(\{ heading: 0, pitch: 0 \}\)/g) ?? [];
+    expect(resetCalls.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('src/app/index.tsx resolveInstantPosition 배선 계약 (구글맵처럼 캐시 우선, 딜레이/무반응 회귀 가드 — 재센터 버튼과 최초 진입 확대가 공유)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+  const resolveBlockMatch = codeOnly.match(
+    /async function resolveInstantPosition\(\)[\s\S]*?\n\}/
+  );
+  const resolveBlock = resolveBlockMatch ? resolveBlockMatch[0] : '';
+
+  it('Test 57: resolveInstantPosition이 존재하고 정규식으로 추출됐다 (이후 테스트들의 전제 조건)', () => {
+    expect(resolveBlockMatch).not.toBeNull();
+  });
+
+  it('Test 58 (회귀 가드 — 매번 새 GPS fix를 기다려 딜레이가 들쭉날쭉하던 문제): getLastKnownPositionAsync를 getCurrentPositionAsync보다 먼저 시도한다', () => {
+    const firstLastKnownIndex = resolveBlock.indexOf('getLastKnownPositionAsync');
+    const firstCurrentPositionIndex = resolveBlock.indexOf('getCurrentPositionAsync');
+    expect(firstLastKnownIndex).toBeGreaterThan(-1);
+    expect(firstCurrentPositionIndex).toBeGreaterThan(-1);
+    expect(firstLastKnownIndex).toBeLessThan(firstCurrentPositionIndex);
+  });
+
+  it('Test 59: 신선한 캐시 조회는 LAST_KNOWN_MAX_AGE_MS(체크인 폴백 체인과 동일한 신선도 기준)를 쓴다', () => {
+    expect(resolveBlock).toMatch(
+      /getLastKnownPositionAsync\(\{\s*maxAge:\s*LAST_KNOWN_MAX_AGE_MS\s*\}\)/
+    );
+  });
+
+  it('Test 60 (회귀 가드 — 캐시 없을 때 GPS가 느리면 무한정 대기하던 문제): 캐시가 없는 경로는 GPS와 CAPTURE_TIMEOUT_MS 타이머를 Promise.race로 경합시킨다', () => {
+    expect(resolveBlock).toMatch(/Promise\.race\(\[gpsOutcome, timerOutcome\]\)/);
+    expect(resolveBlock).toMatch(/setTimeout\(\(\) => resolve\(\{ tag: 'timeout' \}\), CAPTURE_TIMEOUT_MS\)/);
+  });
+
+  it('Test 61 (회귀 가드 — 버튼이 완전히 무반응이던 문제): GPS 타임아웃/에러 시 나이 제한 없는 OS 캐시를 마지막 수단으로 시도한다', () => {
+    expect(resolveBlock).toMatch(/getLastKnownPositionAsync\(\)\.catch\(\(\) => null\)/);
+  });
+
+  it('Test 62: handleRecenterPress와 드래프트 복구 effect 둘 다 resolveInstantPosition을 호출한다 (중복 구현 없이 공유)', () => {
+    // 정의부(async function resolveInstantPosition() {...}) 1회 + 실제 호출 2곳(재센터, 최초 진입) = 3
+    const occurrences = codeOnly.match(/resolveInstantPosition\(/g) ?? [];
+    expect(occurrences.length).toBe(3);
+    const callSites = codeOnly.match(/const coords = await resolveInstantPosition\(\);/g) ?? [];
+    expect(callSites.length).toBe(2);
+  });
+
+  it('Test 63: handleRecenterPress는 항상 MAP_REGION_DELTA로 재확대한다 (구글맵처럼 팬/줌아웃 상태와 무관하게 항상 내 위치 기준으로 확대)', () => {
+    const recenterMatch = codeOnly.match(/const handleRecenterPress = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/);
+    expect(recenterMatch).not.toBeNull();
+    const block = recenterMatch ? recenterMatch[0] : '';
+    expect(block).toMatch(/latitudeDelta: MAP_REGION_DELTA/);
+    expect(block).toMatch(/longitudeDelta: MAP_REGION_DELTA/);
+  });
+
+  it('Test 67 (회귀 가드 — animateToRegion과 animateCamera가 거의 동시에 호출되면 iOS가 위치 이동 애니메이션을 중간에 취소하고 각도만 반영하던 네이티브 경합 문제): handleRecenterPress가 animateToRegion에 RECENTER_ANIMATION_MS를 명시하고, 그만큼 await한 뒤에야 이어지는 animateCamera(heading/pitch)를 호출한다', () => {
+    const recenterMatch = codeOnly.match(/const handleRecenterPress = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/);
+    expect(recenterMatch).not.toBeNull();
+    const block = recenterMatch ? recenterMatch[0] : '';
+    expect(codeOnly).toMatch(/const RECENTER_ANIMATION_MS = 500;/);
+    expect(block).toMatch(/animateToRegion\(\s*\{[\s\S]*?\},\s*\n\s*RECENTER_ANIMATION_MS\s*\n\s*\);/);
+    expect(block).toMatch(/await new Promise\(\(resolve\) => setTimeout\(resolve, RECENTER_ANIMATION_MS\)\);/);
+    // await 지점이 animateToRegion 호출보다 뒤에, nextMode 결정(따라서 이어지는
+    // animateCamera 호출들)보다는 앞에 와야 한다.
+    const animateToRegionIndex = block.indexOf('animateToRegion(');
+    const awaitTimeoutIndex = block.indexOf('await new Promise((resolve) => setTimeout(resolve, RECENTER_ANIMATION_MS));');
+    const nextModeIndex = block.indexOf("const nextMode: 'north' | 'compass'");
+    expect(animateToRegionIndex).toBeGreaterThan(-1);
+    expect(awaitTimeoutIndex).toBeGreaterThan(animateToRegionIndex);
+    expect(nextModeIndex).toBeGreaterThan(awaitTimeoutIndex);
+  });
+});
+
+describe('src/app/index.tsx 최초 진입 시 내 위치 기준 확대 배선 계약 (네이버지도/구글맵처럼 전국 축소 뷰 대신 내 위치로 시작)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+  const draftEffectMatch = codeOnly.match(
+    /useEffect\(\(\) => \{\s*let isMounted = true;\s*loadRecoverableDraft\([\s\S]*?\n  \}, \[db\]\);/
+  );
+  const draftEffectBlock = draftEffectMatch ? draftEffectMatch[0] : '';
+
+  it('Test 64: 드래프트 복구 effect가 정규식으로 추출됐다 (이후 테스트들의 전제 조건)', () => {
+    expect(draftEffectMatch).not.toBeNull();
+  });
+
+  it('Test 65 (회귀 가드 — 항상 전국 축소 뷰로 시작하던 문제): 드래프트가 없으면(draft !== null 분기 밖) fetchLocationPermission으로 권한을 확인한 뒤 resolveInstantPosition으로 내 위치를 구해 animateToRegion한다', () => {
+    expect(draftEffectBlock).toMatch(/if \(draft !== null\) \{/);
+    expect(draftEffectBlock).toMatch(/const permission = await fetchLocationPermission\(\);/);
+    expect(draftEffectBlock).toMatch(/if \(!isMounted \|\| !permission\.granted\) return;/);
+    expect(draftEffectBlock).toMatch(/const coords = await resolveInstantPosition\(\);/);
+  });
+
+  it('Test 66: 이 경로는 requestLocationPermission(프롬프트를 띄울 수 있는 호출)을 쓰지 않는다 — 권한 요청은 여전히 "체크인" 첫 탭이 소유한다', () => {
+    expect(draftEffectBlock).not.toMatch(/requestLocationPermission/);
+    expect(draftEffectBlock).toMatch(/fetchLocationPermission/);
   });
 });
