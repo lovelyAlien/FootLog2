@@ -176,3 +176,34 @@ describe('src/app/index.tsx 드래프트 복구 배선 계약 (Plan 03-10 Task 3
     expect(indexSource).toMatch(/\bisMounted\b/);
   });
 });
+
+describe('src/app/index.tsx 내 위치 재센터링 버튼 배선 계약', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 29: handleRecenterPress 핸들러와 접근성 라벨이 등장한다', () => {
+    expect(indexSource).toMatch(/\bhandleRecenterPress\b/);
+    expect(indexSource).toMatch(/accessibilityLabel="현재 위치로 이동"/);
+  });
+
+  it('Test 30: 재센터링 버튼이 requestLocationPermission → getCurrentPositionAsync → animateToRegion 순서로 배선된다', () => {
+    const match = codeOnly.match(/const handleRecenterPress[\s\S]*?\n  \}, \[\]\);/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/requestLocationPermission/);
+    expect(block).toMatch(/getCurrentPositionAsync/);
+    expect(block).toMatch(/animateToRegion/);
+  });
+
+  it('Test 31: 재센터링 버튼은 accent 컬러를 쓰지 않는다 (DESIGN.md 6개 승인 용도 밖 — 중립색 사용)', () => {
+    const match = codeOnly.match(/recenterButton:\s*\{[\s\S]*?\n  \},/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).not.toMatch(/colors\.accent\b/);
+  });
+
+  it('Test 32: expo-location을 직접 import하지 않고 checkin/deps의 defaultLocationDeps를 통해서만 접근한다', () => {
+    expect(codeOnly).not.toMatch(/from ['"]expo-location['"]/);
+    expect(indexSource).toMatch(/\bdefaultLocationDeps\b/);
+  });
+});
