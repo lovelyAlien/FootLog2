@@ -100,3 +100,22 @@ describe('CheckinActionCard 메모/사진 입력 영역 (SAVED 전용, Task 3)',
     expect(cardSource).toMatch(/minHeight: 68/);
   });
 });
+
+describe('CheckinActionCard "완료" 버튼 (2026-08-28 추가 — 사진/메모 저장 확인 CTA)', () => {
+  it('Test 16: CHECKIN_COPY.completeCta 참조가 존재하고 "완료" 리터럴이 하드코딩되지 않는다', () => {
+    expect(cardSource).toMatch(/CHECKIN_COPY\.completeCta/);
+    expect(codeOnly).not.toContain("'완료'");
+    expect(codeOnly).not.toContain('"완료"');
+  });
+
+  it('Test 17: onComplete prop이 선언되고 완료 버튼 onPress에 연결된다', () => {
+    expect(cardSource).toMatch(/onComplete:\s*\(\)\s*=>\s*void/);
+    expect(cardSource).toMatch(/onPress=\{onComplete\}/);
+  });
+
+  it('Test 18: 완료 버튼은 확인/다시 시도와 동일한 primaryButton 스타일을 공유한다 (accent 미사용)', () => {
+    const occurrences = codeOnly.match(/style=\{styles\.primaryButton\}/g) ?? [];
+    expect(occurrences.length).toBeGreaterThanOrEqual(3);
+    expect(codeOnly).not.toMatch(/colors\.accent/);
+  });
+});

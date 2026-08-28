@@ -128,6 +128,7 @@ export const CHECKIN_COPY = {
   notePlaceholder: '지금 여기서 뭘 하고 있나요?',
   photoPlaceholderLabel: '사진 추가',
   photoFailed: '사진을 추가하지 못했어요',
+  completeCta: '완료',
   unsavedExitAlert: '이 체크인은 저장되지 않았어요',
   unsavedExitAlertButton: '확인',
 } as const;

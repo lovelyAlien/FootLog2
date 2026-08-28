@@ -7,8 +7,8 @@
 // 내부에서는 절대 위치를 지정하지 않는다.
 //
 // 버튼 색상 결정(03-UI-SPEC.md §Color "버튼 색상 결정" 근거 그대로 계승): "확인"/
-// "다시 시도" 버튼은 colors.accent를 쓰지 않는다. DESIGN.md는 accent를 정확히 6개
-// 승인된 용도로 제한하며 이 두 버튼은 그 목록에 없다 — priming.tsx의 "허용하기"
+// "다시 시도"/"완료" 버튼은 colors.accent를 쓰지 않는다. DESIGN.md는 accent를 정확히
+// 6개 승인된 용도로 제한하며 이 세 버튼은 그 목록에 없다 — priming.tsx의 "허용하기"
 // 버튼이 이미 같은 선례를 세웠다(accent 미사용, colors.textPrimary 필 버튼 채택).
 //
 // 메모/사진 입력 영역(Task 3): phase === 'SAVED' 분기 안에서만 마운트된다 — 이는
@@ -41,6 +41,10 @@ export type CheckinActionCardProps = {
   // 시점에만 일어난다(디바운스 자동저장은 Phase 7 스코프). 이 콜백은 값을 받지 않는다 —
   // 최신 note 값은 부모(src/app/index.tsx)가 이미 갖고 있다.
   onNoteBlur: () => void;
+  // 2026-08-28 추가 — 사진/메모는 자동저장되지만(블러/백그라운드 flush), 사용자가
+  // 명시적으로 "다 됐다"고 확인할 지점이 없다는 피드백에 따라 추가한 "완료" 버튼.
+  // 지도 빈 영역 탭(CR-01 DISMISS)과 동일한 동작을 명시적 CTA로도 제공한다.
+  onComplete: () => void;
 };
 
 export function CheckinActionCard({
@@ -53,6 +57,7 @@ export function CheckinActionCard({
   onPickPhoto,
   onChangeNote,
   onNoteBlur,
+  onComplete,
 }: CheckinActionCardProps) {
   // CAPTURING/IDLE: 카드 없음 — 로딩은 체크인 버튼 자체가 표현한다(03-UI-SPEC.md).
   if (phase === 'CAPTURING' || phase === 'IDLE') {
@@ -125,6 +130,17 @@ export function CheckinActionCard({
             placeholderTextColor={colors.textFaint}
             style={[typography.journalEntry, styles.noteInput]}
           />
+          <View style={styles.gapMd} />
+          <Pressable
+            onPress={onComplete}
+            accessibilityRole="button"
+            accessibilityLabel={CHECKIN_COPY.completeCta}
+            style={styles.primaryButton}
+          >
+            <Text style={[typography.placeName, styles.primaryButtonLabel]}>
+              {CHECKIN_COPY.completeCta}
+            </Text>
+          </Pressable>
         </>
       )}
 
