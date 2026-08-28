@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 3 UI-SPEC approved
-last_updated: "2026-08-27T17:03:20.272Z"
-last_activity: 2026-08-27
+stopped_at: "Phase 3 shipped — PR #1 (gsd/phase-03-check-in-core-loop → main)"
+last_updated: "2026-08-28T00:00:00.000Z"
+last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 3
@@ -102,6 +102,6 @@ Ingest에서 확인되어 이어받은 항목들.
 
 ## Session Continuity
 
-Last session: 2026-08-27T17:03:20.262Z
-Stopped at: Phase 3 UI-SPEC approved
+Last session: 2026-08-28T00:00:00.000Z
+Stopped at: Phase 3 shipped — https://github.com/lovelyAlien/FootLog2/pull/1 opened against main; local main fast-forwarded to match. Next: Phase 4 planning.
 Resume file: None
