@@ -58,7 +58,8 @@ import {
   updateCheckinNoteAndPhoto,
 } from '../checkin/checkinRepo';
 import type { NewCheckinParams } from '../checkin/checkinRepo';
-import { defaultCryptoDeps } from '../checkin/deps';
+import { defaultCryptoDeps, defaultLocationDeps } from '../checkin/deps';
+import { LOCATION_ACCURACY_BALANCED } from '../checkin/config';
 import {
   PHOTO_ACTION_SHEET_CANCEL_INDEX,
   PHOTO_ACTION_SHEET_OPTIONS,
@@ -68,6 +69,7 @@ import {
 import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../checkin/localDate';
 import type { LocationSource } from '../db/schema';
 import type { CheckinState } from '../checkin/checkinFlow';
+import { SymbolView } from 'expo-symbols';
 
 // 확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 — GPS 좌표 근방을 자연스럽게 보여줄
 // 정도의 값이며, 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
@@ -202,6 +204,31 @@ export default function Index() {
 
   const handleRegionChangeComplete = useCallback((region: Region) => {
     lastMapCoordinateRef.current = { lat: region.latitude, lng: region.longitude };
+  }, []);
+
+  // 구글맵 스타일 "내 위치로 이동" 버튼 — 체크인 흐름과 무관하게 지도를 사용자의
+  // 현재 위치로 재센터링한다. 권한이 아직 없으면 요청하고(undetermined일 때만
+  // 실제 프롬프트가 뜸 — requestLocationPermission의 기존 가드 재사용),
+  // 거부 상태면 조용히 아무 것도 하지 않는다(별도 배너는 LocationDeniedBanner가
+  // 이미 담당).
+  const handleRecenterPress = useCallback(() => {
+    (async () => {
+      try {
+        const nextPermission = await requestLocationPermission();
+        if (!nextPermission.granted) return;
+        const position = await defaultLocationDeps.getCurrentPositionAsync({
+          accuracy: LOCATION_ACCURACY_BALANCED,
+        });
+        mapRef.current?.animateToRegion({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          latitudeDelta: MAP_REGION_DELTA,
+          longitudeDelta: MAP_REGION_DELTA,
+        });
+      } catch (error) {
+        console.error('Failed to recenter map to current location', error);
+      }
+    })();
   }, []);
 
   // 체크인 탭 → 권한 요청 → 위치 캡처 → 확인 핀 드롭 → 드래프트 upsert(D-03: 확인
@@ -518,25 +545,42 @@ export default function Index() {
           />
         </KeyboardAvoidingView>
       ) : (
-        <View style={[styles.checkinButtonContainer, { bottom: insets.bottom + spacing.xl }]}>
-          <Pressable
-            onPress={handleCheckinPress}
-            disabled={isCapturing}
-            accessibilityRole="button"
-            accessibilityLabel="체크인"
-            style={[styles.checkinButton, isCapturing && styles.checkinButtonCapturing]}
+        <>
+          <View style={[styles.checkinButtonContainer, { bottom: insets.bottom + spacing.xl }]}>
+            <Pressable
+              onPress={handleCheckinPress}
+              disabled={isCapturing}
+              accessibilityRole="button"
+              accessibilityLabel="체크인"
+              style={[styles.checkinButton, isCapturing && styles.checkinButtonCapturing]}
+            >
+              <Animated.View style={{ opacity: buttonContentOpacity }}>
+                {isCapturing ? (
+                  <ActivityIndicator color={colors.accent} />
+                ) : (
+                  <Text style={[typography.placeName, styles.checkinButtonLabel]}>
+                    {CHECKIN_COPY.checkinCta}
+                  </Text>
+                )}
+              </Animated.View>
+            </Pressable>
+          </View>
+          <View
+            style={[
+              styles.recenterButtonContainer,
+              { bottom: insets.bottom + spacing.xl, right: spacing.lg },
+            ]}
           >
-            <Animated.View style={{ opacity: buttonContentOpacity }}>
-              {isCapturing ? (
-                <ActivityIndicator color={colors.accent} />
-              ) : (
-                <Text style={[typography.placeName, styles.checkinButtonLabel]}>
-                  {CHECKIN_COPY.checkinCta}
-                </Text>
-              )}
-            </Animated.View>
-          </Pressable>
-        </View>
+            <Pressable
+              onPress={handleRecenterPress}
+              accessibilityRole="button"
+              accessibilityLabel="현재 위치로 이동"
+              style={styles.recenterButton}
+            >
+              <SymbolView name="location.fill" tintColor={colors.textMuted} />
+            </Pressable>
+          </View>
+        </>
       )}
     </View>
   );
@@ -573,6 +617,19 @@ const styles = StyleSheet.create({
   },
   checkinButtonLabel: {
     color: colors.surface,
+  },
+  recenterButtonContainer: {
+    position: 'absolute',
+  },
+  recenterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   actionCardContainer: {
     position: 'absolute',
