@@ -101,7 +101,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] 03-09-PLAN.md — 최소 지도 화면 배선(MapView + 배너 스택 + 알약버튼 + 확인 핀 드래그 + 드래프트 upsert) (wave 5)
 - [x] 03-10-PLAN.md — 저장 커밋 + 메모/사진 저장 + 드래프트 복구 + 미저장 이탈 안내 + 키보드 회피 (wave 6)
 - [x] 03-11-PLAN.md — EAS Dev Client 재빌드 + 창업자 iPhone 실기기 검증 5종 (wave 7)
-- [ ] 03-12-PLAN.md — [gap closure] 체크인 알약버튼 라벨 비가시 회귀 수정(크로스페이드 Animated.Value 재동기화) + 실기기 재검증 (wave 8)
+- [x] 03-12-PLAN.md — [gap closure] 체크인 알약버튼 라벨 비가시 회귀 수정(크로스페이드 Animated.Value 재동기화) + 실기기 재검증 (wave 8)
 
 ### Phase 4: Today View
 
@@ -189,7 +189,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete   | 2026-08-26 |
 | 2. Notification Infrastructure | 8/8 | Complete   | 2026-08-27 |
-| 3. Check-in Core Loop | 11/11 | Complete   | 2026-08-27 |
+| 3. Check-in Core Loop | 12/12 | Complete   | 2026-08-28 |
 | 4. Today View | 0/TBD | Not started | - |
 | 5. Check-in Detail & Edit | 0/TBD | Not started | - |
 | 6. Calendar Tab | 0/TBD | Not started | - |
