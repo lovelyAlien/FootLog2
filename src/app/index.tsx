@@ -449,13 +449,16 @@ export default function Index() {
   // CR-01 리뷰 대응 — SAVED 카드를 닫고 다음 체크인을 시작할 수 있는 유일한 경로.
   // 리듀서의 DISMISS는 이미 존재하지만(IDLE 초기화), 이전에는 캡처 실패 catch
   // 블록에서만 dispatch돼 SAVED 도달 이후에는 세션 안에서 다시 IDLE로 돌아갈 방법이
-  // 없었다(SAVED 카드가 영구적으로 남아 체크인 버튼이 다시 뜨지 않음). 03-UI-SPEC.md에
-  // 정의된 별도 "닫기" 버튼/카피가 없으므로 새 문구를 발명하는 대신, 지도 위 빈 영역
-  // 탭을 "이 체크인은 끝났다"는 기존 제스처(바텀시트/카드 바깥 탭으로 닫기)로 재사용한다
-  // — note/photo는 이미 각자 시점에 flush됐지만(TextInput blur, 사진 선택 즉시 반영)
-  // 방어적으로 한 번 더 flush한 뒤 DISMISS한다. SAVE_FAILED/CONFIRM 등 다른 phase는
-  // 각자의 명시적 버튼(확인/다시 시도)이 있으므로 건드리지 않는다.
-  const handleMapPress = useCallback(() => {
+  // 없었다(SAVED 카드가 영구적으로 남아 체크인 버튼이 다시 뜨지 않음). note/photo는
+  // 이미 각자 시점에 flush됐지만(TextInput blur, 사진 선택 즉시 반영) 방어적으로
+  // 한 번 더 flush한 뒤 DISMISS한다. SAVE_FAILED/CONFIRM 등 다른 phase는 각자의
+  // 명시적 버튼(확인/다시 시도)이 있으므로 건드리지 않는다.
+  //
+  // 2026-08-28 추가 — 원래는 03-UI-SPEC.md에 정의된 별도 "닫기" 버튼/카피가 없어서
+  // 지도 위 빈 영역 탭 제스처 하나로만 노출했으나(CR-01), 사용자가 사진/메모 저장
+  // 여부를 확인할 명시적 지점이 없다는 피드백을 받아 CheckinActionCard의 "완료"
+  // 버튼도 이 동일한 핸들러를 공유한다 — 완료 버튼이 주 경로, 지도 탭은 보조 경로.
+  const handleFinishCheckin = useCallback(() => {
     if (stateRef.current.phase !== 'SAVED') return;
     flushNoteAndPhoto();
     dispatch({ type: 'DISMISS' });
@@ -556,17 +559,19 @@ export default function Index() {
         style={StyleSheet.absoluteFill}
         showsUserLocation
         onRegionChangeComplete={handleRegionChangeComplete}
-        onPress={handleMapPress}
+        onPress={handleFinishCheckin}
       >
         {state.pin && showActionCard && (
           <Marker
             draggable
             coordinate={{ latitude: state.pin.lat, longitude: state.pin.lng }}
-            anchor={{ x: 0.5, y: 0.5 }}
+            anchor={{ x: 0.5, y: 1 }}
             hitSlop={PIN_HIT_SLOP}
             onDragEnd={handleDragEnd}
           >
-            <View style={[styles.pinBase, pinStyleForSource(state.pin.locationSource)]} />
+            <View style={styles.pinWrapper}>
+              <View style={[styles.pinDrop, pinStyleForSource(state.pin.locationSource)]} />
+            </View>
           </Marker>
         )}
       </MapView>
@@ -591,6 +596,7 @@ export default function Index() {
             onPickPhoto={handlePickPhoto}
             onChangeNote={handleChangeNote}
             onNoteBlur={flushNoteAndPhoto}
+            onComplete={handleFinishCheckin}
           />
         </KeyboardAvoidingView>
       ) : (
@@ -689,10 +695,30 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  pinBase: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  // 구글맵 스타일 물방울(teardrop) 핀 — SVG 없이 순수 View/StyleSheet로 구현한다
+  // (react-native-gesture-handler를 안 쓰는 것과 같은 이유로 불필요한 의존성 추가를
+  // 피한다). 정사각형의 세 모서리만 완전히 둥글리고 한 모서리(좌하단)는 각지게 남긴
+  // 뒤 -45도 회전시키면 뾰족한 끝이 바로 아래를 가리키는 물방울 모양이 된다 — CSS
+  // 진영에서 널리 쓰이는 표준 기법과 동일하다. 회전은 레이아웃 박스 크기에 영향을
+  // 주지 않으므로(react-native transform은 순수 시각 효과), 실제 뾰족한 끝은
+  // pinDrop 자신의 28px 박스보다 아래로 튀어나온다 — pinWrapper의 높이(34)가 그
+  // 여유 공간을 확보하고, Marker의 anchor={{x:0.5, y:1}}가 pinWrapper 하단(≈ 뾰족한
+  // 끝 위치)을 실제 좌표에 고정한다. 이전 점(dot) 마커는 iOS 네이티브 "내 위치"
+  // 파란 점과 겹쳐 보여 구분이 어렵다는 피드백으로 모양을 바꿨다 — 색상(accent/
+  // accentSoft 팔레트)은 DESIGN.md의 "빨강 계열 금지" 원칙을 지켜 그대로 유지한다.
+  pinWrapper: {
+    width: 28,
+    height: 34,
+    alignItems: 'center',
+  },
+  pinDrop: {
+    width: 28,
+    height: 28,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 14,
+    borderBottomLeftRadius: 0,
+    transform: [{ rotate: '-45deg' }],
   },
   pinConfident: {
     backgroundColor: colors.accent,

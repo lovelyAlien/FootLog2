@@ -95,9 +95,9 @@ DESIGN.md/`tokens.ts`의 기존 팔레트를 그대로 사용 — 이 phase는 �
 | Accent (10%) | `#7C8660` (`colors.accent`) | **체크인 알약버튼**(DESIGN.md 6개 승인 용도 중 "체크인 버튼")과 **확인 핀의 신뢰 상태 표시**(승인 용도 "지도 마크") 단 2곳으로 한정 — 아래 "Pin Visual States"·"버튼 색상 결정" 참고 |
 | Destructive | 해당 없음 | DESIGN.md에는 semantic 색상 시스템 자체가 없다 — 저장 실패도 muted 텍스트로만 표현(아래 Copywriting 참고), 빨강 계열 금지 |
 
-**버튼 색상 결정 — accent 범위를 넓히지 않음(Phase 2 선례 그대로 계승):** "확인"/"다시 시도" 버튼은 accent를 쓰지 않는다. DESIGN.md는 accent를 정확히 6개 용도로 제한하며 "체크인 버튼"은 지도 위 진입 알약버튼(체크인 알약버튼)을 가리킨다 — 확인/재시도 버튼을 같은 용도로 해석해 accent를 확장하면 Decisions Log가 명시한 "액센트는 하나, 절대 늘리지 않는다" 원칙과 Phase 2 priming 화면이 이미 세운 선례(제품명 "허용하기" 버튼도 accent 미사용, 대신 `colors.textPrimary` 필 버튼 채택)에 어긋난다. 따라서:
+**버튼 색상 결정 — accent 범위를 넓히지 않음(Phase 2 선례 그대로 계승):** "확인"/"다시 시도"/"완료" 버튼은 accent를 쓰지 않는다. DESIGN.md는 accent를 정확히 6개 용도로 제한하며 "체크인 버튼"은 지도 위 진입 알약버튼(체크인 알약버튼)을 가리킨다 — 이 세 버튼을 같은 용도로 해석해 accent를 확장하면 Decisions Log가 명시한 "액센트는 하나, 절대 늘리지 않는다" 원칙과 Phase 2 priming 화면이 이미 세운 선례(제품명 "허용하기" 버튼도 accent 미사용, 대신 `colors.textPrimary` 필 버튼 채택)에 어긋난다. 따라서:
 - **체크인 알약버튼(진입, 지도 위 플로팅):** 배경 `colors.accent`, 텍스트 `colors.surface`. 로딩 중엔 배경만 `colors.accentSoft`로 전환(라벨은 `ActivityIndicator`, color `colors.accent`로 대체) — 180ms 크로스페이드(`motion.saveStateCrossfadeMs`).
-- **"확인" / "다시 시도" 버튼:** 배경 `colors.textPrimary`(#2F302C), 텍스트 `colors.surface` — priming.tsx의 "허용하기" 버튼과 동일 처리.
+- **"확인" / "다시 시도" / "완료" 버튼:** 배경 `colors.textPrimary`(#2F302C), 텍스트 `colors.surface` — priming.tsx의 "허용하기" 버튼과 동일 처리.
 - **"나중에"/링크류 텍스트가 이 phase엔 없음** — 해당 사항 아님.
 
 ### Pin Visual States (03-CONTEXT.md "Claude's Discretion" 확정)
@@ -110,7 +110,7 @@ DESIGN.md/`tokens.ts`의 기존 팔레트를 그대로 사용 — 이 phase는 �
 | 추정(Estimated) | `gps_low_accuracy_fallback` / `manual_denied` / `manual_no_signal` (드래그 전) | `colors.accentSoft` 100% | `colors.accent` 2px | 5초 타임아웃+OS캐시 폴백, 또는 권한 거부/신호 없음으로 자체 폴백 체인 사용 — "옅게 다르게"(product-design.md 확정 표현)로 3가지 원인을 동일하게 표시, 경고 아이콘·문구 없음 |
 | 사용자 확인(User-placed) | `gps_dragged`(원 소스 무관, 드래그 발생 즉시 전이) | `colors.accent` 100% | `colors.accentSoft` 2px(외곽 halo) | 사용자가 직접 드래그로 최종 위치를 확정 — 자동 성공과 동일하게 "신뢰"를 뜻하는 실채움을 쓰되, 나중에 지도/리스트에서 "손으로 확인했다"는 걸 옅은 외곽 링으로만 구분(product-design.md: "일반 체크인과 시각적으로 살짝 구분") |
 
-- **핀 형상:** 24px 지름 원(dot) 마커, 좌표 중심 고정(anchor 0.5/0.5) — product-design.md에서 최종 채택된 "점 마커" 미학(2026-08-22 design-system variant C)을 재사용. 테두리 없는 상태(Confident)는 채움 원 하나, 테두리 있는 두 상태는 채움 원 + 동심 스트로크.
+- **핀 형상 (2026-08-28 변경, DESIGN.md Decisions Log 참고):** 구글맵 스타일 물방울(teardrop) 마커, 뾰족한 끝이 실제 좌표를 가리킴(anchor 0.5/1). SVG 등 새 의존성 없이 28px 정사각형의 세 모서리만 완전히 둥글리고 한 모서리는 각지게 남긴 뒤 -45도 회전시키는 순수 View/StyleSheet 기법으로 구현. 원래 채택했던 24px 점(dot) 마커(2026-08-22 design-system variant C)는 iOS 네이티브 "내 위치" 파란 점과 겹쳐 구분이 어렵다는 실사용 피드백으로 교체됨 — 색상(accent/accentSoft) 팔레트와 3가지 시각 상태 매핑은 그대로 유지, 채움/테두리 조합도 동일하게 적용.
 - **드롭 애니메이션:** `motion.confirmPinDropMs`(160ms) ease-out, 오버슈트/바운스 없음(DESIGN.md 확정 모션 — 새로 발명하지 않고 그대로 재사용).
 - **드래그 시:** `onDragStart`에서 시각 변화 없음(그대로), `onDragEnd`에서 위 "사용자 확인" 상태로 즉시 전이(애니메이션 없이 채움/테두리 스왑 — 드롭 애니메이션과 별개, 새 모션 토큰 발명하지 않음).
 - **"현재 위치" 표시:** 이 phase는 커스텀 accent 링을 쓰지 않는다 — `MapView`의 `showsUserLocation={true}`(iOS 네이티브 파란 점)로 충분(accent 예산을 확인 핀에만 쓰기 위한 의도적 절약). "현재 위치 링"(DESIGN.md 승인 용도)의 실제 커스텀 적용은 Phase 4 오늘 뷰가 필요 시 담당.
@@ -134,6 +134,7 @@ DESIGN.md/`tokens.ts`의 기존 팔레트를 그대로 사용 — 이 phase는 �
 | 사진 추가 placeholder 라벨 | "사진 추가" |
 | 사진 액션시트 옵션(iOS 표준 `ActionSheetIOS`, OS 네이티브 — 커스텀 리테마 안 함) | "사진 촬영" / "앨범에서 선택" / "취소" |
 | 사진 추가 실패 인라인 문구 | "사진을 추가하지 못했어요" — 모달/토스트 없이 사진 영역 바로 아래 |
+| 완료 CTA(메모/사진 입력 확정) | "완료" — 2026-08-28 추가: 사진/메모를 자동저장에만 맡기지 않고 사용자가 명시적으로 "다 됐다"고 확인하는 지점을 둔다(창업자 요청) |
 | 위치 권한 거부 배너 | "위치 권한이 꺼져있어요 · 설정에서 켜기" (아이콘·경고색 없음, `NotificationDeniedBanner`와 동일 톤) |
 | Empty state | 해당 없음 — Phase 3는 리스트/빈 상태 화면을 만들지 않는다 |
 | Destructive confirmation | 해당 없음 — Phase 3에 삭제 등 파괴적 액션 없음(개별 체크인 삭제는 Phase 5 REQ-checkin-swipe-delete 소관). 확인 핀 화면 이탈로 인한 드래프트 소실은 파괴적 액션이 아니라 "저장 전이라 원래 커밋된 적 없음" 상태이므로 확인 다이얼로그 없이 조용히 사라짐(product-design.md 확정: "탭 전환을 막는 별도 로직 불필요") |
@@ -160,9 +161,10 @@ DESIGN.md/`tokens.ts`의 기존 팔레트를 그대로 사용 — 이 phase는 �
 | CAPTURING | 체크인 버튼 탭 | 카드 없음 — 버튼 자체가 로딩 상태(위 Color 섹션 참고), 지도는 계속 보임 |
 | CONFIRM | GPS 캡처 완료(성공/타임아웃/폴백 무관, 항상 도달) | 핀이 지도에 드롭(160ms) + 카드에 안내 문구(`helperText`) + "확인" 버튼 |
 | SAVING | "확인" 탭 | 카드 내용이 180ms 크로스페이드로 `ActivityIndicator`(텍스트 없음)로 전환 — 자동 재시도 1회는 이 화면 안에서 조용히 일어나며 별도 상태로 노출되지 않음 |
-| SAVED | insert 성공(자동 재시도 포함) | 180ms 크로스페이드 → "저장 완료"(`screenTitle`) + 그 바로 아래 사진 영역 + 메모 입력 영역이 기본 노출(접혀있지 않음) |
+| SAVED | insert 성공(자동 재시도 포함) | 180ms 크로스페이드 → "저장 완료"(`screenTitle`) + 그 바로 아래 사진 영역 + 메모 입력 영역이 기본 노출(접혀있지 않음) + 메모 입력 아래 "완료" 버튼 |
 | SAVE_FAILED | insert 재시도까지 실패 | 180ms 크로스페이드 → "저장하지 못했어요"(`screenTitle`) + "저장 공간을 확인해주세요"(`helperText`, `textMuted`) + "다시 시도" 버튼. **사진/메모 입력 영역은 이 상태에서 아예 렌더링하지 않는다**(비활성화가 아니라 미마운트 — "저장 성공 전까지 메모/사진 입력을 막는다"의 구현 계약) |
 | (SAVE_FAILED에서 이탈 시도) | 사용자가 뒤로 가기/탭 전환 | OS 네이티브 `Alert` 1회 노출("이 체크인은 저장되지 않았어요", 버튼 "확인") — 이탈 자체를 막지는 않음(정보 제공), 드래프트는 D-05에 따라 SQLite에 남아있어 다음 실행 시 복구 제안으로 이어짐(데이터 계층 책임, UI-SPEC 범위 아님) |
+| (SAVED에서 "완료" 탭 — 2026-08-28 추가) | 사용자가 사진/메모 입력을 마치고 "완료" 탭 | 메모/사진을 즉시 한 번 더 flush한 뒤 카드를 닫고 초기 IDLE(체크인 알약버튼)로 복귀 — CR-01이 도입한 지도 빈 영역 탭 DISMISS 제스처와 동일한 동작을 명시적 버튼으로도 제공한다(제스처는 보조 경로로 유지, 버튼이 주 경로) |
 
 ### 메모/사진 입력 영역 (SAVED 상태에서만 렌더링)
 
@@ -170,6 +172,8 @@ DESIGN.md/`tokens.ts`의 기존 팔레트를 그대로 사용 — 이 phase는 �
 1. **사진 영역** — 아직 선택 안 함: `colors.surfaceSoft` 배경 + `colors.line` 1px 테두리의 정사각형 placeholder 박스(최소 44×44pt, 권장 80×80pt), 중앙에 `expo-symbols` 카메라 아이콘(`colors.textMuted`) + 그 아래 "사진 추가"(`helperText`). 탭하면 `ActionSheetIOS`(OS 네이티브, 리테마 안 함) 노출. 선택 완료 시: 80×80pt 정사각 썸네일(`radius.md`, 8px 모서리), 우측 또는 하단에 "변경"(`placeName` 톤 축소, `textMuted`) 텍스트. 실패 시: 박스 바로 아래 "사진을 추가하지 못했어요"(`helperText`, `textMuted`) — 모달/토스트 없음.
 2. 세로 간격 `spacing.md`(16px)
 3. **메모 입력** — 멀티라인 `TextInput`, 스타일 `typography.journalEntry` 전체 적용(placeholder 포함), `placeholderTextColor: colors.textFaint`, 배경 `colors.surface`(카드와 동일, 별도 구분선 없이 자연스럽게 이어짐), 최소 높이 3줄 분량(약 68px, `journalEntry` line-height 22.5px 기준). 빨간 별표/"필수" 표시 없음 — placeholder 문구 자체가 초대하는 톤.
+4. 세로 간격 `spacing.md`(16px)
+5. **"완료" 버튼**(2026-08-28 추가) — 위 "확인"/"다시 시도"와 동일한 `primaryButton` 스타일(배경 `colors.textPrimary`, 텍스트 `colors.surface`, `radius.full`, 44pt 이상). 사진/메모는 필수가 아니므로 항상 활성 상태(비활성화 조건 없음). 탭하면 메모/사진을 flush하고 카드를 닫아 다음 체크인을 위한 초기 상태로 돌아간다 — 위 상태 전이표 "(SAVED에서 '완료' 탭)" 행 참고.
 
 키보드 대응(구현 노트, 계획 단계 참고): 메모 입력에 포커스 시 카드가 하단 고정이라 iOS 키보드에 가려질 수 있음 — `KeyboardAvoidingView`(behavior: `padding`) 또는 동등한 처리가 필요. 이는 시각 계약이 아니라 구현 세부사항이므로 PLAN.md에서 태스크화할 것을 권장.
 
