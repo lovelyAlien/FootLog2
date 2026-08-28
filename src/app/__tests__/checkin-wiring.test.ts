@@ -207,3 +207,51 @@ describe('src/app/index.tsx 내 위치 재센터링 버튼 배선 계약', () =>
     expect(indexSource).toMatch(/\bdefaultLocationDeps\b/);
   });
 });
+
+describe('src/app/index.tsx 나침반 모드 토글 배선 계약 (재센터링 버튼 연속 탭)', () => {
+  const indexSource = readSource('index.tsx');
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 33: orientationMode 상태가 useState로 선언되고 초기값이 north다', () => {
+    expect(indexSource).toMatch(/const \[orientationMode, setOrientationMode\] = useState/);
+    expect(indexSource).toMatch(/useState<'north' \| 'compass'>\('north'\)/);
+  });
+
+  it('Test 34: watchHeadingAsync가 defaultLocationDeps를 통해서만 호출되고 expo-location을 직접 import하지 않는다', () => {
+    expect(indexSource).toMatch(/defaultLocationDeps\.watchHeadingAsync/);
+    expect(codeOnly).not.toMatch(/from ['"]expo-location['"]/);
+  });
+
+  it('Test 35: 나침반 구독(headingSubscriptionRef)이 모드 전환 시와 언마운트 시 최소 2곳에서 remove된다', () => {
+    expect(indexSource).toMatch(/\bheadingSubscriptionRef\b/);
+    const removeCalls = codeOnly.match(/headingSubscriptionRef\.current\?\.remove\(\)/g) ?? [];
+    expect(removeCalls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('Test 36: 재센터링 버튼 아이콘이 모드에 따라 location.fill과 location.north.line.fill 사이에서 전환된다', () => {
+    expect(indexSource).toMatch(/location\.fill/);
+    expect(indexSource).toMatch(/location\.north\.line\.fill/);
+  });
+
+  it('Test 37: 재센터링 버튼 아이콘은 모드와 무관하게 colors.textMuted를 쓰고 accent는 쓰지 않는다', () => {
+    const match = codeOnly.match(/<SymbolView[\s\S]*?\/>/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/colors\.textMuted/);
+    expect(block).not.toMatch(/colors\.accent\b/);
+  });
+
+  it('Test 38: handleRecenterPress는 여전히 permission → getCurrentPositionAsync → animateToRegion 순서를 유지한 뒤 모드를 전환한다 (deps 배열은 [] 유지)', () => {
+    const match = codeOnly.match(/const handleRecenterPress[\s\S]*?\n  \}, \[\]\);/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/requestLocationPermission/);
+    expect(block).toMatch(/getCurrentPositionAsync/);
+    expect(block).toMatch(/animateToRegion/);
+    expect(block).toMatch(/orientationModeRef/);
+  });
+
+  it('Test 39: react-native-gesture-handler를 쓰지 않는다 (길게 누르기 대신 연속 탭 토글로 구현)', () => {
+    expect(codeOnly).not.toMatch(/react-native-gesture-handler/);
+  });
+});
