@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 4 컨텍스트 수집 완료
-last_updated: "2026-08-30T05:57:19.952Z"
+stopped_at: Phase 4 UI-SPEC 승인 완료
+last_updated: "2026-08-30T07:01:34.217Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 8
@@ -102,6 +102,6 @@ Ingest에서 확인되어 이어받은 항목들.
 
 ## Session Continuity
 
-Last session: 2026-08-30T05:57:19.942Z
-Stopped at: Phase 4 컨텍스트 수집 완료
-Resume file: .planning/phases/04-today-view/04-CONTEXT.md
+Last session: 2026-08-30T07:01:34.207Z
+Stopped at: Phase 4 UI-SPEC 승인 완료
+Resume file: .planning/phases/04-today-view/04-UI-SPEC.md
