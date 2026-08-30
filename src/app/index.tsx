@@ -142,6 +142,13 @@ async function resolveInstantPosition(
 
   if (outcome.tag === 'gps') return outcome.pos.coords;
 
+  // 정확도 파라미터(requiredAccuracy) 검토: 여기도 의도적으로 쓰지 않는다 — 위
+  // freshCache 분기와 달리 이 경로는 이미 GPS-vs-타임아웃 레이스에서 진 뒤의
+  // 최종 폴백이라, requiredAccuracy로 걸러 null이 되면 재센터 버튼이 조용히 아무
+  // 것도 하지 않게 된다("부정확해도 뭔가 보여주는 것"이 "아예 안 움직이는 것"보다
+  // 낫다는 판단). CLAUDE.md의 OS 캐시 정확도 검토 규칙(2026-08-28) 대상 API지만
+  // freshCache 분기처럼 백그라운드 재보정(onRefine)을 걸 대상 GPS 시도가 이미
+  // 소진된 상태라 재보정 경로도 두지 않는다.
   const staleCache = await defaultLocationDeps.getLastKnownPositionAsync().catch(() => null);
   return staleCache ? staleCache.coords : null;
 }
@@ -198,6 +205,17 @@ export default function Index() {
   // "비활성화가 아니라 미마운트" 계약 때문에 disabled prop을 둘 수 없다 —
   // checkinCardUi.test.ts Test 11 참고).
   const isSaveInFlightRef = useRef(false);
+  // 리뷰 발견 — handleCheckinPress는 handleSaveCheckin과 달리 재진입 가드가 state.phase
+  // 클로저 체크뿐이었다. 리렌더가 끼어들기 전에 도착한 두 번째 탭은 같은 IDLE을 보고
+  // 가드를 통과해 GPS 캡처/드래프트 저장/카메라 애니메이션이 중복 실행될 수 있었다 —
+  // isSaveInFlightRef와 동일한 패턴으로 동기적 ref 가드를 추가한다.
+  const isCheckinInFlightRef = useRef(false);
+  // 리뷰 발견 — 확인 핀은 CAPTURE_RESOLVED가 dispatch되는 즉시(동기) draggable해지지만,
+  // 그 좌표를 drafts 테이블에 쓰는 upsertDraft는 아직 진행 중일 수 있다. 그 사이 사용자가
+  // 핀을 드래그하면 handleDragEnd의 UPDATE가 아직 존재하지 않는 row를 대상으로 조용히
+  // 0행 적용돼 드래그 보정이 유실됐다(크래시 시 드래그 이전 좌표로 복구). 이 ref로
+  // drafts에 대한 모든 쓰기를 upsertDraft → 이후 드래그 갱신 순서로 직렬화한다.
+  const draftWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
   // AppState 리스너(구독은 한 번만 생성)가 항상 최신 state를 읽을 수 있도록 미러링하는
   // ref — 매 렌더마다 구독을 다시 만들지 않기 위한 용도(리스너 자체는 [flushNoteAndPhoto]
   // 에만 의존).
@@ -291,19 +309,34 @@ export default function Index() {
         const initialRequestId = recenterRequestIdRef.current;
         const coords = await resolveInstantPosition((refinedCoords) => {
           if (!isMounted || recenterRequestIdRef.current !== initialRequestId) return;
-          mapRef.current?.animateToRegion(
-            {
-              latitude: refinedCoords.latitude,
-              longitude: refinedCoords.longitude,
-              latitudeDelta: MAP_REGION_DELTA,
-              longitudeDelta: MAP_REGION_DELTA,
-            },
-            RECENTER_ANIMATION_MS
-          );
+          // 리뷰 발견 — onRefine은 waitForMapReady 게이트를 거치지 않고 곧장
+          // animateToRegion을 불렀다. 백그라운드 GPS 보정이 onMapReady보다 먼저
+          // 끝나면(콜드 부팅 중 흔한 순서, 시뮬레이터에서는 거의 항상 그렇다) 이
+          // 호출이 조용히 무시된다 — 다른 모든 카메라 호출 지점과 동일하게 게이트를
+          // 통과시킨다.
+          (async () => {
+            await waitForMapReady();
+            if (!isMounted || recenterRequestIdRef.current !== initialRequestId) return;
+            mapRef.current?.animateToRegion(
+              {
+                latitude: refinedCoords.latitude,
+                longitude: refinedCoords.longitude,
+                latitudeDelta: MAP_REGION_DELTA,
+                longitudeDelta: MAP_REGION_DELTA,
+              },
+              RECENTER_ANIMATION_MS
+            );
+          })().catch((error) => {
+            console.error('Failed to apply refined initial position', error);
+          });
         });
-        if (!isMounted || !coords) return;
+        // 리뷰 발견 — 이 최종 animateToRegion에는 staleness 가드가 없어서, 콜드
+        // 부팅 시 resolveInstantPosition이 최대 5초까지 걸리는 동안 사용자가 이미
+        // 수동으로 재센터/팬을 하거나 체크인을 확정해도 뒤늦게 이 호출이 카메라를
+        // 되돌려버렸다 — onRefine과 동일한 recenterRequestIdRef 가드를 추가한다.
+        if (!isMounted || !coords || recenterRequestIdRef.current !== initialRequestId) return;
         await waitForMapReady();
-        if (!isMounted) return;
+        if (!isMounted || recenterRequestIdRef.current !== initialRequestId) return;
         mapRef.current?.animateToRegion({
           latitude: coords.latitude,
           longitude: coords.longitude,
@@ -437,19 +470,34 @@ export default function Index() {
 
         const coords = await resolveInstantPosition((refinedCoords) => {
           if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
-          mapRef.current?.animateToRegion(
-            {
-              latitude: refinedCoords.latitude,
-              longitude: refinedCoords.longitude,
-              latitudeDelta: MAP_REGION_DELTA,
-              longitudeDelta: MAP_REGION_DELTA,
-            },
-            RECENTER_ANIMATION_MS
-          );
+          // 리뷰 발견 — onRefine은 waitForMapReady 게이트를 거치지 않고 곧장
+          // animateToRegion을 불렀다(다른 모든 카메라 호출 지점과 다르게).
+          (async () => {
+            await waitForMapReady();
+            if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
+            mapRef.current?.animateToRegion(
+              {
+                latitude: refinedCoords.latitude,
+                longitude: refinedCoords.longitude,
+                latitudeDelta: MAP_REGION_DELTA,
+                longitudeDelta: MAP_REGION_DELTA,
+              },
+              RECENTER_ANIMATION_MS
+            );
+          })().catch((error) => {
+            console.error('Failed to apply refined recenter position', error);
+          });
         });
         if (!coords) return;
+        // 리뷰 발견 — 아래 tail(주석 참고)이 그동안 recenterRequestIdRef를 재확인하지
+        // 않아, 재센터 진행 중 사용자가 지도를 손으로 옮기면(handlePanDrag가 id를
+        // 증가시키고 방향을 북쪽으로 리셋해도) 뒤늦게 도착한 이 태스크가 orientation/
+        // heading 구독 상태를 그대로 덮어써 방금 사용자가 한 리셋을 되돌려버렸다.
+        // await 지점(waitForMapReady, 아래 setTimeout, watchHeadingAsync)마다 재확인한다.
+        if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
 
         await waitForMapReady();
+        if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
         mapRef.current?.animateToRegion(
           {
             latitude: coords.latitude,
@@ -465,16 +513,22 @@ export default function Index() {
         // 각도만 바뀐 것처럼 보이는 문제가 있었다(region 기반 애니메이션과 camera 기반
         // 애니메이션이 같은 네이티브 카메라 상태를 동시에 건드리며 경합). animateToRegion에
         // 준 duration만큼 기다린 뒤에야 다음 카메라 명령을 보낸다.
+        //
+        // 리뷰 발견(altitude) — 이 고정 지연은 react-native-maps의 기본 애니메이션
+        // 길이를 그대로 가정한 타이밍 추측이다. onRegionChangeComplete를 실제 완료
+        // 신호로 쓰는 대안을 검토했으나, 이 콜백은 이 호출이 아닌 다른 region 변화
+        // (동시 사용자 팬 등)에도 반응하므로 잘못된 시점에 조기 완료로 오인해 바로 이
+        // 지점이 고치려던 애니메이션 경합을 재도입할 위험이 있다 — 이번 라운드에서는
+        // 그 위험을 감수하지 않고 고정 지연을 유지한다. Reduce Motion/저전력 모드로
+        // 실제 네이티브 애니메이션 길이가 달라지면 이 가정이 깨질 수 있음을 남겨둔다.
         await new Promise((resolve) => setTimeout(resolve, RECENTER_ANIMATION_MS));
+        if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
 
         const nextMode: 'north' | 'compass' = !hasCenteredOnceRef.current
           ? 'north'
           : orientationModeRef.current === 'north'
             ? 'compass'
             : 'north';
-        hasCenteredOnceRef.current = true;
-        orientationModeRef.current = nextMode;
-        setOrientationMode(nextMode);
 
         // 이전 모드의 구독은 두 분기 모두에서 정리한다 — compass 재진입 시 중복
         // 구독을 남기지 않기 위함이다.
@@ -486,14 +540,37 @@ export default function Index() {
           // 기울인다(pitch). 이후 setCamera({ heading })는 지정한 필드만
           // 갱신하고 나머지 카메라 상태(pitch 포함)는 그대로 유지되므로, 매
           // heading 업데이트마다 pitch를 다시 넘길 필요는 없다.
-          mapRef.current?.animateCamera({ pitch: COMPASS_PITCH_DEGREES });
-          headingSubscriptionRef.current = await defaultLocationDeps.watchHeadingAsync(
-            (heading) => {
+          //
+          // 리뷰 발견 — orientationMode/hasCenteredOnceRef를 watchHeadingAsync
+          // 성공 여부와 무관하게 먼저 커밋했었다. 실패(예: 일시적 CoreLocation
+          // 오류)해도 catch가 콘솔 로그만 남기고 넘어가, UI는 나침반 모드라고
+          // 표시하면서 실제 헤딩 구독은 없는 상태로 남았다 — 구독 성공 확인 후에만
+          // 상태를 커밋하도록 순서를 바꾼다.
+          try {
+            const subscription = await defaultLocationDeps.watchHeadingAsync((heading) => {
               const degrees = heading.trueHeading >= 0 ? heading.trueHeading : heading.magHeading;
               mapRef.current?.setCamera({ heading: degrees });
+            });
+            if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) {
+              subscription.remove();
+              return;
             }
-          );
+            headingSubscriptionRef.current = subscription;
+            hasCenteredOnceRef.current = true;
+            orientationModeRef.current = 'compass';
+            setOrientationMode('compass');
+            mapRef.current?.animateCamera({ pitch: COMPASS_PITCH_DEGREES });
+          } catch (error) {
+            console.error('Failed to start compass heading subscription', error);
+            hasCenteredOnceRef.current = true;
+            orientationModeRef.current = 'north';
+            setOrientationMode('north');
+            mapRef.current?.animateCamera({ heading: 0, pitch: 0 });
+          }
         } else {
+          hasCenteredOnceRef.current = true;
+          orientationModeRef.current = nextMode;
+          setOrientationMode(nextMode);
           mapRef.current?.animateCamera({ heading: 0, pitch: 0 });
         }
       } catch (error) {
@@ -507,7 +584,12 @@ export default function Index() {
   // 소유한다(03-05가 확정한 책임 경계) — requestLocationPermission 내부의
   // undetermined 가드가 반복 프롬프트를 막는다(T-3-15).
   const handleCheckinPress = useCallback(() => {
+    // 리뷰 발견 — 이 ref 가드는 state.phase 클로저 체크보다 먼저, 리렌더 유무와
+    // 무관하게 즉시 갱신되는 동기 체크로 더블탭 레이스를 막는다(WR-04의
+    // isSaveInFlightRef와 동일 패턴).
+    if (isCheckinInFlightRef.current) return;
     if (state.phase !== 'IDLE') return;
+    isCheckinInFlightRef.current = true;
     dispatch({ type: 'TAP_CHECKIN' });
 
     (async () => {
@@ -533,7 +615,10 @@ export default function Index() {
         dispatch({ type: 'CAPTURE_RESOLVED', location });
 
         const now = toIsoTimestamp();
-        await upsertDraft(db, {
+        // 리뷰 발견 — 이 쓰기를 draftWriteQueueRef에 등록해, CAPTURE_RESOLVED
+        // 직후(이 upsert가 끝나기 전) 드래그가 들어와도 handleDragEnd의 UPDATE가
+        // 이 INSERT보다 먼저 실행되지 않도록 순서를 보장한다.
+        const draftWrite = upsertDraft(db, {
           lat: location.lat,
           lng: location.lng,
           accuracyMeters: location.accuracyMeters,
@@ -542,6 +627,8 @@ export default function Index() {
           timezoneAtCapture: resolveTimeZone(),
           now,
         });
+        draftWriteQueueRef.current = draftWrite.catch(() => {});
+        await draftWrite;
       } catch (error) {
         // 프로미스 미삼킴 규약 — 캡처 중 예외가 나도 CAPTURING에 갇히지 않도록
         // DISMISS를 dispatch해 IDLE로 되돌린다(T-3-24).
@@ -550,6 +637,8 @@ export default function Index() {
           dispatch({ type: 'DISMISS' });
         }
         return;
+      } finally {
+        isCheckinInFlightRef.current = false;
       }
 
       // 여기 도달했다는 것은 확인 핀이 이미 CONFIRM 상태로 떠 있고 드래프트도
@@ -580,12 +669,23 @@ export default function Index() {
       // 더 이상 의미를 갖지 않기 때문"). 드래프트에도 그 무효화를 명시적으로 반영해야
       // 앱이 드래그 직후 강제종료됐다가 복구됐을 때 stale한 accuracy 값이 checkins에
       // 영구히 남는 것을 막는다.
-      updateDraftCoordinate(db, {
-        lat: latitude,
-        lng: longitude,
-        accuracyMeters: null,
-        now: toIsoTimestamp(),
-      }).catch((error) => {
+      //
+      // 리뷰 발견 — draftWriteQueueRef 뒤에 체이닝해 이 UPDATE가 handleCheckinPress의
+      // upsertDraft(INSERT OR REPLACE)보다 먼저 실행되지 않도록 직렬화한다. 직접
+      // updateDraftCoordinate를 부르면, 확인 핀이 draggable해지는 CAPTURE_RESOLVED
+      // dispatch 시점과 upsertDraft 완료 시점 사이의 좁은 창에서 빠른 드래그가 아직
+      // 존재하지 않는 row에 UPDATE를 실행해(SQLite가 0행 적용을 에러 없이 조용히
+      // 넘김) 드래그 보정이 유실될 수 있었다.
+      const write = draftWriteQueueRef.current.then(() =>
+        updateDraftCoordinate(db, {
+          lat: latitude,
+          lng: longitude,
+          accuracyMeters: null,
+          now: toIsoTimestamp(),
+        })
+      );
+      draftWriteQueueRef.current = write.catch(() => {});
+      write.catch((error) => {
         console.error('Failed to update draft coordinate after drag', error);
       });
     },

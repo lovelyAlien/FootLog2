@@ -10,10 +10,36 @@ import { File, Paths } from 'expo-file-system';
 import type { LocationDeps, ImagePickerDeps, CryptoDeps, PhotoStorageDeps } from './config';
 import { LOCATION_ACCURACY_BALANCED } from './config';
 
+// 리뷰 발견 — index.tsx의 resolveInstantPosition(재센터/초기 진입)과 location.ts의
+// captureWithTimeout(체크인 캡처)이 서로 조율 없이 각자 독립적으로
+// getCurrentPositionAsync를 부를 수 있다(예: 콜드 부팅 직후 초기 위치 정렬이 아직
+// GPS를 기다리는 중에 사용자가 "체크인"을 탭하는 경우) — 두 GPS 요청이 동시에 뜨는
+// 것을 막기 위해 여기서 동일 옵션의 동시 호출을 하나의 네이티브 호출로 합친다
+// (in-flight 요청 coalescing). 옵션 조합별로 캐시 키를 나눠 서로 다른 accuracy
+// 요청까지 잘못 합치지 않는다.
+const inFlightPositionRequests = new Map<
+  string,
+  ReturnType<typeof Location.getCurrentPositionAsync>
+>();
+
+function getCurrentPositionAsyncDeduped(
+  ...args: Parameters<typeof Location.getCurrentPositionAsync>
+): ReturnType<typeof Location.getCurrentPositionAsync> {
+  const key = JSON.stringify(args[0] ?? null);
+  const inFlight = inFlightPositionRequests.get(key);
+  if (inFlight) return inFlight;
+
+  const promise = Location.getCurrentPositionAsync(...args).finally(() => {
+    inFlightPositionRequests.delete(key);
+  });
+  inFlightPositionRequests.set(key, promise);
+  return promise;
+}
+
 export const defaultLocationDeps: LocationDeps = {
   getForegroundPermissionsAsync: Location.getForegroundPermissionsAsync,
   requestForegroundPermissionsAsync: Location.requestForegroundPermissionsAsync,
-  getCurrentPositionAsync: Location.getCurrentPositionAsync,
+  getCurrentPositionAsync: getCurrentPositionAsyncDeduped,
   getLastKnownPositionAsync: Location.getLastKnownPositionAsync,
   watchHeadingAsync: Location.watchHeadingAsync,
 };

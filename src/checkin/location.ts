@@ -74,6 +74,13 @@ export async function captureWithTimeout(
   positionPromise.catch(() => {});
 
   try {
+    // 정확도 파라미터(requiredAccuracy) 검토: 여기서는 의도적으로 쓰지 않는다 —
+    // 이 경로는 이미 5초 GPS 타임아웃에서 진 뒤의 최종 폴백이라, requiredAccuracy로
+    // 걸러 null이 되면 곧장 need_fallback_chain(FALLBACK_COORDINATE 등 더 부정확한
+    // 좌표)으로 떨어지게 된다 — "부정확해도 OS 캐시"가 "앱 소유 폴백 체인"보다 대체로
+    // 낫다는 판단. index.tsx의 resolveInstantPosition과 달리 이 경로는 이미 GPS를
+    // 한 번 시도해 실패한 뒤이므로 "즉시 보여주고 백그라운드에서 재보정"할 후속 GPS
+    // 시도가 없다. CLAUDE.md의 OS 캐시 정확도 검토 규칙(2026-08-28)에 따른 명시적 결정.
     const cached = await deps.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS });
     if (cached) {
       return {

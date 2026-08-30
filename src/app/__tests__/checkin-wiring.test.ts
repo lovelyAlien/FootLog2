@@ -357,9 +357,12 @@ describe('src/app/index.tsx 지도 준비 대기 배선 계약 (콜드 부팅 �
     expect(block).toMatch(/waiters\.forEach\(\(resolve\) => resolve\(\)\)/);
   });
 
-  it('Test 53 (회귀 가드 — 콜드 부팅 직후 첫 재센터 탭이 무반응이던 버그): 지도 카메라를 옮기는 4개 지점(드래프트 복구/최초 진입 내 위치 확대/재센터/체크인 캡처) 모두 animateToRegion 앞에서 waitForMapReady를 await한다', () => {
-    const animateToRegionCalls = codeOnly.match(/await waitForMapReady\(\);\s*\n\s*(if \(!isMounted\) return;\s*\n\s*)?mapRef\.current\?\.animateToRegion\(/g) ?? [];
-    expect(animateToRegionCalls.length).toBe(4);
+  it('Test 53 (회귀 가드 — 콜드 부팅 직후 첫 재센터 탭이 무반응이던 버그): 지도 카메라를 옮기는 6개 지점(드래프트 복구/최초 진입 내 위치 확대·onRefine/재센터·onRefine/체크인 캡처) 모두 animateToRegion 앞에서 waitForMapReady를 await한다', () => {
+    // 리뷰 발견(2026-08-30) 이후: onRefine(백그라운드 GPS 보정) 두 곳도 이제
+    // waitForMapReady 게이트를 거치므로 4개에서 6개로 늘었다 — 이전에는 이 두 곳이
+    // 게이트를 우회해 콜드 부팅 중 조용히 no-op될 수 있었다.
+    const animateToRegionCalls = codeOnly.match(/await waitForMapReady\(\);\s*\n\s*(if \([^\n]*\) return;\s*\n\s*)?mapRef\.current\?\.animateToRegion\(/g) ?? [];
+    expect(animateToRegionCalls.length).toBe(6);
   });
 
   it('Test 54: waitForMapReady는 이미 준비됐으면 즉시 resolve하고, 아니면 handleMapReady가 resolve할 때까지 대기한다', () => {
