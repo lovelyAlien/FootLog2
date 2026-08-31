@@ -9,7 +9,7 @@
 // 트랜잭션 안에서만 실행된다 — 순서를 뒤집으면 D-05가 요구하는 "insert 실패/재시도
 // 중 강제종료 시 드래프트로 복구" 보장이 깨진다(03-RESEARCH.md Pitfall 5).
 import type { MigratableDb } from '../db/migrations';
-import type { LocationSource } from '../db/schema';
+import type { CheckinRow, LocationSource } from '../db/schema';
 import { isValidCoordinate } from './fallbackLocation';
 import { DRAFT_ROW_ID } from './config';
 
@@ -114,6 +114,20 @@ export async function getLatestCheckinCoordinate(
     'SELECT lat, lng FROM checkins ORDER BY created_at DESC LIMIT 1'
   );
   return row ?? null;
+}
+
+// 오늘 뷰(지도 핀 + 바텀시트 리스트)가 공유하는 단일 조회 함수 — 04-CONTEXT.md D-11.
+// "오늘"이라는 이름이지만 임의의 localDateKey를 받는다: 시각/타임존 판단은 호출자
+// (화면)가 resolveLocalDateKey(new Date())로 미리 계산해 넘긴다. 이 함수는 순수
+// 조회만 담당하며, Phase 6(캘린더 과거 날짜 뷰)이 동일 시그니처를 재사용한다.
+export async function getTodayCheckins(
+  db: MigratableDb,
+  localDateKey: string
+): Promise<CheckinRow[]> {
+  return db.getAllAsync<CheckinRow>(
+    'SELECT * FROM checkins WHERE local_date_key = ? ORDER BY timestamp_utc ASC',
+    localDateKey
+  );
 }
 
 export async function updateCheckinNoteAndPhoto(
