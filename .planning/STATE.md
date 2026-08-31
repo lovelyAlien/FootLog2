@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 5 context gathered
-last_updated: "2026-08-31T08:08:39.081Z"
+stopped_at: Phase 5 UI-SPEC approved
+last_updated: "2026-08-31T08:33:43.198Z"
 last_activity: 2026-08-31 -- Phase 04 marked complete
 progress:
   total_phases: 8
@@ -102,6 +102,6 @@ Ingest에서 확인되어 이어받은 항목들.
 
 ## Session Continuity
 
-Last session: 2026-08-31T08:08:39.072Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-check-in-detail-edit/05-CONTEXT.md
+Last session: 2026-08-31T08:33:43.185Z
+Stopped at: Phase 5 UI-SPEC approved
+Resume file: .planning/phases/05-check-in-detail-edit/05-UI-SPEC.md
