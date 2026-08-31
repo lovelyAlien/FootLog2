@@ -10,7 +10,7 @@ import path from 'path';
 import { colors, typography, spacing, motion, radius } from './tokens';
 
 describe('tokens.colors', () => {
-  it('DESIGN.md Color 표의 12개 키와 hex 값이 정확히 일치한다', () => {
+  it('DESIGN.md Color 표의 14개 키와 hex 값이 정확히 일치한다 (2026-08-31: pin/pinSoft 추가)', () => {
     expect(colors).toEqual({
       background: '#F4F1EA',
       surface: '#FBFAF6',
@@ -20,12 +20,14 @@ describe('tokens.colors', () => {
       textFaint: '#A7A49A',
       accent: '#7C8660',
       accentSoft: '#D8DDC9',
+      pin: '#B85C38',
+      pinSoft: '#DDC0AC',
       line: '#DDD8CD',
       mapLand: '#E9E4D8',
       mapRoad: '#D2CDC1',
       mapWater: '#DDE3DF',
     });
-    expect(Object.keys(colors)).toHaveLength(12);
+    expect(Object.keys(colors)).toHaveLength(14);
   });
 
   it('semantic 색상 키(success/warning/error/info/danger)가 존재하지 않는다', () => {

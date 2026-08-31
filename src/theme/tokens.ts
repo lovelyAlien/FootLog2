@@ -1,5 +1,5 @@
 // src/theme/tokens.ts
-// Source: DESIGN.md (저장소 루트) 값을 그대로 전사 — 2026-08-26 기준.
+// Source: DESIGN.md (저장소 루트) 값을 그대로 전사 — 2026-08-31 기준.
 // 새 토큰을 여기서 발명하지 않는다. 값이 바뀌면 DESIGN.md를 먼저 갱신하고 이 파일에
 // 반영한다 (CLAUDE.md: "Do not deviate without explicit user approval").
 //
@@ -14,8 +14,10 @@ export const colors = {
   textPrimary: '#2F302C', // 웜 니어블랙 (진짜 검정 아님)
   textMuted: '#79786F',
   textFaint: '#A7A49A', // placeholder 등
-  accent: '#7C8660', // 정확히 6개 승인된 용도로만 사용 — DESIGN.md Color 섹션 참고
+  accent: '#7C8660', // UI 크롬 전용, 정확히 4개 승인된 용도로만 사용 — DESIGN.md Color 섹션 참고
   accentSoft: '#D8DDC9', // 배경용 옅은 올리브
+  pin: '#B85C38', // 체크인 지도 마커 전용 두 번째 색(테라코타) — 진행 중 확인 핀 + 지도 마크. accent와 별개 범주, UI 크롬에는 쓰지 않는다
+  pinSoft: '#DDC0AC', // 저장된 체크인 핀 + 이동 궤적선
   line: '#DDD8CD', // 구분선
   mapLand: '#E9E4D8', // 지도 전용
   mapRoad: '#D2CDC1', // 지도 전용

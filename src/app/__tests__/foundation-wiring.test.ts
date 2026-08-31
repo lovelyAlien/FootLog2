@@ -81,25 +81,20 @@ describe('src/app/(tabs)/index.tsx 배선 계약', () => {
     expect(indexSource).toMatch(/spacing/);
   });
 
-  it('Test 6 (03-09 갱신): colors.accent가 DESIGN.md 승인 6개 용도 중 정확히 2개(체크인 알약버튼, 확인 핀=지도 마크)에만 등장하고 그 외 용도로 확장되지 않는다', () => {
-    // 03-09-PLAN.md Task 1은 이 테스트를 "체크인 버튼에만 등장 — 2회 이하"로 갱신할
-    // 것을 지시했으나, Task 2가 추가한 확인 핀(지도 위 마커)도 DESIGN.md가 승인한
-    // 별개의 accent 용도("지도 마크")라 버튼 전용 상한(2)으로는 정확히 표현할 수
-    // 없다. 두 승인 용도의 알려진 스타일 키를 모두 열거해 "그 이상으로 확장되지
-    // 않는다"는 원래 의도를 그대로 지키면서 상한을 5로 갱신한다(Rule 1 — 계획 시점
-    // 테스트가 Task 2의 산출물을 고려하지 못했던 것을 실행 중 보정).
+  it('Test 6 (2026-08-31 갱신): colors.accent가 UI 크롬 용도(체크인 알약버튼, 로딩 인디케이터)에만 등장하고 지도 마커로는 확장되지 않는다', () => {
+    // 2026-08-31 — 지도 위 체크인 핀(진행 중/저장됨)과 이동 궤적선을 colors.pin/
+    // pinSoft(테라코타, DESIGN.md 참고)로 전환했다. accent는 다시 UI 크롬 전용으로
+    // 좁혀져 상한이 5에서 2(체크인 버튼 배경 + 로딩 인디케이터)로 내려간다.
     const codeOnly = stripComments(indexSource);
     // colors.accentSoft는 별도 토큰이라 단어 경계(\b)가 accent와 Soft 사이에서
     // 끊기지 않으므로 이 정규식에 걸리지 않는다 — colors.accent만 정확히 센다.
     const occurrences = codeOnly.match(/\bcolors\.accent\b/g) ?? [];
-    // 체크인 버튼 배경(1) + 로딩 인디케이터 색(1) + 확인 핀 3가지 시각 상태
-    // (pinConfident 배경 1 + pinFallback 테두리 1 + pinDragged 배경 1) = 5.
-    expect(occurrences.length).toBeLessThanOrEqual(5);
+    expect(occurrences.length).toBeLessThanOrEqual(2);
 
-    // 알려진 두 용도의 스타일 정의가 실제로 존재하는지도 함께 단언해, 상한만
-    // 느슨하게 풀고 실제 용도 확인은 생략하는 것을 방지한다.
     expect(codeOnly).toMatch(/checkinButton:\s*\{[^}]*backgroundColor:\s*colors\.accent/s);
-    expect(codeOnly).toMatch(/pinConfident:\s*\{[^}]*backgroundColor:\s*colors\.accent/s);
+    // 지도 마커가 accent로 되돌아가는 회귀를 막는다 — pinConfident는 colors.pin이어야 한다.
+    expect(codeOnly).not.toMatch(/pinConfident:\s*\{[^}]*backgroundColor:\s*colors\.accent\b/s);
+    expect(codeOnly).toMatch(/pinConfident:\s*\{[^}]*backgroundColor:\s*colors\.pin\b/s);
   });
 
   it('Test 7: 진행률 패턴(N/M)이 등장하지 않는다 (PROJECT.md CRITICAL 원칙 회귀 가드)', () => {

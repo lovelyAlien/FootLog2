@@ -11,8 +11,10 @@
 // 지도 스타일 토큰 결정(03-09-PLAN.md 지도 스타일 토큰 결정 항목): colors.mapLand,
 // colors.mapRoad, colors.mapWater는 이 화면에서 쓰지 않는다. react-native-maps의
 // customMapStyle prop은 구글 지도 provider 전용이고 이 phase는 API 키가 필요 없는
-// 애플 지도 기본 provider를 쓴다(provider 미지정). accent 예산은 체크인 버튼과
-// 지도 위 확인 핀(DESIGN.md 승인 6개 용도 중 "체크인 버튼"과 "지도 마크")에만 쓴다.
+// 애플 지도 기본 provider를 쓴다(provider 미지정). accent(올리브)는 체크인 버튼 등
+// UI 크롬에만 쓴다 — 지도 위 확인 핀/저장된 핀/궤적선은 2026-08-31부터
+// colors.pin/pinSoft(테라코타, DESIGN.md 참고)를 쓴다. 이건 accent의 "1개, 절대 안
+// 늘림" 원칙을 깨는 게 아니라 지도 마커 전용 별도 범주(구글맵/애플맵 관례 차용)다.
 //
 // 03-09: 체크인 탭 → 권한 요청 → 위치 캡처 → 확인 핀 드롭 → 드래프트 upsert.
 // 03-10 Task 1: "확인"/"다시 시도" → commitCheckin 배선 + 미저장 이탈 안내.
@@ -100,7 +102,7 @@ const RECENTER_ANIMATION_MS = 500;
 // 확인 핀 히트 영역 확장값 — 24px 원을 최소 터치 타겟 크기까지 넓힌다.
 const PIN_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
 
-// 이동 궤적선 두께 — 04-UI-SPEC.md §이동 궤적선 확정값(accentSoft, 2px, 실선).
+// 이동 궤적선 두께 — 2px, 실선. 색상은 2026-08-31부터 colors.pinSoft(테라코타, DESIGN.md 참고).
 const TRAJECTORY_STROKE_WIDTH = 2;
 
 // 재센터 버튼과 앱 최초 진입(내 위치 기준 확대 시작) 둘 다가 공유하는 위치 조회
@@ -972,7 +974,7 @@ export default function Index() {
         {trajectoryCoordinates.length >= 2 && (
           <Polyline
             coordinates={trajectoryCoordinates}
-            strokeColor={colors.accentSoft}
+            strokeColor={colors.pinSoft}
             strokeWidth={TRAJECTORY_STROKE_WIDTH}
           />
         )}
@@ -1156,21 +1158,21 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-45deg' }],
   },
   pinConfident: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.pin,
   },
   // 저장된 체크인 핀(D-10) — 원본 location_source에 따른 3단계 시각 구분을 저장
   // 후에는 유지하지 않는다(04-UI-SPEC.md §저장된 체크인 핀). 테두리 없음.
   pinSaved: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.pinSoft,
   },
   pinFallback: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.pinSoft,
     borderWidth: 2,
-    borderColor: colors.accent,
+    borderColor: colors.pin,
   },
   pinDragged: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.pin,
     borderWidth: 2,
-    borderColor: colors.accentSoft,
+    borderColor: colors.pinSoft,
   },
 });

@@ -55,11 +55,11 @@ describe('src/app/(tabs)/index.tsx 단일 쿼리 계약 (04-CONTEXT.md D-11)', (
 });
 
 describe('src/app/(tabs)/index.tsx 저장된 핀 계약 (04-CONTEXT.md D-10)', () => {
-  it('styles.pinSaved 정의가 존재하고 colors.accentSoft를 쓴다', () => {
+  it('styles.pinSaved 정의가 존재하고 colors.pinSoft를 쓴다 (2026-08-31: accentSoft에서 전환)', () => {
     const match = codeOnly.match(/pinSaved:\s*\{[^}]*\},/s);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
-    expect(block).toMatch(/colors\.accentSoft/);
+    expect(block).toMatch(/colors\.pinSoft\b/);
   });
 
   it('pinSaved 스타일 블록에 borderWidth/borderColor가 없다 (저장 후 3단계 시각 구분 미유지)', () => {
@@ -93,7 +93,7 @@ describe('src/app/(tabs)/index.tsx 궤적선 계약 (REQ-trajectory-line)', () =
     const match = codeOnly.match(/<Polyline[\s\S]*?\/>/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
-    expect(block).toMatch(/strokeColor=\{colors\.accentSoft\}/);
+    expect(block).toMatch(/strokeColor=\{colors\.pinSoft\}/);
     expect(block).toMatch(/strokeWidth=\{TRAJECTORY_STROKE_WIDTH\}/);
   });
 
@@ -124,9 +124,9 @@ describe('src/app/(tabs)/index.tsx 궤적선 계약 (REQ-trajectory-line)', () =
 });
 
 describe('src/app/(tabs)/index.tsx accent 예산 계약', () => {
-  it('colors.accent(단어 경계)가 5회 이하로 유지된다 (foundation-wiring Test 6과 동일 상한)', () => {
+  it('colors.accent(단어 경계)가 2회 이하로 유지된다 (2026-08-31: 지도 마커가 colors.pin으로 이전, foundation-wiring Test 6과 동일 상한)', () => {
     const occurrences = codeOnly.match(/\bcolors\.accent\b/g) ?? [];
-    expect(occurrences.length).toBeLessThanOrEqual(5);
+    expect(occurrences.length).toBeLessThanOrEqual(2);
   });
 });
 

@@ -63,9 +63,12 @@ describe('src/app/(tabs)/index.tsx 체크인 배선 계약 (Plan 03-09)', () => 
     expect(codeOnly).not.toMatch(/react-native-gesture-handler/);
   });
 
-  it('Test 10: colors.accent와 colors.accentSoft가 핀 스타일 정의에 등장한다', () => {
-    expect(codeOnly).toMatch(/\bcolors\.accent\b/);
-    expect(codeOnly).toMatch(/\bcolors\.accentSoft\b/);
+  it('Test 10 (2026-08-31 갱신): colors.pin과 colors.pinSoft가 핀 스타일 정의에 등장한다 (accent는 UI 크롬 전용으로 분리됨)', () => {
+    expect(codeOnly).toMatch(/\bcolors\.pin\b/);
+    expect(codeOnly).toMatch(/\bcolors\.pinSoft\b/);
+    // 핀 스타일이 accent/accentSoft로 되돌아가는 회귀를 막는다.
+    expect(codeOnly).not.toMatch(/pinConfident:\s*\{[^}]*colors\.accent\b/s);
+    expect(codeOnly).not.toMatch(/pinSaved:\s*\{[^}]*colors\.accentSoft\b/s);
   });
 
   it('Test 11: hitSlop이 등장한다 (핀 드래그 히트 영역 44×44pt 확장)', () => {
