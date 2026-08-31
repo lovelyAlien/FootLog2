@@ -122,3 +122,14 @@ None - no external service configuration required.
 ---
 *Phase: 04-today-view*
 *Completed: 2026-08-31*
+
+## Self-Check: PASSED
+
+- FOUND: src/today/content.ts
+- FOUND: src/app/(tabs)/_layout.tsx
+- FOUND: src/app/(tabs)/calendar.tsx
+- FOUND: src/app/(tabs)/index.tsx
+- FOUND: src/app/__tests__/tabs-wiring.test.ts
+- FOUND: .planning/phases/04-today-view/04-03-SUMMARY.md
+- CONFIRMED ABSENT: src/app/index.tsx
+- Commits verified in `git log`: 38c043d, abfa72f, 24a97f6, 7fcf3fb
