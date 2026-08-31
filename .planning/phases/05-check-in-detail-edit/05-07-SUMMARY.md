@@ -45,13 +45,15 @@ status: task-1-complete
 
 - 참고: plan의 acceptance criteria가 요구한 `grep -c "activeOffsetX" src/today/CheckinListRow.tsx == 1`은 실제로는 3(코드 주석 내 설명 문구에 등장)이다 — 05-05의 라이브러리 대체 편차 때문에 코드 자체에는 `activeOffsetX` prop이 존재하지 않는다(주석에서만 언급). 이는 plan 문서 서술과 05-05 구현 편차 간의 불일치이며, (F)/(G) 실측으로 실제 동작이 요구사항을 충족함을 확인했으므로 코드 결함으로 보지 않는다.
 
-## 부가 발견 — React Navigation 경고 (검토 필요)
+## 참고 — React Navigation 콘솔 경고 (이미 검토·검증된 트레이드오프, 후속 조치 불필요)
 
-시뮬레이터 조작 중 반복적으로 다음 콘솔 에러가 발생함:
+시뮬레이터 조작 중 반복적으로 다음 콘솔 경고가 발생함:
 
 > "The screen '[id]' was removed natively but didn't get removed from JS state. This can happen if the action was prevented in a 'beforeRemove' listener, which is not fully supported in native-stack. Consider using a 'usePreventRemove' hook with 'headerBackButtonMenuEnabled: false' ..."
 
-이는 05-04에서 구현한 인앱 이탈 미저장 경고(3버튼 다이얼로그)가 `beforeRemove` 리스너를 사용하고 있고, React Navigation 공식 문서가 native-stack에서 이 패턴을 "완전히 지원되지 않음"으로 명시하고 있다는 뜻이다. 실사용에서는 3버튼 다이얼로그 자체는 정상 동작함을 확인했으나(아래 부가 확인 참고), 이 경고는 네이티브 스와이프-백 제스처 등 특정 경로에서 JS 내비게이션 상태와 네이티브 상태가 어긋날 수 있는 잠재적 리스크를 가리킨다. **후속 조치 권장:** `usePreventRemove` 훅으로 마이그레이션 검토(별도 이슈/후속 plan으로 처리 제안 — 이 plan의 범위 밖).
+05-04가 구현한 인앱 이탈 미저장 경고(3버튼 다이얼로그)가 `beforeRemove` 리스너를 쓰고 있어서 뜨는 경고다. **이 리스크는 새로 발견된 것이 아니라 05-04 구현 시점에 이미 조사·검증된 사항이다** — [CheckinDetailScreen.tsx:270-275](../../../src/checkin/CheckinDetailScreen.tsx)의 주석에 "헤더 뒤로가기 버튼과 엣지 스와이프백 둘 다 React Navigation의 동일한 POP 액션 디스패치 파이프라인에 물려 있어 우회 경로 없이 똑같이 이 리스너를 거친다"고 명시돼 있고, 이는 05-RESEARCH.md Pattern 4가 설치된 `expo-router`(57.0.16) 버전의 `useOnPreventRemove.js` 소스를 직접 확인해 검증한 내용이다. React Navigation이 권장하는 `usePreventRemove` 훅은 이 버전에서 공개 API가 아니라(내부 구현) 대신 공개 `addListener('beforeRemove', ...)` API를 의도적으로 선택했다는 것도 같은 주석에 기록돼 있다.
+
+이 콘솔 경고는 React Navigation이 "`beforeRemove` + native-stack" 조합 자체를 보수적으로 일괄 경고하는 것이며, 이 리스너 구현에 실제 우회 경로가 있는지는 정적으로 판단하지 못한다. 이 앱은 우회 경로 없음을 소스 검증으로 이미 확인했으므로 **감수하기로 한 트레이드오프이지, 새로 조사하거나 후속 plan으로 넘길 미해결 리스크가 아니다.**
 
 ## 부가 확인 (A-H 목록 밖, Task 2 사용자 확인 항목과 겹치는 사전 점검)
 
