@@ -1,13 +1,12 @@
-// src/app/index.tsx
-// Phase 3(체크인 코어 루프, 03-09-PLAN.md) — Phase 1의 부팅 확인 플레이스홀더를
-// 대체하는 최소 지도 화면(03-CONTEXT.md D-06). 원래 Phase 4(오늘 뷰)가 이 자리를
-// 채울 예정이었지만, 오늘 뷰가 아직 없어 체크인 버튼과 확인 핀 플로우를 얹을 화면이
-// 필요해 Phase 3가 먼저 이 자리를 쓴다. Phase 4는 이 지도 위에 바텀시트와 리스트를
-// 씌우면 되므로 지도 렌더링, GPS 캡처, 확인 핀 드래그 로직을 그대로 재사용한다.
+// src/app/(tabs)/index.tsx
+// Phase 3(체크인 코어 루프, 03-09-PLAN.md)에서 최소 지도 화면(03-CONTEXT.md D-06)으로
+// 시작했고, Phase 4가 이 화면을 `(tabs)` 그룹의 오늘 탭으로 승격했다(04-03-PLAN.md
+// Task 2, D-06) — 지도 렌더링, GPS 캡처, 확인 핀 드래그 로직은 이 이동으로 바뀌지
+// 않고 그대로 재사용된다.
 //
-// 배너 스택(NotificationDeniedBanner 위, LocationDeniedBanner 아래)의 현재 위치
-// (지도 상단, 세이프에어리어 아래)도 최종 위치가 아니다 — Phase 4가 오늘 뷰를 만들
-// 때 두 배너 모두 탭바 위로 이관한다.
+// 배너 스택(NotificationDeniedBanner 위, LocationDeniedBanner 아래)의 위치(지도
+// 상단, 세이프에어리어 아래)는 04-UI-SPEC.md가 확정한 최종 위치다 — 탭바 위로
+// 이관하지 않고 그대로 유지한다.
 //
 // 지도 스타일 토큰 결정(03-09-PLAN.md 지도 스타일 토큰 결정 항목): colors.mapLand,
 // colors.mapRoad, colors.mapWater는 이 화면에서 쓰지 않는다. react-native-maps의
@@ -36,43 +35,43 @@ import { Redirect } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
 import type { MarkerDragStartEndEvent, Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, motion, radius, spacing, typography } from '../theme/tokens';
-import { fetchNotificationPermission, shouldShowPriming } from '../notifications/permissions';
-import type { PermissionSnapshot } from '../notifications/permissions';
-import { NotificationDeniedBanner } from '../components/NotificationDeniedBanner';
-import { LocationDeniedBanner } from '../components/LocationDeniedBanner';
-import { CheckinActionCard } from '../components/CheckinActionCard';
+import { colors, motion, radius, spacing, typography } from '../../theme/tokens';
+import { fetchNotificationPermission, shouldShowPriming } from '../../notifications/permissions';
+import type { PermissionSnapshot } from '../../notifications/permissions';
+import { NotificationDeniedBanner } from '../../components/NotificationDeniedBanner';
+import { LocationDeniedBanner } from '../../components/LocationDeniedBanner';
+import { CheckinActionCard } from '../../components/CheckinActionCard';
 import {
   checkinReducer,
   initialCheckinState,
   canEditNoteAndPhoto,
   CHECKIN_COPY,
-} from '../checkin/checkinFlow';
-import { fetchLocationPermission, requestLocationPermission } from '../checkin/permissions';
-import { resolveCheckinLocation } from '../checkin/location';
-import type { FallbackSources, ResolvedLocation } from '../checkin/location';
-import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
+} from '../../checkin/checkinFlow';
+import { fetchLocationPermission, requestLocationPermission } from '../../checkin/permissions';
+import { resolveCheckinLocation } from '../../checkin/location';
+import type { FallbackSources, ResolvedLocation } from '../../checkin/location';
+import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../../checkin/draftRepo';
 import {
   commitCheckin,
   getLatestCheckinCoordinate,
   updateCheckinNoteAndPhoto,
-} from '../checkin/checkinRepo';
-import type { NewCheckinParams } from '../checkin/checkinRepo';
-import { defaultCryptoDeps, defaultLocationDeps } from '../checkin/deps';
+} from '../../checkin/checkinRepo';
+import type { NewCheckinParams } from '../../checkin/checkinRepo';
+import { defaultCryptoDeps, defaultLocationDeps } from '../../checkin/deps';
 import {
   CAPTURE_TIMEOUT_MS,
   LAST_KNOWN_MAX_AGE_MS,
   LOCATION_ACCURACY_BALANCED,
-} from '../checkin/config';
+} from '../../checkin/config';
 import {
   PHOTO_ACTION_SHEET_CANCEL_INDEX,
   PHOTO_ACTION_SHEET_OPTIONS,
   PHOTO_SOURCE_BY_ACTION_SHEET_INDEX,
   pickAndCopyPhoto,
-} from '../checkin/photos';
-import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../checkin/localDate';
-import type { LocationSource } from '../db/schema';
-import type { CheckinState } from '../checkin/checkinFlow';
+} from '../../checkin/photos';
+import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../../checkin/localDate';
+import type { LocationSource } from '../../db/schema';
+import type { CheckinState } from '../../checkin/checkinFlow';
 import { SymbolView } from 'expo-symbols';
 
 // 확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 — GPS 좌표 근방을 자연스럽게 보여줄

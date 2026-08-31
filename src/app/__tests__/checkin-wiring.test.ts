@@ -10,13 +10,14 @@ import path from 'path';
 import { stripComments } from '../../test-utils/stripComments';
 
 const APP_DIR = path.join(__dirname, '..');
+const TODAY_SCREEN_PATH = path.join('(tabs)', 'index.tsx');
 
 function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(APP_DIR, relativePath), 'utf-8');
 }
 
-describe('src/app/index.tsx 체크인 배선 계약 (Plan 03-09)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 체크인 배선 계약 (Plan 03-09)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 1: resolveCheckinLocation 식별자가 등장한다', () => {
@@ -83,8 +84,8 @@ describe('src/app/index.tsx 체크인 배선 계약 (Plan 03-09)', () => {
   });
 });
 
-describe('src/app/index.tsx 저장 배선 계약 (Plan 03-10 Task 1)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 저장 배선 계약 (Plan 03-10 Task 1)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 14: commitCheckin 식별자가 등장한다', () => {
@@ -111,8 +112,8 @@ describe('src/app/index.tsx 저장 배선 계약 (Plan 03-10 Task 1)', () => {
   });
 });
 
-describe('src/app/index.tsx 사진/메모/키보드 배선 계약 (Plan 03-10 Task 2)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 사진/메모/키보드 배선 계약 (Plan 03-10 Task 2)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 19: ActionSheetIOS가 등장하고 photos.ts 상수 참조가 존재한다', () => {
@@ -142,8 +143,8 @@ describe('src/app/index.tsx 사진/메모/키보드 배선 계약 (Plan 03-10 Ta
   });
 });
 
-describe('src/app/index.tsx 드래프트 복구 배선 계약 (Plan 03-10 Task 3)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 드래프트 복구 배선 계약 (Plan 03-10 Task 3)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 24: loadRecoverableDraft 식별자가 등장한다', () => {
@@ -177,8 +178,8 @@ describe('src/app/index.tsx 드래프트 복구 배선 계약 (Plan 03-10 Task 3
   });
 });
 
-describe('src/app/index.tsx 내 위치 재센터링 버튼 배선 계약', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 내 위치 재센터링 버튼 배선 계약', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 29: handleRecenterPress 핸들러와 접근성 라벨이 등장한다', () => {
@@ -208,8 +209,8 @@ describe('src/app/index.tsx 내 위치 재센터링 버튼 배선 계약', () =>
   });
 });
 
-describe('src/app/index.tsx 나침반 모드 토글 배선 계약 (재센터링 버튼 연속 탭)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 나침반 모드 토글 배선 계약 (재센터링 버튼 연속 탭)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 33: orientationMode 상태가 useState로 선언되고 초기값이 north다', () => {
@@ -266,8 +267,8 @@ describe('src/app/index.tsx 나침반 모드 토글 배선 계약 (재센터링 
   });
 });
 
-describe('src/app/index.tsx "완료" 버튼 배선 계약 (2026-08-28 추가 — 사진/메모 저장 확인 CTA)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx "완료" 버튼 배선 계약 (2026-08-28 추가 — 사진/메모 저장 확인 CTA)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 41: handleFinishCheckin이 지도 탭과 CheckinActionCard의 onComplete 양쪽에 배선된다', () => {
@@ -288,8 +289,8 @@ describe('src/app/index.tsx "완료" 버튼 배선 계약 (2026-08-28 추가 —
   });
 });
 
-describe('src/app/index.tsx 체크인 버튼 크로스페이드 회귀 가드 (Plan 03-12)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 체크인 버튼 크로스페이드 회귀 가드 (Plan 03-12)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 43: 크로스페이드 effect가 버튼 마운트 여부(showActionCard)에 의존하고, 마운트 안 됐을 때 early return한다', () => {
@@ -312,8 +313,8 @@ describe('src/app/index.tsx 체크인 버튼 크로스페이드 회귀 가드 (P
   });
 });
 
-describe('src/app/index.tsx 재센터 버튼 수동 팬 리셋 배선 계약 (구글맵 "팔로우 해제" 재현)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 재센터 버튼 수동 팬 리셋 배선 계약 (구글맵 "팔로우 해제" 재현)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 47: MapView에 onPanDrag가 handlePanDrag로 배선된다', () => {
@@ -341,8 +342,8 @@ describe('src/app/index.tsx 재센터 버튼 수동 팬 리셋 배선 계약 (�
   });
 });
 
-describe('src/app/index.tsx 지도 준비 대기 배선 계약 (콜드 부팅 첫 탭 무반응 회귀 가드)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 지도 준비 대기 배선 계약 (콜드 부팅 첫 탭 무반응 회귀 가드)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 51: MapView에 onMapReady가 handleMapReady로 배선된다', () => {
@@ -374,8 +375,8 @@ describe('src/app/index.tsx 지도 준비 대기 배선 계약 (콜드 부팅 �
   });
 });
 
-describe('src/app/index.tsx 나침반 모드 3D 틸트 배선 계약 (구글맵 나침반 모드 재현)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 나침반 모드 3D 틸트 배선 계약 (구글맵 나침반 모드 재현)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
   it('Test 55: 나침반 모드 진입 시 COMPASS_PITCH_DEGREES로 지도를 기울인다', () => {
@@ -389,8 +390,8 @@ describe('src/app/index.tsx 나침반 모드 3D 틸트 배선 계약 (구글맵 
   });
 });
 
-describe('src/app/index.tsx resolveInstantPosition 배선 계약 (구글맵처럼 캐시 우선, 딜레이/무반응 회귀 가드 — 재센터 버튼과 최초 진입 확대가 공유)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx resolveInstantPosition 배선 계약 (구글맵처럼 캐시 우선, 딜레이/무반응 회귀 가드 — 재센터 버튼과 최초 진입 확대가 공유)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
   const resolveBlockMatch = codeOnly.match(
     /async function resolveInstantPosition\([\s\S]*?\n\}/
@@ -468,8 +469,8 @@ describe('src/app/index.tsx resolveInstantPosition 배선 계약 (구글맵처�
   });
 });
 
-describe('src/app/index.tsx 최초 진입 시 내 위치 기준 확대 배선 계약 (네이버지도/구글맵처럼 전국 축소 뷰 대신 내 위치로 시작)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 최초 진입 시 내 위치 기준 확대 배선 계약 (네이버지도/구글맵처럼 전국 축소 뷰 대신 내 위치로 시작)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
   const draftEffectMatch = codeOnly.match(
     /useEffect\(\(\) => \{\s*let isMounted = true;\s*loadRecoverableDraft\([\s\S]*?\n  \}, \[db\]\);/

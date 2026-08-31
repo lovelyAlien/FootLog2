@@ -11,6 +11,7 @@ import { stripComments } from '../../test-utils/stripComments';
 
 const APP_DIR = path.join(__dirname, '..');
 const SRC_DIR = path.join(__dirname, '..', '..');
+const TODAY_SCREEN_PATH = path.join('(tabs)', 'index.tsx');
 
 function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(APP_DIR, relativePath), 'utf-8');
@@ -67,11 +68,14 @@ describe('src/app/+not-found.tsx', () => {
   });
 });
 
-describe('src/app/index.tsx 배선 계약', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 배선 계약', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
 
   it('Test 4: src/theme/tokens에서 colors, typography, spacing을 import한다', () => {
-    expect(indexSource).toMatch(/from ['"](\.\.\/)?(@\/)?(src\/)?theme\/tokens['"]/);
+    // Phase 4(04-03-PLAN.md Task 2)가 이 화면을 (tabs) 그룹 안으로 옮기며 상대
+    // 경로가 한 단계 깊어졌다(../theme/tokens → ../../theme/tokens) — (\.\.\/)?
+    // 를 (\.\.\/)*로 완화해 임의 깊이의 상대 경로를 허용한다.
+    expect(indexSource).toMatch(/from ['"](\.\.\/)*(@\/)?(src\/)?theme\/tokens['"]/);
     expect(indexSource).toMatch(/colors/);
     expect(indexSource).toMatch(/typography/);
     expect(indexSource).toMatch(/spacing/);
