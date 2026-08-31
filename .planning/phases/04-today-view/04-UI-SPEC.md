@@ -152,8 +152,14 @@ RootTabNavigator (하단 탭바, colors.surface 배경, 항상 노출)
           │     ├─ TodayBottomSheet (CLOSED/DRAGGING/OPEN, colors.surface, 상단만 radius.lg)
           │     └─ 플로팅 체크인/재센터 버튼 — bottom = 시트 현재 상단(animatedPosition) + spacing.lg, 연속 추적
           └─ [D-04 분기 B] showActionCard === true:
-                ├─ CheckinActionCard (Phase 3 그대로, 바텀시트 자리에 배타적으로 렌더링 — 언마운트 방식)
-                └─ 플로팅 재센터 버튼만 — bottom = 화면(탭바 제외) 하단 + spacing.xl (Phase 3 값 그대로, 체크인 버튼은 액션 카드의 "확인"/"다시 시도"/"완료" CTA로 대체되어 별도 렌더 없음)
+                └─ CheckinActionCard만 (Phase 3 그대로, 바텀시트 자리에 배타적으로 렌더링 — 언마운트 방식)
+                     — 정정(04-06-PLAN.md Task 1, option-a 채택, 2026-08-31): 체크인 버튼과
+                     재센터 버튼 둘 다 렌더하지 않는다(둘 다 언마운트). 이 줄이 이전에 "재센터
+                     버튼만은 계속 보인다"고 적었던 것은 실제 Phase 3 코드 동작에 대한 사실
+                     오인이었다 — Phase 3 코드는 showActionCard가 true인 동안 두 버튼을 모두
+                     언마운트한다. 창업자가 Phase 3 동작을 그대로 유지하기로 선택(회귀 위험 0,
+                     확인 핀 확정 중 지도를 옮길 이유 없음 — 핀을 잃어버리는 혼란 방지)해 이
+                     문서를 코드 실제 동작에 맞춰 정정한다.
 ```
 
 **구현 시 확인 필요(설계 계약이 아니라 배치 검증 항목):** 오늘 화면이 `(tabs)` 라우트 그룹으로 이동하면 화면 콘텐츠 영역이 이미 탭바 위에서 끝난다 — 기존 `insets.bottom`(물리적 세이프에어리어) 기준 오프셋 계산이 탭바 도입 후에도 여전히 유효한지(탭바가 별도로 세이프에어리어를 소비하는지, 화면 콘텐츠가 탭바 높이만큼 이미 줄어드는지) iOS 시뮬레이터에서 실측 확인할 것 — 시각 계약(오프셋 = 시트 상단/화면 하단 + `spacing.lg`/`spacing.xl`)은 그대로, 그 기준선이 어느 좌표계인지만 구현 단계 검증 대상.

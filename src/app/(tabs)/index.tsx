@@ -34,6 +34,12 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { Redirect } from 'expo-router';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import type { MarkerDragStartEndEvent, Region } from 'react-native-maps';
+// reanimated default export는 반드시 `Reanimated`로 바인딩한다 — `Animated`로 쓰면
+// 위 react-native의 `Animated`(크로스페이드용, Plan 03-12 회귀 가드 대상)를 가려
+// checkin-wiring Test 46이 깨지고 native driver 크로스페이드가 무너진다
+// (04-06-PLAN.md Task 2). react-native-gesture-handler는 이 화면에서 직접 import하지
+// 않는다 — 시트 제스처는 @gorhom/bottom-sheet 내부가 처리한다(checkin-wiring gesture-handler 미사용 회귀 가드).
+import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, motion, radius, spacing, typography } from '../../theme/tokens';
 import { fetchNotificationPermission, shouldShowPriming } from '../../notifications/permissions';
@@ -41,6 +47,7 @@ import type { PermissionSnapshot } from '../../notifications/permissions';
 import { NotificationDeniedBanner } from '../../components/NotificationDeniedBanner';
 import { LocationDeniedBanner } from '../../components/LocationDeniedBanner';
 import { CheckinActionCard } from '../../components/CheckinActionCard';
+import { TodayBottomSheet } from '../../today/TodayBottomSheet';
 import {
   checkinReducer,
   initialCheckinState,
@@ -181,6 +188,10 @@ export default function Index() {
   // 오늘 저장된 체크인 — 지도 핀·궤적선·(04-06의) 바텀시트 리스트가 공유하는 유일한
   // 오늘 데이터(04-CONTEXT.md D-11). 별도의 두 번째 조회를 만들지 않는다.
   const [todayCheckins, setTodayCheckins] = useState<CheckinRow[]>([]);
+  // 오늘 탭 콘텐츠 영역(탭바 제외) 높이 — 루트 View의 onLayout으로 측정한다. 시트
+  // 스냅 지점(TodayBottomSheet)과 플로팅 버튼 오프셋 계산(floatingButtonStyle)이
+  // 공유하는 공통 좌표계 기준이다(04-06-PLAN.md Task 2, D-05).
+  const [containerHeight, setContainerHeight] = useState(0);
 
   const mapRef = useRef<MapView>(null);
   const lastMapCoordinateRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -389,6 +400,31 @@ export default function Index() {
 
   const isCapturing = state.phase === 'CAPTURING';
   const showActionCard = state.phase !== 'IDLE' && !isCapturing;
+
+  // 시트 상단 y좌표(컨테이너 좌표계) — TodayBottomSheet가 계속 써 넣고, 아래
+  // floatingButtonStyle이 읽는다(D-05, 부모 소유 SharedValue 계약).
+  const sheetPosition = useSharedValue(0);
+
+  // 루트 View 레이아웃 측정 — 같은 값이 다시 들어오면 리렌더를 건너뛴다.
+  const handleContainerLayout = useCallback(
+    (event: { nativeEvent: { layout: { height: number } } }) => {
+      const nextHeight = event.nativeEvent.layout.height;
+      setContainerHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+    },
+    []
+  );
+
+  // 플로팅 체크인/재센터 버튼의 화면 하단 오프셋 — 시트 상단(animatedPosition)을
+  // 실시간(워크릿)으로 추적한다. onChange(index) 같은 이산 콜백에 의존하지 않는
+  // 이유: DRAGGING 상태에서 손가락 위치를 그대로 따라가야 한다(04-UI-SPEC.md).
+  // containerHeight가 아직 0(레이아웃 측정 전)이면 sheetPosition도 0이라 음수
+  // bottom이 나올 수 있으므로, 그 동안은 Phase 3 정적 오프셋으로 폴백한다.
+  const floatingButtonStyle = useAnimatedStyle(() => {
+    if (containerHeight <= 0) {
+      return { bottom: insets.bottom + spacing.xl };
+    }
+    return { bottom: containerHeight - sheetPosition.value + spacing.lg };
+  }, [containerHeight, insets.bottom]);
 
   // 체크인 버튼과 로딩 인디케이터 사이 전환에 크로스페이드를 적용한다
   // (motion.saveStateCrossfadeMs, 03-UI-SPEC.md 체크인 알약버튼 절).
@@ -920,7 +956,7 @@ export default function Index() {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} onLayout={handleContainerLayout}>
       {/* StyleSheet.absoluteFillObject는 이 RN 버전에 존재하지 않는다(타입 정의 기준
           absoluteFill만 export됨) — 동일한 절대위치 전체채움 스타일 객체인
           absoluteFill을 대신 쓴다. */}
@@ -993,7 +1029,17 @@ export default function Index() {
         </KeyboardAvoidingView>
       ) : (
         <>
-          <View style={[styles.checkinButtonContainer, { bottom: insets.bottom + spacing.xl }]}>
+          {/* D-04 마운트 게이트 — showActionCard가 true인 동안(위 분기) 이 시트는
+              opacity/display/enabled로 숨겨지는 게 아니라 트리에서 완전히 사라진다
+              (CheckinActionCard.tsx의 "비활성화가 아니라 미마운트" 계약과 동일하게).
+              containerHeight <= 0(레이아웃 측정 전)이면 TodayBottomSheet 자신이 null을
+              반환한다(04-04-PLAN.md 계약). */}
+          <TodayBottomSheet
+            checkins={todayCheckins}
+            containerHeight={containerHeight}
+            animatedPosition={sheetPosition}
+          />
+          <Reanimated.View style={[styles.checkinButtonContainer, floatingButtonStyle]}>
             <Pressable
               onPress={handleCheckinPress}
               disabled={isCapturing}
@@ -1011,12 +1057,9 @@ export default function Index() {
                 )}
               </Animated.View>
             </Pressable>
-          </View>
-          <View
-            style={[
-              styles.recenterButtonContainer,
-              { bottom: insets.bottom + spacing.xl, right: spacing.lg },
-            ]}
+          </Reanimated.View>
+          <Reanimated.View
+            style={[styles.recenterButtonContainer, floatingButtonStyle, { right: spacing.lg }]}
           >
             <Pressable
               onPress={handleRecenterPress}
@@ -1029,7 +1072,7 @@ export default function Index() {
                 tintColor={colors.textMuted}
               />
             </Pressable>
-          </View>
+          </Reanimated.View>
         </>
       )}
     </View>
