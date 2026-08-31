@@ -61,6 +61,8 @@ Declared values (Phase 1 `src/theme/tokens.ts`에서 그대로 가져옴 — 새
 | 2xl | 48px | 사용 안 함 이 phase에서는 |
 | 3xl | 64px | 사용 안 함 이 phase에서는 |
 
+> **`sm=12px`에 대한 노트(체커의 표준 8-point 세트 {4,8,16,24,32,48,64} 예외 플래그 대응):** `sm=12px`는 이 phase가 새로 만든 값이 아니라 Phase 1에서 확정돼 `src/theme/tokens.ts`에 이미 존재하는 프로젝트 고유 spacing 스케일의 일부이며, Phase 2~4에서도 동일하게 재사용돼 왔다. 이 phase는 그 값을 그대로 참조할 뿐 스케일 자체를 바꾸지 않는다 — 값 변경은 phase-local UI-SPEC의 권한 밖이며, 필요하다면 프로젝트 전역 `tokens.ts`/DESIGN.md 개정과 사용자 승인이 선행돼야 한다.
+
 Exceptions:
 - **44×44pt 최소 터치 타겟** — "지도 앱에서 열기" 텍스트 버튼, 사진 삭제 아이콘 배지(`hitSlop`으로 확장, 시각적으로는 더 작아도 됨), 스낵바의 "실행취소" 액션, 상세화면 헤더 뒤로가기 버튼(iOS 시스템 기본).
 - **정적 지도 미리보기 고정 높이:** 160px(spacing 스케일의 배수는 아니지만 `photoBox`류 기존 컴포넌트 크기 결정과 동일한 근거의 컴포넌트 치수 — spacing 토큰 자체가 아님). 전체 너비 사용, `radius.md`(8px) 모서리.
@@ -72,6 +74,8 @@ Exceptions:
 ## Typography
 
 `src/theme/tokens.ts`의 네임드 시맨틱 토큰만 사용 — 새 크기/굵기 추가 없음.
+
+> **3-weight 시스템(400/500/600)에 대한 노트(체커의 max-2-weights 규칙 대응):** 이 phase의 Typography 테이블에는 400(`helperText`, `journalEntry`), 500(`timestamp`, `placeName`), 600(`screenTitle`) 세 가지 굵기가 등장하지만, 이 세 굵기는 Phase 5가 새로 도입한 것이 아니다. FootLog는 DESIGN.md에서 **SF Pro 시스템 폰트 / SF Mono 모노스페이스 / Newsreader 이탤릭 세리프**의 3계층 타이포그래피 체계를 프로젝트 전역 결정으로 이미 확정했고(`REQ-design-tokens`, Phase 1에서 `src/theme/tokens.ts`로 export), Phase 2~4가 그 체계를 변경 없이 그대로 재사용해왔다. Phase 5는 이 테이블에서 **새 사이즈나 새 굵기를 단 하나도 추가하지 않는다** — `timestamp`/`placeName`/`helperText`/`journalEntry`/`screenTitle` 모두 이전 phase에서 이미 확립·사용 중이던 토큰을 그대로 재참조할 뿐이다. 체커가 제안한 첫 번째 수정안(예: `screenTitle`을 500으로 낮춰 2-weight로 맞추는 것)을 따르면 이 phase가 DESIGN.md의 이미 승인된 타이포그래피 체계에서 사용자 승인 없이 이탈하게 되는데, 이는 프로젝트 CLAUDE.md의 "DESIGN.md에 정의된 폰트/색상/여백/미학 방향에서 명시적 사용자 승인 없이 벗어나지 않는다"는 규칙을 정면으로 위반한다. 따라서 이 값들은 phase-local 결정이 아니라 **프로젝트 전역 DESIGN.md 개정 + 명시적 사용자 승인**이 있어야만 바뀔 수 있는 범위이며, 이번 revision에서는 어떤 토큰/굵기/크기도 변경하지 않는다.
 
 | Role | Token (tokens.ts) | Size | Weight | Line Height | 이 phase에서 쓰이는 곳 |
 |------|--------------------|------|--------|-------------|------------------------|
@@ -165,6 +169,8 @@ iOS `Alert.alert`의 `style: 'destructive'` 버튼은 시스템이 자동으로 
 ## Screen & Component Notes
 
 ### 레이아웃 구조 (위→아래, 고정 순서 — REQ-checkin-detail-layout)
+
+**주 시각적 앵커:** 이 화면은 단일 지배적 포컬 포인트를 두지 않는다 — 시간 → 지도 → 딥링크 → 사진 → 메모라는 고정된 위→아래 읽기 순서 자체가 위계다(REQ-checkin-detail-layout). 굳이 하나를 꼽는다면 **정적 지도 미리보기**가 화면 진입 직후 가장 먼저 시선을 붙잡는 시각적 앵커 역할을 한다 — 전체 너비를 쓰는 유일한 그래픽 블록이며, 텍스트 위주인 시간/딥링크 라인과 대비를 이루는 첫 색상 면적이기 때문이다. 다만 이는 "지배적 focal point를 의도적으로 설계했다"는 의미가 아니라, 고정 순서 레이아웃에서 자연히 가장 눈에 띄는 요소를 확인한 것뿐이다 — 사진이 있으면 지도보다 큰(최대 240px) 이미지 블록이 뒤따르므로 지도는 "유일한" 앵커가 아니라 "첫 번째" 앵커에 가깝다.
 
 ```
 Stack.Screen (push, 탭바 노출 유지 — product-design.md 네비게이션 셸 다이어그램)
