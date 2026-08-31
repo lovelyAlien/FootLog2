@@ -473,7 +473,9 @@ describe('src/app/(tabs)/index.tsx resolveInstantPosition 배선 계약 (구글�
     // resolveRecenterAnimationMs()가 반환하는 동적 값(recenterAnimationMs)으로
     // 바뀌었다. RECENTER_ANIMATION_MS 상수 자체는 그 함수의 "평소" 분기 값으로 여전히
     // 존재한다.
-    expect(codeOnly).toMatch(/const RECENTER_ANIMATION_MS = 500;/);
+    // 2026-08-31 — 방향 전환 딜레이가 다른 모션 토큰(≤220ms)보다 유난히 길다는
+    // 지적에 500ms에서 250ms로 단축(구조는 그대로, 숫자만 변경).
+    expect(codeOnly).toMatch(/const RECENTER_ANIMATION_MS = 250;/);
     expect(codeOnly).toMatch(/return RECENTER_ANIMATION_MS;/);
     expect(block).toMatch(/const recenterAnimationMs = resolveRecenterAnimationMs\(\);/);
     expect(block).toMatch(/animateToRegion\(\s*\{[\s\S]*?\},\s*\n\s*recenterAnimationMs\s*\n\s*\);/);

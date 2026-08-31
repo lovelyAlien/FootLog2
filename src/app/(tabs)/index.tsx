@@ -94,10 +94,14 @@ const MAP_REGION_DELTA = 0.01;
 const COMPASS_PITCH_DEGREES = 45;
 
 // 재센터 버튼의 animateToRegion(위치+줌) 애니메이션 길이. handleRecenterPress가
-// 이 시간만큼 기다린 뒤에야 후속 animateCamera(heading/pitch)를 보낸다 —
-// react-native-maps 기본값(500ms)과 동일하게 맞춰 iOS 네이티브 카메라 애니메이션
-// 경합을 피한다(아래 handleRecenterPress 주석 참고).
-const RECENTER_ANIMATION_MS = 500;
+// 이 시간만큼 기다린 뒤에야 후속 animateCamera(heading/pitch)를 보낸다 — 동시에
+// 부르면 iOS MKMapView가 진행 중이던 위치 애니메이션을 취소하고 각도만 반영하는
+// 네이티브 경합이 있어(아래 handleRecenterPress 주석 참고) 순차 실행이 필수다.
+// 2026-08-31 — 예전엔 react-native-maps 기본값(500ms)에 맞췄으나, 이 앱의 다른
+// 모션 토큰(motion.bottomSheetSnapMs 220ms, motion.confirmPinDropMs 160ms)보다
+// 훨씬 길어 방향 전환이 유난히 느리게 느껴진다는 지적에 250ms로 단축 — 구조(순차
+// 실행)는 그대로 두고 숫자만 줄인다.
+const RECENTER_ANIMATION_MS = 250;
 
 // 회귀 가드 — "지도를 많이 줌아웃한 상태에서 재센터를 누르면 목표 줌까지 한 번에
 // 안 가고 여러 번 눌러야 하는" 문제(2026-08-31 창업자 리포트, 실기기에서 재현 확인).
