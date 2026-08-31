@@ -8,7 +8,8 @@
   },
   "workflow": {
     "code_review": true,
-    "ui_review": true
+    "ui_review": true,
+    "_auto_chain_active": false
   },
   "git": {
     "branching_strategy": "phase"

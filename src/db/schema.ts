@@ -75,3 +75,39 @@ export const CREATE_DAILY_REFLECTIONS_TABLE_SQL = `
 export const CREATE_CHECKINS_INDEXES_SQL = `
   CREATE INDEX IF NOT EXISTS idx_checkins_local_date_key ON checkins(local_date_key);
 `;
+
+// Plan 03-03 Task 1 — 확인 핀 구간(GPS 캡처 완료 ~ 확인 탭)의 드래프트를 SQLite에 두기
+// 위한 DDL + 행 타입. 03-CONTEXT.md D-03(AsyncStorage가 아닌 SQLite에 영속화)의 구현체.
+export interface DraftRow {
+  id: string;
+  lat: number;
+  lng: number;
+  accuracy_meters: number | null;
+  location_source: LocationSource;
+  local_date_key: string;
+  timezone_at_capture: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// (1) id는 항상 'draft' 고정값이다 — 03-CONTEXT.md D-04("항상 최대 1개")를 스키마 레벨의
+// PRIMARY KEY 제약으로 강제하는 방식이며, 호출부는 항상 INSERT OR REPLACE ... VALUES
+// ('draft', ...)로 이 단일 row를 덮어쓴다(구현은 03-04).
+// (2) local_date_key는 날짜 경계 만료 판정(product-design.md T24 edge case 1)에 쓰인다 —
+// 드래프트가 생성된 날짜와 확인 시점의 날짜가 다르면 만료된 것으로 간주한다.
+// (3) note/photo_path 컬럼이 없다 — 드래프트 구간은 "GPS 캡처 완료 ~ 확인 탭" 사이이며,
+// 메모/사진 입력은 저장 성공 이후 화면이라 드래프트에 담길 일이 없다(03-RESEARCH.md
+// Pattern 4). 인덱스도 만들지 않는다 — 단일 row 테이블이라 PK만으로 충분하다.
+export const CREATE_DRAFTS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS drafts (
+    id TEXT PRIMARY KEY NOT NULL,
+    lat REAL NOT NULL,
+    lng REAL NOT NULL,
+    accuracy_meters REAL,
+    location_source TEXT NOT NULL,
+    local_date_key TEXT NOT NULL,
+    timezone_at_capture TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`;

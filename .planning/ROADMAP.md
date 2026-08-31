@@ -24,7 +24,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 
 - [x] **Phase 1: Foundation** - Expo/EAS 스캐폴드, 디자인 토큰, 그리고 나머지 전부를 그 위에 지을 수 있는 SQLite 마이그레이션 프레임워크가 존재한다. (completed 2026-08-26)
 - [x] **Phase 2: Notification Infrastructure** - 앱이 체크인/회고 리마인더를 신뢰성 있게 스케줄링하고 스스로 복구하며, 확정된 권한 프롬프트 문구와 거부 상태 UI 패턴을 갖춘다. (completed 2026-08-27)
-- [ ] **Phase 3: Check-in Core Loop** - 사용자가 자유형 체크인(위치 + 선택적 사진/메모)을 GPS·저장 실패를 포함해 안정적으로 남길 수 있다.
+- [x] **Phase 3: Check-in Core Loop** - 사용자가 자유형 체크인(위치 + 선택적 사진/메모)을 GPS·저장 실패를 포함해 안정적으로 남길 수 있다. (completed 2026-08-27)
 - [ ] **Phase 4: Today View** - 사용자가 오늘의 체크인들을 지도에서 보여주는 홈 화면과, 새 체크인을 위한 마찰 낮은 진입점을 갖는다.
 - [ ] **Phase 5: Check-in Detail & Edit** - 사용자가 기록된 개별 체크인을 조회·수정·삭제할 수 있다.
 - [ ] **Phase 6: Calendar Tab** - 사용자가 월 그리드와 빠른 날짜별 스크러버로 과거 날짜를 훑어볼 수 있다.
@@ -88,7 +88,20 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
   4. 위치 권한이 거부되면 사용자는 알림 거부와 동일한 조용한 배너+설정 딥링크 패턴을 보며, (OS 캐시가 아닌) 앱 소유의 폴백 위치가 뒷받침한다.
   5. 진행 중인 체크인 드래프트는 저장되거나 명시적으로 폐기될 때까지 앱 백그라운드 전환/재실행을 버텨내며, 날짜 경계 만료와 단일 드래프트 전용 엣지케이스를 포함한다.
 
-**Plans**: TBD
+**Plans**: 12 plans (8 waves)
+
+- [x] 03-01-PLAN.md — 네이티브 모듈 5종 설치 + checkin DI 골격(config/deps) + 테스트 더블 3종 (wave 1)
+- [x] 03-02-PLAN.md — D-07 최종 폴백 좌표 창업자 확정 체크포인트 + fallbackLocation 상수 모듈 (wave 1)
+- [x] 03-03-PLAN.md — drafts 테이블 DDL + DATABASE_VERSION 2 마이그레이션 + 데이터 보존 회귀 (wave 1)
+- [x] 03-04-PLAN.md — localDate/draftRepo/checkinRepo (1회 자동 재시도 + insert 성공 후에만 드래프트 삭제) (wave 2)
+- [x] 03-05-PLAN.md — 위치 권한 모듈 + LocationDeniedBanner + UI 계약 테스트 (wave 2)
+- [x] 03-06-PLAN.md — 사진 액션시트 + documentDirectory 복사(UUID 파일명, 출처 보존) (wave 2)
+- [x] 03-07-PLAN.md — 5초 타임아웃 레이스 + 3단계 폴백 체인 + location_source 5값 매핑 확정 (wave 3)
+- [x] 03-08-PLAN.md — 체크인 상태 머신 리듀서 + 액션 카드(메모/사진은 SAVED에서만 마운트) (wave 4)
+- [x] 03-09-PLAN.md — 최소 지도 화면 배선(MapView + 배너 스택 + 알약버튼 + 확인 핀 드래그 + 드래프트 upsert) (wave 5)
+- [x] 03-10-PLAN.md — 저장 커밋 + 메모/사진 저장 + 드래프트 복구 + 미저장 이탈 안내 + 키보드 회피 (wave 6)
+- [x] 03-11-PLAN.md — EAS Dev Client 재빌드 + 창업자 iPhone 실기기 검증 5종 (wave 7)
+- [x] 03-12-PLAN.md — [gap closure] 체크인 알약버튼 라벨 비가시 회귀 수정(크로스페이드 Animated.Value 재동기화) + 실기기 재검증 (wave 8)
 
 ### Phase 4: Today View
 
@@ -176,7 +189,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete   | 2026-08-26 |
 | 2. Notification Infrastructure | 8/8 | Complete   | 2026-08-27 |
-| 3. Check-in Core Loop | 0/TBD | Not started | - |
+| 3. Check-in Core Loop | 12/12 | Complete   | 2026-08-28 |
 | 4. Today View | 0/TBD | Not started | - |
 | 5. Check-in Detail & Edit | 0/TBD | Not started | - |
 | 6. Calendar Tab | 0/TBD | Not started | - |

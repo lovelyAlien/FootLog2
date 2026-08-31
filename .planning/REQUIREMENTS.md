@@ -26,10 +26,10 @@
 
 ### Check-in core loop
 
-- [ ] **REQ-checkin-core** (M7, PD-T3): 체크인을 탭하면 위치를 캡처해 즉시 SQLite에 저장한 뒤, 선택적으로 사진/메모 입력을 허용한다.
-- [ ] **REQ-checkin-write-failure-ui** (M8, PD-T4; M7 확장): 저장이 실패하면 앱이 자동으로 한 번 재시도한 뒤 "저장하지 못했어요" + 재시도 버튼을 표시하며, 저장이 성공할 때까지 메모/사진 입력을 막는다.
-- [ ] **REQ-checkin-confirm-pin** (M9, PD-T5/T24/T32): 앱은 항상 드래그 가능한 확인 핀을 보여주며(GPS 성공/실패/저정확도 모두 동일 경로), 5초 타임아웃 시 마지막으로 알려진 위치로 폴백하고, 날짜 경계 만료·저장 시 삭제·단일 드래프트만 허용·권한 변경에 대한 강건성을 포함해 확인 핀 창 동안 드래프트가 영속화된다.
-- [ ] **REQ-location-denied-flow** (M10, PD-T19; M9 확장): 위치 권한이 거부되면 앱은 OS 캐시 위치가 아닌 앱 소유의 폴백 위치를 사용하고, 알림 거부와 동일한 배너 패턴을 보여준다.
+- [x] **REQ-checkin-core** (M7, PD-T3): 체크인을 탭하면 위치를 캡처해 즉시 SQLite에 저장한 뒤, 선택적으로 사진/메모 입력을 허용한다.
+- [x] **REQ-checkin-write-failure-ui** (M8, PD-T4; M7 확장): 저장이 실패하면 앱이 자동으로 한 번 재시도한 뒤 "저장하지 못했어요" + 재시도 버튼을 표시하며, 저장이 성공할 때까지 메모/사진 입력을 막는다.
+- [x] **REQ-checkin-confirm-pin** (M9, PD-T5/T24/T32): 앱은 항상 드래그 가능한 확인 핀을 보여주며(GPS 성공/실패/저정확도 모두 동일 경로), 5초 타임아웃 시 마지막으로 알려진 위치로 폴백하고, 날짜 경계 만료·저장 시 삭제·단일 드래프트만 허용·권한 변경에 대한 강건성을 포함해 확인 핀 창 동안 드래프트가 영속화된다.
+- [x] **REQ-location-denied-flow** (M10, PD-T19; M9 확장): 위치 권한이 거부되면 앱은 OS 캐시 위치가 아닌 앱 소유의 폴백 위치를 사용하고, 알림 거부와 동일한 배너 패턴을 보여준다.
 
 ### Today view
 
@@ -116,10 +116,10 @@
 | REQ-notification-scheduling | Phase 2 | Pending |
 | REQ-permission-copy | Phase 2 | Complete |
 | REQ-notification-denied-flow | Phase 2 | Pending |
-| REQ-checkin-core | Phase 3 | Pending |
-| REQ-checkin-write-failure-ui | Phase 3 | Pending |
-| REQ-checkin-confirm-pin | Phase 3 | Pending |
-| REQ-location-denied-flow | Phase 3 | Pending |
+| REQ-checkin-core | Phase 3 | Complete |
+| REQ-checkin-write-failure-ui | Phase 3 | Complete |
+| REQ-checkin-confirm-pin | Phase 3 | Complete |
+| REQ-location-denied-flow | Phase 3 | Complete |
 | REQ-today-view | Phase 4 | Pending |
 | REQ-photo-resize | Phase 4 | Pending |
 | REQ-onboarding-empty-state | Phase 4 | Pending |
