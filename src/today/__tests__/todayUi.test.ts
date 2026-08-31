@@ -13,6 +13,9 @@ import { stripComments } from '../../test-utils/stripComments';
 const rowSource = fs.readFileSync(path.join(__dirname, '..', 'CheckinListRow.tsx'), 'utf-8');
 const rowCodeOnly = stripComments(rowSource);
 
+const sheetSource = fs.readFileSync(path.join(__dirname, '..', 'TodayBottomSheet.tsx'), 'utf-8');
+const sheetCodeOnly = stripComments(sheetSource);
+
 describe('CheckinListRow 비인터랙티브 계약 (D-03)', () => {
   it('Test 1: Pressable/TouchableOpacity/onPress/chevron이 등장하지 않는다', () => {
     expect(rowCodeOnly).not.toMatch(/Pressable/);
@@ -52,5 +55,60 @@ describe('CheckinListRow 토큰 규율', () => {
 
   it('Test 8: LIST_ROW_MIN_HEIGHT = 44 상수가 정확히 선언된다', () => {
     expect(rowSource).toMatch(/export const LIST_ROW_MIN_HEIGHT = 44/);
+  });
+});
+
+describe('TodayBottomSheet 리스트 렌더링 (Anti-Pattern 가드)', () => {
+  it('Test 9: BottomSheetFlatList를 사용한다', () => {
+    expect(sheetCodeOnly).toMatch(/BottomSheetFlatList/);
+  });
+
+  it('Test 10: 플레인 FlatList/ScrollView가 등장하지 않는다', () => {
+    expect(sheetCodeOnly).not.toMatch(/<FlatList/);
+    expect(sheetCodeOnly).not.toMatch(/<ScrollView/);
+  });
+
+  it('Test 11: 중첩 GestureHandlerRootView가 등장하지 않는다', () => {
+    expect(sheetCodeOnly).not.toMatch(/GestureHandlerRootView/);
+  });
+});
+
+describe('TodayBottomSheet 애니메이션/문구/스타일 토큰 규율', () => {
+  it('Test 12: motion.bottomSheetSnapMs 참조가 존재한다', () => {
+    expect(sheetCodeOnly).toMatch(/motion\.bottomSheetSnapMs/);
+  });
+
+  it('Test 13: TODAY_COPY.emptyState 참조가 존재하고 문구 리터럴이 하드코딩되지 않는다', () => {
+    expect(sheetCodeOnly).toMatch(/TODAY_COPY\.emptyState/);
+    expect(sheetCodeOnly).not.toContain('아직 기록이 없어요');
+  });
+
+  it('Test 14: colors.surface / radius.lg 표면 스타일이 존재한다', () => {
+    expect(sheetCodeOnly).toMatch(/colors\.surface/);
+    expect(sheetCodeOnly).toMatch(/radius\.lg/);
+  });
+
+  it('Test 15: colors.accent가 등장하지 않는다', () => {
+    expect(sheetCodeOnly).not.toMatch(/colors\.accent\b/);
+  });
+
+  it("Test 16: position: 'absolute'가 등장하지 않는다 (배치는 부모 책임)", () => {
+    expect(sheetCodeOnly).not.toMatch(/position:\s*'absolute'/);
+  });
+
+  it('Test 17: 리터럴 80이 등장하지 않는다 (CLOSED 높이는 토큰에서 파생)', () => {
+    expect(sheetCodeOnly).not.toMatch(/\b80\b/);
+  });
+
+  it('Test 18: LIST_ROW_MIN_HEIGHT를 import해 CLOSED 높이 계산에 재사용한다', () => {
+    expect(sheetCodeOnly).toMatch(/LIST_ROW_MIN_HEIGHT/);
+  });
+
+  it('Test 19: hex 컬러 리터럴이 등장하지 않는다', () => {
+    expect(sheetCodeOnly).not.toMatch(/#[0-9a-fA-F]{3,6}\b/);
+  });
+
+  it('Test 20: containerHeight가 0 이하일 때 null을 반환하는 조기 반환이 존재한다', () => {
+    expect(sheetCodeOnly).toMatch(/containerHeight\s*<=\s*0/);
   });
 });
