@@ -110,18 +110,24 @@ describe('상세화면 색상/토큰 규율', () => {
     expect(detailScreenCodeOnly).not.toMatch(/#[0-9a-fA-F]{3,6}\b/);
   });
 
-  it("Test 12 (프레젠테이셔널 계약): position: 'absolute'가 등장하지 않는다", () => {
-    expect(detailScreenCodeOnly).not.toMatch(/position:\s*'absolute'/);
+  it("Test 12 (프레젠테이셔널 계약 예외 — 사진 삭제 배지 오버레이 한 곳만, 05-06-PLAN.md Task 2, D-04): position: 'absolute'가 정확히 1회 등장한다", () => {
+    const matches = detailScreenCodeOnly.match(/position:\s*'absolute'/g) ?? [];
+    expect(matches.length).toBe(1);
   });
 });
 
 describe('D-05: 상세화면에 체크인 삭제 진입점이 없다', () => {
-  // 05-06-PLAN.md가 사진 삭제('사진 삭제' 접근성 라벨)를 추가하면 이 describe의
-  // 정규식을 조정할 예정이다 — 그때도 deleteCheckin 부재 단언은 반드시 유지한다
-  // (그것이 D-05의 본질이며, 체크인 전체 삭제와 사진 필드 삭제는 서로 다른 개념이다).
-  it("Test 13: deleteCheckin/trash/'삭제' 문자열이 등장하지 않는다", () => {
+  // 05-06-PLAN.md가 사진 삭제 배지(D-04, SF Symbol "trash")를 추가하면서 trash 전면
+  // 부재 단언은 더는 성립하지 않는다 — D-05의 본질은 "체크인 전체 삭제로 이어지는
+  // 식별자"의 부재이므로, deleteCheckin/UndoSnackbar 미등장으로 정교화한다. 사진
+  // 삭제(CHECKIN_DETAIL_COPY.deletePhoto)는 체크인 전체 삭제와 무게가 다른 별개
+  // 액션이다(D-04) — trash 아이콘은 이제 이 화면에 정당하게 존재한다.
+  it('Test 13: deleteCheckin/UndoSnackbar가 등장하지 않는다(체크인 전체 삭제와 무관)', () => {
     expect(detailScreenCodeOnly).not.toMatch(/deleteCheckin/);
-    expect(detailScreenCodeOnly).not.toMatch(/trash/);
+    expect(detailScreenCodeOnly).not.toMatch(/UndoSnackbar/);
+  });
+
+  it("Test 13b: '삭제' 한글 리터럴이 소스에 직접 등장하지 않는다(전부 CHECKIN_DETAIL_COPY 상수 참조)", () => {
     expect(detailScreenCodeOnly).not.toContain('삭제');
   });
 });
@@ -201,5 +207,83 @@ describe('자동저장 미채택 (D-01 vs Phase 7)', () => {
     expect(detailScreenCodeOnly).not.toMatch(/setTimeout/);
     expect(detailScreenCodeOnly).not.toMatch(/debounce/);
     expect(detailScreenCodeOnly).not.toMatch(/onBlur/);
+  });
+});
+
+// 05-06-PLAN.md Task 2 — 이하 3개 describe는 사진 교체/삭제(D-03/D-04) 및 파일 삭제
+// 순서 원자성(Pitfall 5)에 대한 신규 회귀 가드다.
+describe('사진 교체/삭제 (D-03/D-04)', () => {
+  it('Test 25: 사진 액션시트 호출과 pickAndCopyPhoto가 등장한다', () => {
+    expect(detailScreenCodeOnly).toMatch(/ActionSheetIOS\.showActionSheetWithOptions/);
+    expect(detailScreenCodeOnly).toMatch(/pickAndCopyPhoto\(/);
+  });
+
+  it("Test 26 (photos.ts 상수 재사용, 재정의 금지): '사진 촬영'/'앨범에서 선택' 리터럴이 등장하지 않는다", () => {
+    expect(detailScreenCodeOnly).not.toContain('사진 촬영');
+    expect(detailScreenCodeOnly).not.toContain('앨범에서 선택');
+  });
+
+  it('Test 27 (deps.ts 격리 유지): expo-file-system 직접 import가 등장하지 않는다', () => {
+    expect(detailScreenCodeOnly).not.toMatch(/expo-file-system/);
+  });
+
+  it('Test 28: CHECKIN_DETAIL_COPY.changePhoto/deletePhoto 참조가 존재한다', () => {
+    expect(detailScreenCodeOnly).toMatch(/CHECKIN_DETAIL_COPY\.changePhoto/);
+    expect(detailScreenCodeOnly).toMatch(/CHECKIN_DETAIL_COPY\.deletePhoto/);
+  });
+
+  it('Test 29 (D-04 색상 회귀 가드): 사진 삭제 배지가 colors.textMuted를 쓰고 colors.pin/colors.accent는 쓰지 않는다', () => {
+    expect(detailScreenCodeOnly).toMatch(/colors\.textMuted/);
+    expect(detailScreenCodeOnly).not.toMatch(/colors\.accent\b/);
+    expect(detailScreenCodeOnly).not.toMatch(/colors\.pin\b/);
+  });
+
+  it('Test 30 (D-04 — 확인 다이얼로그 없음): Alert 호출이 전체 파일에서 1회뿐이다(미저장 경고 전용, 사진 삭제는 대상 아님)', () => {
+    const matches = detailScreenCodeOnly.match(/Alert\.alert\(/g) ?? [];
+    expect(matches.length).toBe(1);
+  });
+});
+
+describe('사진 파일 삭제 순서 원자성 (Pitfall 5)', () => {
+  it('Test 31 (교체 경로): handlePickPhoto 구간에서 updateCheckinNoteAndPhoto가 deleteFile보다 먼저 등장한다', () => {
+    const start = detailScreenCodeOnly.indexOf('handlePickPhoto');
+    const end = detailScreenCodeOnly.indexOf('handleDeletePhoto');
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const block = detailScreenCodeOnly.slice(start, end);
+    const updateIndex = block.indexOf('updateCheckinNoteAndPhoto');
+    const deleteFileIndex = block.indexOf('deleteFile(');
+    expect(updateIndex).toBeGreaterThanOrEqual(0);
+    expect(deleteFileIndex).toBeGreaterThan(updateIndex);
+  });
+
+  it('Test 32 (삭제 경로): handleDeletePhoto 구간에서 updateCheckinNoteAndPhoto가 deleteFile보다 먼저 등장한다', () => {
+    const start = detailScreenCodeOnly.indexOf('handleDeletePhoto');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const block = detailScreenCodeOnly.slice(start);
+    const updateIndex = block.indexOf('updateCheckinNoteAndPhoto');
+    const deleteFileIndex = block.indexOf('deleteFile(');
+    expect(updateIndex).toBeGreaterThanOrEqual(0);
+    expect(deleteFileIndex).toBeGreaterThan(updateIndex);
+  });
+
+  it('Test 33 (non-blocking): deleteFile 호출이 모두 .catch(로 이어진다(교체 경로 1 + 삭제 경로 1)', () => {
+    const matches = detailScreenCodeOnly.match(/deleteFile\([^)]*\)\s*\.catch\(/g) ?? [];
+    expect(matches.length).toBe(2);
+  });
+});
+
+describe('사진 편집은 미저장 경고 대상이 아니다 (D-04)', () => {
+  it('Test 34: 사진 핸들러 구간(handlePickPhoto~handleDeletePhoto 끝)에 isDirtyRef.current = true 대입이 없다', () => {
+    const start = detailScreenCodeOnly.indexOf('handlePickPhoto');
+    const end = detailScreenCodeOnly.indexOf('if (!checkin) return null;');
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const block = detailScreenCodeOnly.slice(start, end);
+    expect(block).not.toMatch(/isDirtyRef\.current\s*=\s*true/);
+  });
+
+  it('Test 35: UndoSnackbar import가 등장하지 않는다(체크인 전체 삭제 undo와 혼용 금지)', () => {
+    expect(detailScreenCodeOnly).not.toMatch(/UndoSnackbar/);
   });
 });

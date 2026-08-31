@@ -148,4 +148,6 @@ export const CHECKIN_DETAIL_COPY = {
   saveAndLeave: '저장하고 나가기',
   openInMaps: '지도 앱에서 열기',
   changePhoto: '사진 변경',
+  // 아이콘 전용 배지의 VoiceOver 라벨(시각 텍스트 없음, 05-06-PLAN.md Task 2, D-04).
+  deletePhoto: '사진 삭제',
 } as const;

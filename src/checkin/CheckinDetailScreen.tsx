@@ -51,6 +51,10 @@ import { colors, radius, spacing, typography } from '../theme/tokens';
 import type { MigratableDb } from '../db/migrations';
 import type { CheckinRow } from '../db/schema';
 
+// 사진 제거 배지 터치 영역 확장 — 시각 크기는 작게 유지하되(05-UI-SPEC.md
+// §Spacing Scale) 터치 영역은 44×44pt를 채운다(05-06-PLAN.md Task 2).
+const PHOTO_DELETE_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
+
 export type CheckinDetailScreenProps = {
   db: MigratableDb;
   checkinId: string;
@@ -214,6 +218,35 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
     );
   }, [db, checkinId]);
 
+  // 05-06-PLAN.md Task 2 — 사진 제거 배지(D-04, 확인 다이얼로그 없이 즉시 실행,
+  // 되돌림 없음). 원자성 순서는 위 교체 핸들러와 동일하다 — DB 갱신이 성공한
+  // 뒤에만 구 파일을 정리한다. 체크인 전체 삭제가 쓰는 되돌림 스낵바 컴포넌트
+  // (4초 undo)는 여기서 import하지 않는다 — 사진 필드 하나만 바뀌는 가벼운 편집
+  // 액션이라, 무게가 다른 액션과 같은 컴포넌트로 묶으면 D-04가 깨진다. isDirtyRef도
+  // 건드리지 않는다(즉시 저장이라 미저장 경고 대상이 아니다).
+  const handleDeletePhoto = useCallback(() => {
+    const previousPhotoPath = photoPathRef.current;
+    if (!previousPhotoPath) return;
+    updateCheckinNoteAndPhoto(db, checkinId, {
+      note: noteRef.current || null,
+      photoPath: null,
+      now: toIsoTimestamp(),
+    })
+      .then(() => {
+        if (!isMountedRef.current) return;
+        photoPathRef.current = null;
+        setCheckin((prev) => (prev ? { ...prev, photo_path: null } : prev));
+        // 구 파일 정리는 non-blocking이다 — DB는 이미 빈 슬롯 상태를 가리키고
+        // 있으므로 이 호출이 실패해도 고아 파일만 남길 뿐 데이터 유실이 아니다.
+        defaultPhotoStorageDeps.deleteFile(previousPhotoPath).catch((error) => {
+          console.error('Failed to delete removed photo file', error);
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to persist photo removal to checkin row', error);
+      });
+  }, [db, checkinId]);
+
   // AppState 백그라운드 강제 flush(REQ-checkin-detail-flush, D-02) — (tabs)/index/
   // index.tsx의 기존 리스너와 동일한 관용구를 복제한다(같은 리스너를 공유/재사용하는
   // 게 아니라 각 화면이 각자의 dirty state에 대해 같은 패턴을 한 번 더 구독). 반드시
@@ -346,8 +379,9 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
 
       {/* 4. 사진 — 탭하면 사진 액션시트(교체/추가, D-03)가 열린다. 접근성 라벨은
           사진 유무에 따라 갈린다: 있으면 changePhoto, 없으면 기존 첨부 흐름과 같은
-          문구(CheckinActionCard.tsx 선례). 사진 제거용 아이콘 배지(D-04)는
-          05-06-PLAN.md Task 2가 사진이 있을 때만 이 슬롯 안에 추가한다. */}
+          문구(CheckinActionCard.tsx 선례). 사진이 있을 때만 우상단에 제거용 아이콘
+          배지(D-04)를 함께 마운트한다 — 없으면 이 서브트리 자체가 없다(disable이
+          아니라 조건부 마운트, 이 파일의 저장 실패 카드와 동일한 원칙). */}
       <Pressable
         onPress={handlePickPhoto}
         accessibilityRole="button"
@@ -356,7 +390,23 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
         }
       >
         {checkin.photo_path ? (
-          <Image source={{ uri: checkin.photo_path }} style={styles.photo} contentFit="contain" />
+          <View style={styles.photoWrapper}>
+            <Image source={{ uri: checkin.photo_path }} style={styles.photo} contentFit="contain" />
+            {/* 제거 배지는 사진 이미지 위 오버레이라 이 화면에서 absolute 배치를 쓰는
+                유일한 지점이다 — 화면 전체 레이아웃 배치가 아니라 사진 이미지 내부의
+                아이콘-오버레이 관계이므로 프레젠테이셔널 계약("배치는 부모가
+                결정한다")과 충돌하지 않는다(05-06-PLAN.md Task 2 확정 사항). */}
+            <Pressable
+              onPress={handleDeletePhoto}
+              accessibilityRole="button"
+              accessibilityLabel={CHECKIN_DETAIL_COPY.deletePhoto}
+              hitSlop={PHOTO_DELETE_HIT_SLOP}
+              style={styles.photoDeleteBadge}
+            >
+              <View style={[StyleSheet.absoluteFill, styles.photoDeleteBadgeBackground]} />
+              <SymbolView name="trash" tintColor={colors.textMuted} />
+            </Pressable>
+          </View>
         ) : (
           <View style={styles.photoEmpty}>
             <SymbolView name="camera" tintColor={colors.textMuted} />
@@ -464,11 +514,33 @@ const styles = StyleSheet.create({
   pinSaved: {
     backgroundColor: colors.pinSoft,
   },
+  // photoWrapper — 사진 + 삭제 배지 오버레이를 묶는 컨테이너. RN View의 기본
+  // position 값(relative)만으로 자식의 absolute 배치 기준이 되므로 이 스타일
+  // 자체에는 별도 position을 두지 않는다.
+  photoWrapper: {
+    marginTop: spacing.lg,
+  },
   photo: {
     width: '100%',
     height: 240,
     borderRadius: radius.md,
-    marginTop: spacing.lg,
+  },
+  // 삭제 배지 — 이 파일에서 absolute 배치가 등장하는 유일한 지점(사진 이미지 내부의
+  // 아이콘-오버레이 관계, 05-06-PLAN.md Task 2). 시각 크기는 작게, 터치 영역은
+  // hitSlop으로 44×44pt까지 확장한다.
+  photoDeleteBadge: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    padding: spacing['2xs'],
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoDeleteBadgeBackground: {
+    backgroundColor: colors.surface,
+    opacity: 0.85,
+    borderRadius: radius.full,
   },
   photoEmpty: {
     height: 160,
