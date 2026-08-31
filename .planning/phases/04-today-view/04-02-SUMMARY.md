@@ -102,9 +102,15 @@ None - plan executed exactly as written. (구현 중 acceptance criteria의 리�
 
 다만 git 커밋 히스토리 자체에는 `test(...)`/`feat(...)` 분리 커밋이 아니라 태스크당 단일 `feat(...)` 커밋만 존재한다(테스트+구현 동시 포함). RED 검증은 커밋 이전 단계에서 `npx jest`로 직접 수행했으며 본 SUMMARY에 그 결과를 기록한다.
 
-## Self-Check
+## Self-Check: PASSED
 
-(아래 Self-Check 섹션에서 검증)
+- FOUND: src/checkin/photoResize.ts
+- FOUND: src/checkin/photoResize.test.ts
+- FOUND: src/checkin/testing/fakeImageResizer.ts
+- FOUND: .planning/phases/04-today-view/04-02-SUMMARY.md
+- FOUND commit: 9d61ac8 (Task 1)
+- FOUND commit: 772558b (Task 2)
+- FOUND commit: 9922b0f (SUMMARY)
 
 ## Issues Encountered
 - 없음. `npx expo install expo-image-manipulator`가 즉시 `~57.0.14`(다른 `expo-*` 패키지와 동일한 SDK 57 라인)를 설치해 버전 불일치 문제가 없었다.
