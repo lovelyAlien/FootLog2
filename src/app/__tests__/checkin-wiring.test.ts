@@ -365,7 +365,13 @@ describe('src/app/(tabs)/index.tsx 지도 준비 대기 배선 계약 (콜드 �
     // 리뷰 발견(2026-08-30) 이후: onRefine(백그라운드 GPS 보정) 두 곳도 이제
     // waitForMapReady 게이트를 거치므로 4개에서 6개로 늘었다 — 이전에는 이 두 곳이
     // 게이트를 우회해 콜드 부팅 중 조용히 no-op될 수 있었다.
-    const animateToRegionCalls = codeOnly.match(/await waitForMapReady\(\);\s*\n\s*(if \([^\n]*\) return;\s*\n\s*)?mapRef\.current\?\.animateToRegion\(/g) ?? [];
+    // 2026-08-31 — handleRecenterPress의 메인 호출 지점 하나가 waitForMapReady와
+    // animateToRegion 사이에 `const recenterAnimationMs = resolveRecenterAnimationMs();`를
+    // 끼워 넣으므로(극단적 줌아웃 가드), 그 한 줄도 선택적으로 허용한다.
+    const animateToRegionCalls =
+      codeOnly.match(
+        /await waitForMapReady\(\);\s*\n\s*(const recenterAnimationMs = resolveRecenterAnimationMs\(\);\s*\n\s*)?(if \([^\n]*\) return;\s*\n\s*)?mapRef\.current\?\.animateToRegion\(/g
+      ) ?? [];
     expect(animateToRegionCalls.length).toBe(6);
   });
 
@@ -454,21 +460,46 @@ describe('src/app/(tabs)/index.tsx resolveInstantPosition 배선 계약 (구글�
     expect(block).toMatch(/longitudeDelta: MAP_REGION_DELTA/);
   });
 
-  it('Test 67 (회귀 가드 — animateToRegion과 animateCamera가 거의 동시에 호출되면 iOS가 위치 이동 애니메이션을 중간에 취소하고 각도만 반영하던 네이티브 경합 문제): handleRecenterPress가 animateToRegion에 RECENTER_ANIMATION_MS를 명시하고, 그만큼 await한 뒤에야 이어지는 animateCamera(heading/pitch)를 호출한다', () => {
+  it('Test 67 (회귀 가드 — animateToRegion과 animateCamera가 거의 동시에 호출되면 iOS가 위치 이동 애니메이션을 중간에 취소하고 각도만 반영하던 네이티브 경합 문제): handleRecenterPress가 animateToRegion에 recenterAnimationMs를 명시하고, 그만큼 await한 뒤에야 이어지는 animateCamera(heading/pitch)를 호출한다', () => {
     const recenterMatch = codeOnly.match(/const handleRecenterPress = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/);
     expect(recenterMatch).not.toBeNull();
     const block = recenterMatch ? recenterMatch[0] : '';
+    // 2026-08-31 — 극단적 줌아웃 회귀 가드(EXTREME_ZOOM_OUT_RATIO)로 duration이
+    // resolveRecenterAnimationMs()가 반환하는 동적 값(recenterAnimationMs)으로
+    // 바뀌었다. RECENTER_ANIMATION_MS 상수 자체는 그 함수의 "평소" 분기 값으로 여전히
+    // 존재한다.
     expect(codeOnly).toMatch(/const RECENTER_ANIMATION_MS = 500;/);
-    expect(block).toMatch(/animateToRegion\(\s*\{[\s\S]*?\},\s*\n\s*RECENTER_ANIMATION_MS\s*\n\s*\);/);
-    expect(block).toMatch(/await new Promise\(\(resolve\) => setTimeout\(resolve, RECENTER_ANIMATION_MS\)\);/);
+    expect(codeOnly).toMatch(/return RECENTER_ANIMATION_MS;/);
+    expect(block).toMatch(/const recenterAnimationMs = resolveRecenterAnimationMs\(\);/);
+    expect(block).toMatch(/animateToRegion\(\s*\{[\s\S]*?\},\s*\n\s*recenterAnimationMs\s*\n\s*\);/);
+    expect(block).toMatch(/await new Promise\(\(resolve\) => setTimeout\(resolve, recenterAnimationMs\)\);/);
     // await 지점이 animateToRegion 호출보다 뒤에, nextMode 결정(따라서 이어지는
     // animateCamera 호출들)보다는 앞에 와야 한다.
     const animateToRegionIndex = block.indexOf('animateToRegion(');
-    const awaitTimeoutIndex = block.indexOf('await new Promise((resolve) => setTimeout(resolve, RECENTER_ANIMATION_MS));');
+    const awaitTimeoutIndex = block.indexOf('await new Promise((resolve) => setTimeout(resolve, recenterAnimationMs));');
     const nextModeIndex = block.indexOf("const nextMode: 'north' | 'compass'");
     expect(animateToRegionIndex).toBeGreaterThan(-1);
     expect(awaitTimeoutIndex).toBeGreaterThan(animateToRegionIndex);
     expect(nextModeIndex).toBeGreaterThan(awaitTimeoutIndex);
+  });
+
+  it('Test 69 (회귀 가드 — 지도를 많이 줌아웃한 상태에서 재센터를 누르면 목표 줌까지 여러 번 눌러야 도달하던 문제, 2026-08-31): 현재 위도 델타가 목표의 EXTREME_ZOOM_OUT_RATIO배를 넘으면 애니메이션 없이 즉시 이동한다', () => {
+    expect(codeOnly).toMatch(/const EXTREME_ZOOM_OUT_RATIO = 10;/);
+    const resolveMatch = codeOnly.match(
+      /const resolveRecenterAnimationMs = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/
+    );
+    expect(resolveMatch).not.toBeNull();
+    const block = resolveMatch ? resolveMatch[0] : '';
+    expect(block).toMatch(/currentDelta > MAP_REGION_DELTA \* EXTREME_ZOOM_OUT_RATIO/);
+    expect(block).toMatch(/return 0;/);
+    // onRegionChangeComplete가 현재 델타를 기록해야 이 판정이 가능하다.
+    const regionChangeMatch = codeOnly.match(
+      /const handleRegionChangeComplete = useCallback\(\(region: Region\) => \{[\s\S]*?\n  \}, \[\]\);/
+    );
+    expect(regionChangeMatch).not.toBeNull();
+    expect(regionChangeMatch ? regionChangeMatch[0] : '').toMatch(
+      /lastLatitudeDeltaRef\.current = region\.latitudeDelta;/
+    );
   });
 });
 

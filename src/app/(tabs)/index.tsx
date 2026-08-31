@@ -99,6 +99,17 @@ const COMPASS_PITCH_DEGREES = 45;
 // 경합을 피한다(아래 handleRecenterPress 주석 참고).
 const RECENTER_ANIMATION_MS = 500;
 
+// 회귀 가드 — "지도를 많이 줌아웃한 상태에서 재센터를 누르면 목표 줌까지 한 번에
+// 안 가고 여러 번 눌러야 하는" 문제(2026-08-31 창업자 리포트, 실기기에서 재현 확인).
+// 원인은 iOS MKMapView의 animateToRegion이 위도 델타가 극단적으로 큰 폭(대륙/국가
+// 스케일)만큼 줄어드는 애니메이션을 요청받으면 한 호출로 목표까지 수렴하지 않고
+// 매 호출마다 그 격차의 일부만 좁힌다는 네이티브 특성이다(요청한 duration과 무관 —
+// 더 긴 duration을 줘도 같은 현상). 현재 화면 위도 델타가 목표(MAP_REGION_DELTA)의
+// 이 배수보다 크면 "극단적 줌아웃"으로 보고, 애니메이션 대신 즉시 이동(duration 0)
+// 시켜 여러 번 누를 필요 자체를 없앤다. 평소(약간 팬/줌된 정도)의 재센터는 여전히
+// 부드럽게 애니메이션된다.
+const EXTREME_ZOOM_OUT_RATIO = 10;
+
 // 확인 핀 히트 영역 확장값 — 24px 원을 최소 터치 타겟 크기까지 넓힌다.
 const PIN_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
 
@@ -197,6 +208,10 @@ export default function Index() {
 
   const mapRef = useRef<MapView>(null);
   const lastMapCoordinateRef = useRef<{ lat: number; lng: number } | null>(null);
+  // 현재 화면 위도 델타(줌 폭) — EXTREME_ZOOM_OUT_RATIO 판정에 쓴다. null이면 아직
+  // onRegionChangeComplete가 한 번도 안 왔다는 뜻이라 안전하게 "평소 애니메이션"으로
+  // 처리한다.
+  const lastLatitudeDeltaRef = useRef<number | null>(null);
   const orientationModeRef = useRef<'north' | 'compass'>('north');
   // 구글맵 실제 동작 재현 — 첫 탭은 "북쪽 고정으로 확대·이동"만 하고 나침반 모드로
   // 바로 들어가지 않는다. 이 ref가 false인 동안은 orientationModeRef가 이미 어떤
@@ -461,6 +476,17 @@ export default function Index() {
 
   const handleRegionChangeComplete = useCallback((region: Region) => {
     lastMapCoordinateRef.current = { lat: region.latitude, lng: region.longitude };
+    lastLatitudeDeltaRef.current = region.latitudeDelta;
+  }, []);
+
+  // EXTREME_ZOOM_OUT_RATIO 참고 — 현재 화면이 목표 줌보다 훨씬 넓게 잡혀 있으면
+  // animateToRegion이 한 번에 수렴하지 못하므로 즉시 이동(duration 0)시킨다.
+  const resolveRecenterAnimationMs = useCallback(() => {
+    const currentDelta = lastLatitudeDeltaRef.current;
+    if (currentDelta != null && currentDelta > MAP_REGION_DELTA * EXTREME_ZOOM_OUT_RATIO) {
+      return 0;
+    }
+    return RECENTER_ANIMATION_MS;
   }, []);
 
   // 콜드 부팅 직후 첫 상호작용 버그 가드 — 네이티브 MapView(iOS MKMapView)가
@@ -557,7 +583,7 @@ export default function Index() {
                 latitudeDelta: MAP_REGION_DELTA,
                 longitudeDelta: MAP_REGION_DELTA,
               },
-              RECENTER_ANIMATION_MS
+              resolveRecenterAnimationMs()
             );
           })().catch((error) => {
             console.error('Failed to apply refined recenter position', error);
@@ -572,6 +598,7 @@ export default function Index() {
         if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
 
         await waitForMapReady();
+        const recenterAnimationMs = resolveRecenterAnimationMs();
         if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
         mapRef.current?.animateToRegion(
           {
@@ -580,7 +607,7 @@ export default function Index() {
             latitudeDelta: MAP_REGION_DELTA,
             longitudeDelta: MAP_REGION_DELTA,
           },
-          RECENTER_ANIMATION_MS
+          recenterAnimationMs
         );
         // 위치 이동 애니메이션이 끝나기 전에 아래에서 곧바로 animateCamera(heading/pitch)를
         // 호출하면, iOS MKMapView가 진행 중이던 region 애니메이션을 그 순간의 중간값에서
@@ -589,14 +616,15 @@ export default function Index() {
         // 애니메이션이 같은 네이티브 카메라 상태를 동시에 건드리며 경합). animateToRegion에
         // 준 duration만큼 기다린 뒤에야 다음 카메라 명령을 보낸다.
         //
-        // 리뷰 발견(altitude) — 이 고정 지연은 react-native-maps의 기본 애니메이션
-        // 길이를 그대로 가정한 타이밍 추측이다. onRegionChangeComplete를 실제 완료
-        // 신호로 쓰는 대안을 검토했으나, 이 콜백은 이 호출이 아닌 다른 region 변화
-        // (동시 사용자 팬 등)에도 반응하므로 잘못된 시점에 조기 완료로 오인해 바로 이
+        // 리뷰 발견(altitude) — 이 지연은 react-native-maps의 기본 애니메이션 길이를
+        // 그대로 가정한 타이밍 추측이다(resolveRecenterAnimationMs가 반환한 값을 그대로
+        // 씀 — 극단적 줌아웃이면 0, 아니면 RECENTER_ANIMATION_MS). onRegionChangeComplete를
+        // 실제 완료 신호로 쓰는 대안을 검토했으나, 이 콜백은 이 호출이 아닌 다른 region
+        // 변화(동시 사용자 팬 등)에도 반응하므로 잘못된 시점에 조기 완료로 오인해 바로 이
         // 지점이 고치려던 애니메이션 경합을 재도입할 위험이 있다 — 이번 라운드에서는
         // 그 위험을 감수하지 않고 고정 지연을 유지한다. Reduce Motion/저전력 모드로
         // 실제 네이티브 애니메이션 길이가 달라지면 이 가정이 깨질 수 있음을 남겨둔다.
-        await new Promise((resolve) => setTimeout(resolve, RECENTER_ANIMATION_MS));
+        await new Promise((resolve) => setTimeout(resolve, recenterAnimationMs));
         if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
 
         const nextMode: 'north' | 'compass' = !hasCenteredOnceRef.current
