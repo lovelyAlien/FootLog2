@@ -10,7 +10,7 @@ import path from 'path';
 import { stripComments } from '../../test-utils/stripComments';
 
 const APP_DIR = path.join(__dirname, '..');
-const TODAY_SCREEN_PATH = path.join('(tabs)', 'index.tsx');
+const TODAY_SCREEN_PATH = path.join('(tabs)', 'index', 'index.tsx');
 
 function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(APP_DIR, relativePath), 'utf-8');

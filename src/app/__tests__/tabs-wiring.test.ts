@@ -19,7 +19,7 @@ const layoutSource = readSource(path.join('(tabs)', '_layout.tsx'));
 const layoutCodeOnly = stripComments(layoutSource);
 const calendarSource = readSource(path.join('(tabs)', 'calendar.tsx'));
 const calendarCodeOnly = stripComments(calendarSource);
-const todayIndexSource = readSource(path.join('(tabs)', 'index.tsx'));
+const todayIndexSource = readSource(path.join('(tabs)', 'index', 'index.tsx'));
 const todayIndexCodeOnly = stripComments(todayIndexSource);
 const contentSource = fs.readFileSync(
   path.join(APP_DIR, '..', 'today', 'content.ts'),
@@ -27,9 +27,9 @@ const contentSource = fs.readFileSync(
 );
 
 describe('라우트 구조 계약', () => {
-  it('Test 1: (tabs)/_layout.tsx, (tabs)/index.tsx, (tabs)/calendar.tsx가 전부 존재한다', () => {
+  it('Test 1: (tabs)/_layout.tsx, (tabs)/index/index.tsx, (tabs)/calendar.tsx가 전부 존재한다', () => {
     expect(fs.existsSync(path.join(APP_DIR, '(tabs)', '_layout.tsx'))).toBe(true);
-    expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'index.tsx'))).toBe(true);
+    expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'index', 'index.tsx'))).toBe(true);
     expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'calendar.tsx'))).toBe(true);
   });
 
