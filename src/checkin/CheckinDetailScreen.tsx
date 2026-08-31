@@ -79,9 +79,10 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={[timestampStyle, styles.time]}>{formatLocalTime(checkin.timestamp_utc)}</Text>
 
-      {/* 정적 지도 미리보기 — 스크롤/줌/회전/틸트/탭 모두 비활성. pointerEvents="none"까지
-          더해 개별 플래그를 다 잠가도 남을 수 있는 제스처 인식 자체를 원천 차단한다
-          (05-UI-SPEC.md §정적 지도 미리보기, 05-RESEARCH.md Pattern 2). */}
+      {/* 정적 지도 미리보기 — 스크롤/줌/회전/틸트/탭 모두 비활성. 터치 이벤트 자체를
+          완전히 무시하는 속성까지 더해 개별 제스처 플래그를 다 잠가도 남을 수 있는
+          제스처 인식을 원천 차단한다(05-UI-SPEC.md §정적 지도 미리보기, 05-RESEARCH.md
+          Pattern 2). */}
       <MapView
         style={styles.map}
         region={{
@@ -125,8 +126,9 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
           </Text>
         </View>
       )}
-      {/* 사진 교체/삭제 인터랙션(D-03/D-04)은 05-06-PLAN.md가 추가한다 — 여기서는
-          표시 전용이라 Pressable로 감싸지 않는다(중복 구현 방지 주석). */}
+      {/* 사진 교체/제거 인터랙션(D-03/D-04, 기존 첨부를 없애는 가벼운 편집 액션)은
+          05-06-PLAN.md가 추가한다 — 여기서는 표시 전용이라 Pressable로 감싸지 않는다
+          (중복 구현 방지 주석). */}
     </ScrollView>
   );
 }
