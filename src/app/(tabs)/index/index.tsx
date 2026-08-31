@@ -72,6 +72,7 @@ import {
   CAPTURE_TIMEOUT_MS,
   LAST_KNOWN_MAX_AGE_MS,
   LOCATION_ACCURACY_BALANCED,
+  MAP_REGION_DELTA,
 } from '../../../checkin/config';
 import {
   PHOTO_ACTION_SHEET_CANCEL_INDEX,
@@ -85,9 +86,10 @@ import type { CheckinState } from '../../../checkin/checkinFlow';
 import { SymbolView } from 'expo-symbols';
 import { buildTrajectoryCoordinates } from '../../../today/trajectory';
 
-// 확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 — GPS 좌표 근방을 자연스럽게 보여줄
-// 정도의 값이며, 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
-const MAP_REGION_DELTA = 0.01;
+// MAP_REGION_DELTA(확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 근사치)는
+// 05-03-PLAN.md Task 2부터 src/checkin/config.ts로 옮겨졌다 — CheckinDetailScreen.tsx의
+// 잠긴 정적 지도 미리보기도 같은 값이 필요해져 두 곳에 값을 중복 선언하지 않기
+// 위해서다(이 저장소 규약). 위 checkin/config import에서 함께 가져온다.
 
 // 나침반 모드 진입 시 지도를 기울이는 각도 — 구글맵 "나침반(3D 시선 회전)" 모드의
 // 살짝 눕는 느낌을 재현한다. 45도는 애플/구글 지도 모두에서 흔히 쓰는 관용적인 값.
