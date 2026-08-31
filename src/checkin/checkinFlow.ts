@@ -138,10 +138,16 @@ export const CHECKIN_COPY = {
 // 바뀌어도 이 편집 흐름의 회귀 가드가 함께 흔들리지 않게 하기 위함, 그 반대도 마찬가지.
 // 05-UI-SPEC.md §Copywriting Contract "미저장 경고 다이얼로그(D-01, 신규 카피)" +
 // §Screen & Component Notes "3. 지도 앱에서 열기" 절이 확정한 문구를 그대로 전사한다.
+// 05-06-PLAN.md Task 1 — 사진이 이미 있을 때 사진 슬롯의 접근성 라벨.
+// CheckinActionCard.tsx가 같은 문구를 하드코딩해 쓰던 선례를 이 화면에서는 단일
+// 출처 상수로 옮긴다(JSX 한글 리터럴 하드코딩 금지 규약).
 export const CHECKIN_DETAIL_COPY = {
   unsavedTitle: '저장하지 않은 변경사항이 있어요',
   keepEditing: '계속 편집',
   discardAndLeave: '저장하지 않고 나가기',
   saveAndLeave: '저장하고 나가기',
   openInMaps: '지도 앱에서 열기',
+  changePhoto: '사진 변경',
+  // 아이콘 전용 배지의 VoiceOver 라벨(시각 텍스트 없음, 05-06-PLAN.md Task 2, D-04).
+  deletePhoto: '사진 삭제',
 } as const;
