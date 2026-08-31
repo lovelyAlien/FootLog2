@@ -13,14 +13,15 @@
 //
 // 05-03-PLAN.md는 표시 계층(시각 → 정적 지도 미리보기 → 사진)까지 책임졌다.
 // 05-04-PLAN.md가 메모 입력·저장·미저장 경고·AppState background flush·"지도 앱에서
-// 열기" 딥링크를 이 파일에 이어 붙였다. 사진 교체/삭제 인터랙션은 05-06-PLAN.md가
-// 아직 다음 슬롯으로 남겨두고 있다 — 지금은 그 슬롯에 동작 없는 껍데기를 렌더하지
-// 않는다.
+// 열기" 딥링크를 이 파일에 이어 붙였다. 05-06-PLAN.md Task 1이 사진 슬롯을 탭하면
+// 기존 첨부 흐름과 같은 액션시트(촬영/앨범)로 교체/추가하는 인터랙션(D-03)을 더한다
+// — 사진 삭제 배지(D-04)는 Task 2 몫으로 다음 슬롯에 남겨둔다.
 //
 // D-05: 이 화면에 체크인 전체 삭제 진입점을 두지 않는다 — 삭제는 오늘 뷰 리스트
 // 스와이프로만 제공되며(05-05-PLAN.md), 상세화면은 편집 전용 공간으로 유지한다.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActionSheetIOS,
   Alert,
   AppState,
   Pressable,
@@ -39,6 +40,13 @@ import { MAP_REGION_DELTA } from './config';
 import MapView, { Marker } from 'react-native-maps';
 import { useNavigation } from 'expo-router';
 import { getCheckinById, runWithSingleRetry, updateCheckinNoteAndPhoto } from './checkinRepo';
+import {
+  PHOTO_ACTION_SHEET_CANCEL_INDEX,
+  PHOTO_ACTION_SHEET_OPTIONS,
+  PHOTO_SOURCE_BY_ACTION_SHEET_INDEX,
+  pickAndCopyPhoto,
+} from './photos';
+import { defaultPhotoStorageDeps } from './deps';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 import type { MigratableDb } from '../db/migrations';
 import type { CheckinRow } from '../db/schema';
@@ -69,12 +77,15 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
   // [db, checkinId]에만 의존하는 안정적 useCallback으로 유지하기 위함이다.
   const [note, setNote] = useState('');
   const noteRef = useRef('');
-  // 사진 편집(교체/삭제)은 05-06-PLAN.md 몫이라 이 plan에서는 photo_path가 로드 이후
-  // 바뀌지 않는다 — 그래도 flushNoteAndPhoto가 checkin state를 deps에 담지 않도록
-  // ref로 미러링해둔다.
+  // photoPathRef — flushNoteAndPhoto가 checkin state를 deps에 담지 않도록 최신
+  // photo_path를 ref로 미러링해둔다. 05-06-PLAN.md부터는 사진 교체/삭제 핸들러도
+  // 이 ref를 읽고 쓴다(성공 후에만 갱신 — 아래 handlePickPhoto 참고).
   const photoPathRef = useRef<string | null>(null);
   const isDirtyRef = useRef(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  // 사진 첨부 실패 state — 캡처 흐름(CheckinActionCard)의 photoError와 동일한 역할이나
+  // 이 화면 로컬 state로 별도 관리한다(캡처 흐름의 phase 상태 머신과 섞지 않는다).
+  const [photoError, setPhotoError] = useState(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -133,6 +144,75 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
   // 매트릭스, D-01). Phase 3 캡처 시점의 "blur 즉시 커밋"(CheckinActionCard의 블러
   // 콜백)과 의도적으로 다른 모델이며, 이 화면의 핵심 결정이라 "일관성" 명목으로 blur
   // 저장을 되돌리기 가장 쉬운 지점이다 — 되돌리지 말 것.
+
+  // 05-06-PLAN.md Task 1 — 사진 슬롯 탭 시 교체/추가(D-03). (tabs)/index/index.tsx의
+  // 사진 액션시트 관용구를 그대로 적응한다: photos.ts가 소유한 옵션/취소 인덱스/출처
+  // 매핑 상수를 그대로 소비하고 이 파일에 재정의하지 않는다. 사진 편집은 메모와 달리
+  // dirty 추적 대상이 아니다 — isDirtyRef를 건드리지 않고, 성공 즉시 DB에 반영한다
+  // (05-UI-SPEC.md §저장 트리거 매트릭스: "사진 삭제·교체 → 즉시 저장, 경고 대상 아님").
+  const handlePickPhoto = useCallback(() => {
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: [...PHOTO_ACTION_SHEET_OPTIONS],
+        cancelButtonIndex: PHOTO_ACTION_SHEET_CANCEL_INDEX,
+      },
+      (buttonIndex) => {
+        const source = PHOTO_SOURCE_BY_ACTION_SHEET_INDEX[buttonIndex];
+        if (!source) return;
+
+        pickAndCopyPhoto(source)
+          .then((result) => {
+            if (!isMountedRef.current || result === null) return;
+            if ('error' in result) {
+              setPhotoError(true);
+              return;
+            }
+            setPhotoError(false);
+
+            // 원자성 순서(연구 문서의 Pitfall 5, 05-CONTEXT.md Claude's Discretion
+            // 확정 답) — ① 새 파일 저장은 위 호출이 이미 완료했다. ② DB 갱신이
+            // 성공한 뒤에만 ③ 이전 사진 파일을 정리한다. 순서를 뒤집어 구 파일부터
+            // 지우면, 저장이 실패했을 때 새 파일도 구 파일도 남지 않는 상태가 된다
+            // — 절대 뒤집지 않는다. previousPhotoPath는 DB 갱신을 부르기 전에
+            // 지역 변수로 붙잡아 둔다(성공 후 photoPathRef가 갱신되면 더는 읽을
+            // 수 없다).
+            const previousPhotoPath = photoPathRef.current;
+            updateCheckinNoteAndPhoto(db, checkinId, {
+              // note 인자로 noteRef.current를 함께 넘기는 이유: 이 갱신 함수가 note와
+              // photoPath 두 필드를 함께 받는 계약이라, 사진만 바꿀 때도 현재 메모
+              // 값을 같이 보내지 않으면 편집 중이던 메모가 덮어쓰기로 사라진다.
+              note: noteRef.current || null,
+              photoPath: result.uri,
+              now: toIsoTimestamp(),
+            })
+              .then(() => {
+                if (!isMountedRef.current) return;
+                photoPathRef.current = result.uri;
+                setCheckin((prev) => (prev ? { ...prev, photo_path: result.uri } : prev));
+                if (previousPhotoPath) {
+                  // 구 파일 정리는 non-blocking이다 — DB는 이미 새 사진을 가리키고
+                  // 있으므로 이 호출이 실패해도 고아 파일만 남길 뿐 데이터 유실이
+                  // 아니다(사용자에게 오류를 노출하지 않는다).
+                  defaultPhotoStorageDeps
+                    .deleteFile(previousPhotoPath)
+                    .catch((error) => {
+                      console.error('Failed to delete replaced photo file', error);
+                    });
+                }
+              })
+              .catch((error) => {
+                console.error('Failed to persist replaced photo to checkin row', error);
+              });
+          })
+          .catch((error) => {
+            console.error('Failed to pick and copy photo', error);
+            if (isMountedRef.current) {
+              setPhotoError(true);
+            }
+          });
+      }
+    );
+  }, [db, checkinId]);
 
   // AppState 백그라운드 강제 flush(REQ-checkin-detail-flush, D-02) — (tabs)/index/
   // index.tsx의 기존 리스너와 동일한 관용구를 복제한다(같은 리스너를 공유/재사용하는
@@ -264,19 +344,33 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
         </Text>
       </Pressable>
 
-      {checkin.photo_path ? (
-        <Image source={{ uri: checkin.photo_path }} style={styles.photo} contentFit="contain" />
-      ) : (
-        <View style={styles.photoEmpty}>
-          <SymbolView name="camera" tintColor={colors.textMuted} />
-          <Text style={[typography.helperText, styles.photoEmptyLabel]}>
-            {CHECKIN_COPY.photoPlaceholderLabel}
-          </Text>
-        </View>
+      {/* 4. 사진 — 탭하면 사진 액션시트(교체/추가, D-03)가 열린다. 접근성 라벨은
+          사진 유무에 따라 갈린다: 있으면 changePhoto, 없으면 기존 첨부 흐름과 같은
+          문구(CheckinActionCard.tsx 선례). 사진 제거용 아이콘 배지(D-04)는
+          05-06-PLAN.md Task 2가 사진이 있을 때만 이 슬롯 안에 추가한다. */}
+      <Pressable
+        onPress={handlePickPhoto}
+        accessibilityRole="button"
+        accessibilityLabel={
+          checkin.photo_path ? CHECKIN_DETAIL_COPY.changePhoto : CHECKIN_COPY.photoPlaceholderLabel
+        }
+      >
+        {checkin.photo_path ? (
+          <Image source={{ uri: checkin.photo_path }} style={styles.photo} contentFit="contain" />
+        ) : (
+          <View style={styles.photoEmpty}>
+            <SymbolView name="camera" tintColor={colors.textMuted} />
+            <Text style={[typography.helperText, styles.photoEmptyLabel]}>
+              {CHECKIN_COPY.photoPlaceholderLabel}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+      {photoError && (
+        <Text style={[typography.helperText, styles.photoErrorLabel]}>
+          {CHECKIN_COPY.photoFailed}
+        </Text>
       )}
-      {/* 사진 교체/제거 인터랙션(D-03/D-04, 기존 첨부를 없애는 가벼운 편집 액션)은
-          05-06-PLAN.md가 추가한다 — 여기서는 표시 전용이라 Pressable로 감싸지 않는다
-          (중복 구현 방지 주석). */}
 
       {/* 5. 메모(레이아웃 마지막 슬롯) — journalEntry 타이포 토큰은 이 TextInput
           하나에만 적용한다(Phase 3/4 계승 원칙, 버튼/헤더/안내 문구에는 절대 쓰지
@@ -387,6 +481,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   photoEmptyLabel: {
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
+  photoErrorLabel: {
     color: colors.textMuted,
     marginTop: spacing.xs,
   },
