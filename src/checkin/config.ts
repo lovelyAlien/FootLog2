@@ -73,3 +73,10 @@ export const MAX_PHOTO_DIMENSION_PX = 1600;
 // 검증 경로가 없음). 03-RESEARCH.md Standard Stack 기준 expo-location@~57.0.14의
 // LocationAccuracy.Balanced = 3.
 export const LOCATION_ACCURACY_BALANCED = 3 as const;
+
+// 05-03-PLAN.md Task 2 — 지도 region의 위/경도 델타(줌 레벨 근사치). 원래
+// (tabs)/index/index.tsx(오늘 뷰)의 확인 핀 카메라 이동에서만 쓰던 지역 상수였는데,
+// CheckinDetailScreen.tsx의 잠긴 정적 지도 미리보기도 동일 델타가 필요해졌다 — 값을
+// 두 곳에 중복 선언하지 않는다는 이 저장소의 규약에 따라 여기로 옮겨 양쪽이 같은
+// 상수를 import한다. 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
+export const MAP_REGION_DELTA = 0.01;

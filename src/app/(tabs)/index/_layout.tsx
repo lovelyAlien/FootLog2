@@ -10,8 +10,13 @@
 // 스크린에 headerShown: false를 명시하지 않으면 오늘 뷰 최상단에 의도치 않은 빈
 // 네비게이션 바가 생긴다.
 //
-// [id] 스크린(체크인 상세화면)은 아직 등록하지 않는다 — 이 시점에는 해당 라우트
-// 파일이 존재하지 않는다. 05-03-PLAN.md가 [id].tsx를 만들면서 여기에 함께 등록한다.
+// [id] 스크린(체크인 상세화면)은 2026-09-01 05-03-PLAN.md Task 1이 등록한다 —
+// headerShown: true를 여기서 **명시**하는 이유: 이 Stack은 위에서 설명한 대로 루트의
+// screenOptions={{ headerShown: false }}를 상속하지 않는 별도 인스턴스이고, 반대로
+// 같은 Stack 안의 index 스크린은 headerShown: false다 — 그래서 기본값에 기댈 수 없고
+// 스크린마다 명시해야 한다(05-RESEARCH.md Pitfall 2). title은 여기서 정적으로 지정하지
+// 않는다 — 체크인마다 다른 로컬 날짜라서 CheckinDetailScreen이 데이터 로드 후
+// navigation.setOptions로 채운다.
 //
 // src/app/(tabs)/_layout.tsx(형제 Tabs 레이아웃)는 이 이동으로 바뀌지 않는다 —
 // expo-router는 (tabs)/index/index.tsx를 여전히 "index" 세그먼트로 매칭한다
@@ -22,6 +27,7 @@ export default function TodayStackLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="[id]" options={{ headerShown: true }} />
     </Stack>
   );
 }
