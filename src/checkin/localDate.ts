@@ -47,3 +47,20 @@ export function formatLocalTime(
     hourCycle: 'h23',
   }).format(new Date(isoTimestamp));
 }
+
+// 05-02-PLAN.md Task 2 — 체크인 상세화면 헤더 타이틀(예: "8월 31일"). `ko-KR` 로케일을
+// 쓰는 이유: 이 문자열은 formatLocalTime과 달리 시간 표시가 아니라 사용자에게 한국어로
+// 그대로 노출되는 문구다 — "8월 31일" 같은 한국어 월/일 표기를 얻으려면 en-GB/en-CA가
+// 아니라 ko-KR이 필요하다(이 파일의 en-CA/en-GB 로케일 선택 근거를 남기는 기존 관례를
+// 그대로 따른 것). 수동 Date 파싱/문자열 슬라이싱/월 이름 배열 하드코딩을 쓰지 않고
+// Intl.DateTimeFormat이 타임존 변환과 로케일 표기를 전담한다(이 파일 상단 규약).
+export function formatLocalMonthDay(
+  isoTimestamp: string,
+  timeZone: string = resolveTimeZone()
+): string {
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone,
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(isoTimestamp));
+}
