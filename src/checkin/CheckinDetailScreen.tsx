@@ -19,7 +19,16 @@
 // D-05: 이 화면에 체크인 전체 삭제 진입점을 두지 않는다 — 삭제는 오늘 뷰 리스트
 // 스와이프로만 제공되며(05-05-PLAN.md), 상세화면은 편집 전용 공간으로 유지한다.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  AppState,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import * as Linking from 'expo-linking';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
@@ -143,6 +152,45 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
     });
     return () => subscription.remove();
   }, [flushNoteAndPhoto]);
+
+  // beforeRemove — 인앱 이탈(뒤로가기/스와이프백) 미저장 경고(D-01). 헤더 뒤로가기
+  // 버튼과 엣지 스와이프백 둘 다 React Navigation의 동일한 POP 액션 디스패치
+  // 파이프라인에 물려 있어 우회 경로 없이 똑같이 이 리스너를 거친다
+  // (05-RESEARCH.md Pattern 4가 expo-router/build/react-navigation/core/
+  // useOnPreventRemove.js 소스로 직접 검증). usePreventRemove(내부 구현, 공개 API
+  // 아님) 대신 useNavigation()의 공개 addListener API만 쓴다.
+  //
+  // 세 버튼 모두 iOS 기본(강조 없는) 스타일이다 — 경고성 강조 스타일을 절대 쓰지
+  // 않는다. iOS는 그 강조 스타일 버튼을 자동으로 빨간 텍스트로 렌더하는데, DESIGN.md는
+  // UI 전역에서 빨강 계열 시맨틱 색상을 금지한다(Phase 4가 발견한 "탭바 기본 파란
+  // 틴트"와 같은 종류의 놓치기 쉬운 플랫폼 기본값 함정) — 버튼 순서와 문구로만 옵션을
+  // 구분한다.
+  //
+  // 막았던 pop 액션 객체를 나중에 그대로 navigation.dispatch에 넘기면 원래 막았던
+  // 화면 전환이 재실행된다 — React Navigation의 표준 "preventing going back" 관용구다.
+  useEffect(() => {
+    const sub = navigation.addListener('beforeRemove', (e) => {
+      if (!isDirtyRef.current) return;
+      e.preventDefault();
+      Alert.alert(CHECKIN_DETAIL_COPY.unsavedTitle, undefined, [
+        { text: CHECKIN_DETAIL_COPY.keepEditing, style: 'default' },
+        {
+          text: CHECKIN_DETAIL_COPY.discardAndLeave,
+          style: 'default',
+          onPress: () => navigation.dispatch(e.data.action),
+        },
+        {
+          text: CHECKIN_DETAIL_COPY.saveAndLeave,
+          style: 'default',
+          onPress: () => {
+            flushNoteAndPhoto();
+            navigation.dispatch(e.data.action);
+          },
+        },
+      ]);
+    });
+    return sub;
+  }, [navigation, flushNoteAndPhoto]);
 
   // 로드 전(state 초기값) + 존재하지 않는 id(getCheckinById가 null 반환) 둘 다 같은
   // 빈 렌더로 처리한다 — 이 화면은 "이미 존재하는 체크인 1건"에 대한 화면이라 빈
