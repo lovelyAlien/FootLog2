@@ -144,7 +144,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 
 - [x] 05-01-PLAN.md — 라우트 폴더 재구성((tabs)/index/{_layout,index}.tsx) + 회귀 가드 5개 파일 경로 갱신 (wave 1)
 - [x] 05-02-PLAN.md — 데이터/유틸 레이어: getCheckinById·deleteCheckin·formatLocalMonthDay·PhotoStorageDeps.deleteFile (wave 1)
-- [ ] 05-03-PLAN.md — 상세화면 [id] 라우트 + 조회 + 시각/정적지도/사진 고정 레이아웃 (wave 2)
+- [x] 05-03-PLAN.md — 상세화면 [id] 라우트 + 조회 + 시각/정적지도/사진 고정 레이아웃 (wave 2)
 - [ ] 05-04-PLAN.md — 메모 편집·저장 + beforeRemove 미저장 경고 + AppState flush + Maps 딥링크 (wave 3)
 - [ ] 05-05-PLAN.md — 리스트 행 탭 진입 + 스와이프 삭제 + 4초 지연 삭제/undo 스낵바 (wave 3)
 - [ ] 05-06-PLAN.md — 상세화면 사진 교체/삭제(D-03/D-04) + 파일 삭제 순서 원자성 (wave 4)
@@ -209,7 +209,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Notification Infrastructure | 8/8 | Complete   | 2026-08-27 |
 | 3. Check-in Core Loop | 12/12 | Complete   | 2026-08-28 |
 | 4. Today View | 7/7 | Complete   | 2026-08-31 |
-| 5. Check-in Detail & Edit | 2/7 | In Progress|  |
+| 5. Check-in Detail & Edit | 3/7 | In Progress|  |
 | 6. Calendar Tab | 0/TBD | Not started | - |
 | 7. Day-end Reflection | 0/TBD | Not started | - |
 | 8. Export & Polish | 0/TBD | Not started | - |
