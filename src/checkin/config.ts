@@ -40,6 +40,15 @@ export type PhotoStorageDeps = {
   copyIntoDocumentDirectory(sourceUri: string, fileName: string): Promise<string>;
 };
 
+// expo-image-manipulator SDK 57 새 API는 체이닝 컨텍스트 객체
+// (`manipulate().resize().renderAsync().saveAsync()`)라 `Pick<typeof SDK, ...>` 더블이
+// 과도하게 복잡해지므로(위 PhotoStorageDeps와 동일한 이유), 프로덕션이 실제로 필요로 하는
+// 동작 하나("긴 변을 maxDimensionPx 이하로 줄인 뒤 저장한 결과 uri를 반환") 만 좁힌 함수
+// 포트로 노출한다.
+export type ResizeDeps = {
+  resizeToMaxDimension(uri: string, maxDimensionPx: number): Promise<string>;
+};
+
 // 5000 = docs/designs/footlog-product-design.md T5 확정값(실측 근거 없는 초기 추정치로
 // 문서에 명시돼 있음, 03-RESEARCH.md Pattern 2). getCurrentPositionAsync에는 신뢰 가능한
 // timeout 옵션이 없어 Promise.race로 직접 구현해야 한다.
@@ -51,6 +60,9 @@ export const LAST_KNOWN_MAX_AGE_MS = 5 * 60 * 1000;
 // 03-CONTEXT.md D-04: drafts 테이블은 단일 row만 유지하는 고정 PK를 쓴다(화면 이탈/강제
 // 종료 후에도 드래프트가 생존해야 하므로 사용자별/세션별 PK가 아니라 상수 하나로 고정).
 export const DRAFT_ROW_ID = 'draft';
+
+// REQ-photo-resize 확정값, 다른 곳에서 1600을 재선언하지 않는다(04-02-PLAN.md).
+export const MAX_PHOTO_DIMENSION_PX = 1600;
 
 // deps.ts의 `Location.Accuracy.Balanced`(nominal enum) 값과 반드시 일치해야 한다 —
 // 정합성 단언은 deps.ts에 있다(유닛 테스트가 네이티브 모듈을 로드하지 않으므로 런타임
