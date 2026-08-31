@@ -209,8 +209,8 @@ export default function Index() {
   const mapRef = useRef<MapView>(null);
   const lastMapCoordinateRef = useRef<{ lat: number; lng: number } | null>(null);
   // 현재 화면 위도 델타(줌 폭) — EXTREME_ZOOM_OUT_RATIO 판정에 쓴다. null이면 아직
-  // onRegionChangeComplete가 한 번도 안 왔다는 뜻이라 안전하게 "평소 애니메이션"으로
-  // 처리한다.
+  // onRegionChangeComplete가 한 번도 안 왔다는 뜻이며, resolveRecenterAnimationMs는
+  // 이 경우도 "즉시 이동"으로 처리한다(이미 목표 근처라는 근거가 없으므로).
   const lastLatitudeDeltaRef = useRef<number | null>(null);
   const orientationModeRef = useRef<'north' | 'compass'>('north');
   // 구글맵 실제 동작 재현 — 첫 탭은 "북쪽 고정으로 확대·이동"만 하고 나침반 모드로
@@ -481,9 +481,17 @@ export default function Index() {
 
   // EXTREME_ZOOM_OUT_RATIO 참고 — 현재 화면이 목표 줌보다 훨씬 넓게 잡혀 있으면
   // animateToRegion이 한 번에 수렴하지 못하므로 즉시 이동(duration 0)시킨다.
+  //
+  // 리뷰 발견 — currentDelta가 null(onRegionChangeComplete가 아직 한 번도 안 옴)일 때
+  // "평소 애니메이션"으로 처리했더니, 콜드 부팅 직후 첫 재센터 탭이 바로 이 조건에
+  // 걸려 정작 고치려던 "여러 번 눌러야 수렴" 버그를 그대로 재현했다(실기기 재현 확인
+  // — 세션 중 지도를 한 번도 손으로 팬/줌하지 않은 채 첫 탭을 누른 경우). null은
+  // "이미 목표 근처"라는 근거가 전혀 없는 상태이므로, 반대로 안전한 기본값은
+  // "즉시 이동"이다 — 최악의 경우도 이미 목표에 가까운데 애니메이션 없이 스냅되는
+  // 정도의 사소한 모션 손실일 뿐, 기능적 버그(여러 번 눌러야 함)는 아니다.
   const resolveRecenterAnimationMs = useCallback(() => {
     const currentDelta = lastLatitudeDeltaRef.current;
-    if (currentDelta != null && currentDelta > MAP_REGION_DELTA * EXTREME_ZOOM_OUT_RATIO) {
+    if (currentDelta == null || currentDelta > MAP_REGION_DELTA * EXTREME_ZOOM_OUT_RATIO) {
       return 0;
     }
     return RECENTER_ANIMATION_MS;

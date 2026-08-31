@@ -501,6 +501,19 @@ describe('src/app/(tabs)/index.tsx resolveInstantPosition 배선 계약 (구글�
       /lastLatitudeDeltaRef\.current = region\.latitudeDelta;/
     );
   });
+
+  it('Test 70 (회귀 가드 — 콜드 부팅 직후 지도를 한 번도 손대지 않은 채 누른 첫 재센터 탭도 여러 번 눌러야 했던 문제, 2026-08-31): currentDelta가 null(onRegionChangeComplete 미수신)이어도 즉시 이동으로 처리한다', () => {
+    const resolveMatch = codeOnly.match(
+      /const resolveRecenterAnimationMs = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/
+    );
+    expect(resolveMatch).not.toBeNull();
+    const block = resolveMatch ? resolveMatch[0] : '';
+    // null도 "즉시 이동" 분기로 떨어져야 한다 — "안전하게 평소 애니메이션"으로
+    // 처리했던 이전 판정(currentDelta != null && ...)이 실기기에서 콜드 부팅 첫 탭에
+    // 그대로 버그를 재현시켜, null도 즉시 이동으로 바꿨다.
+    expect(block).toMatch(/currentDelta == null \|\| currentDelta > MAP_REGION_DELTA \* EXTREME_ZOOM_OUT_RATIO/);
+    expect(block).not.toMatch(/currentDelta != null &&/);
+  });
 });
 
 describe('src/app/(tabs)/index.tsx 최초 진입 시 내 위치 기준 확대 배선 계약 (네이버지도/구글맵처럼 전국 축소 뷰 대신 내 위치로 시작)', () => {
