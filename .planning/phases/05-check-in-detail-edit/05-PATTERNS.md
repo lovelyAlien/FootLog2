@@ -349,7 +349,7 @@ import { SwipeDirection } from 'react-native-gesture-handler';
   activeOffsetX={[-10, 10]}   // Pitfall 3 mitigation — BottomSheetFlatList gesture conflict
   failOffsetY={[-5, 5]}
   renderRightActions={() => (
-    <View style={styles.deleteAffordance /* width:72, backgroundColor: colors.accent */}>
+    <View style={styles.deleteAffordance /* width:72, backgroundColor: colors.pin */}>
       <SymbolView name="trash" tintColor={colors.surface} />
     </View>
   )}
@@ -481,7 +481,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 ### Design tokens — no new tokens invented
 **Source:** `src/theme/tokens.ts` (full file quoted above)
-**Apply to:** all new/modified UI files. Specifically: swipe-delete affordance uses `colors.accent` (background) + `colors.surface` (icon tint) per UI-SPEC; static map pin uses `colors.pinSoft`; "지도 앱에서 열기" button text uses `colors.textMuted` (never `colors.accent` — accent is reserved, see `(tabs)/_layout.tsx` comment lines 7-12 for the precedent of accent-budget discipline enforced by wiring tests); undo snackbar crossfade uses `motion.saveStateCrossfadeMs` (180ms).
+**Apply to:** all new/modified UI files. Specifically: swipe-delete affordance uses `colors.pin` (background, 2026-09-01 switched from `colors.accent` — see DESIGN.md Decisions Log) + `colors.surface` (icon tint) per UI-SPEC; static map pin uses `colors.pinSoft`; "지도 앱에서 열기" button text uses `colors.textMuted` (never `colors.accent`/`colors.pin` — this phase does not use accent at all, see `(tabs)/_layout.tsx` comment lines 7-12 for the precedent of accent-budget discipline enforced by wiring tests); undo snackbar crossfade uses `motion.saveStateCrossfadeMs` (180ms).
 
 ### Presentational component contract (no absolute positioning, parent-owned placement)
 **Source:** `src/components/CheckinActionCard.tsx:4-7`, `src/today/CheckinListRow.tsx:4-6`, `src/today/TodayBottomSheet.tsx:4-8`

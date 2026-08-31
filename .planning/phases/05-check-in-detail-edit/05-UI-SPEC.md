@@ -23,7 +23,7 @@ Phase 5의 UI 표면은 오늘 뷰(Phase 4) 바텀시트 리스트의 완료된 
 4. **"지도 앱에서 열기" 딥링크 버튼** — muted 톤 텍스트 버튼(REQ-maps-deeplink).
 5. **사진 교체/삭제** — 기존 액션시트 재사용 + 확인 없는 즉시 삭제(D-03, D-04).
 6. **수정 저장 실패 UI** — 최초 저장 실패(`CheckinActionCard` SAVE_FAILED)와 동일 패턴 재사용.
-7. **바텀시트 리스트 행 스와이프 삭제 + 4초 undo 스낵바** — 올리브그린 어포던스, 빨강 금지(REQ-checkin-swipe-delete).
+7. **바텀시트 리스트 행 스와이프 삭제 + 4초 undo 스낵바** — Pin(테라코타) 어포던스, 빨강 금지(REQ-checkin-swipe-delete).
 8. **`CheckinListRow`를 탭 가능하게 전환** — Phase 4에서 의도적으로 비활성화(D-03, 04-CONTEXT.md)했던 것을 이 phase가 뒤집는다.
 
 **이 phase가 만들지 않는 것 (05-CONTEXT.md 근거):**
@@ -67,7 +67,7 @@ Exceptions:
 - **44×44pt 최소 터치 타겟** — "지도 앱에서 열기" 텍스트 버튼, 사진 삭제 아이콘 배지(`hitSlop`으로 확장, 시각적으로는 더 작아도 됨), 스낵바의 "실행취소" 액션, 상세화면 헤더 뒤로가기 버튼(iOS 시스템 기본).
 - **정적 지도 미리보기 고정 높이:** 160px(spacing 스케일의 배수는 아니지만 `photoBox`류 기존 컴포넌트 크기 결정과 동일한 근거의 컴포넌트 치수 — spacing 토큰 자체가 아님). 전체 너비 사용, `radius.md`(8px) 모서리.
 - **빈 사진 슬롯 높이:** 160px, 정적 지도 미리보기와 시각적 리듬 일치(둘 다 화면 너비를 쓰는 사각형 블록).
-- **스와이프 삭제 어포던스 폭:** 72px(리스트 행과 동일한 44px 높이), `colors.accent` 배경.
+- **스와이프 삭제 어포던스 폭:** 72px(리스트 행과 동일한 44px 높이), `colors.pin` 배경.
 
 ---
 
@@ -93,23 +93,23 @@ Exceptions:
 
 ## Color
 
-DESIGN.md/`tokens.ts`의 기존 팔레트를 그대로 사용 — **이 phase가 새 색상 토큰을 발명하지 않는다.** 다만 기존 `colors.accent`를 승인된 6개 용도 밖의 새 맥락(스와이프 삭제)에 재사용하는 확장 결정이 하나 있다(아래 참고).
+DESIGN.md/`tokens.ts`의 기존 팔레트를 그대로 사용 — **이 phase가 새 색상 토큰을 발명하지 않는다.**
 
 | Role | Value | Usage |
 |------|-------|-------|
 | Dominant (60%) | `#F4F1EA` (`colors.background`) | 상세화면 배경 |
 | Secondary (30%) | `#FBFAF6` (`colors.surface`) | 메모 텍스트필드 배경, 사진 슬롯 배경(사진 있을 때는 사진 자체) |
-| Accent (10%) | `#7C8660` (`colors.accent`) | 이 phase의 신규 사용처는 **스와이프 삭제 어포던스 배경** 1곳뿐(아래 "색상 결정" 참고) — 체크인 버튼 등 기존 6개 승인 용도는 이 phase에서 다시 그리지 않음 |
+| Pin | `#B85C38` (`colors.pin`) | **스와이프 삭제 어포던스 배경**(아래 "색상 결정" 참고, 2026-09-01 accent에서 전환) |
 | Pin soft | `#DDC0AC` (`colors.pinSoft`) | 정적 지도 미리보기의 단일 마커(이미 저장된 체크인이므로 Today 뷰의 "저장된 핀"과 동일 규칙 적용 — `colors.pin`이 아니라 `pinSoft`) |
-| Destructive(체크인 전체 삭제 스와이프) | `colors.accent` (신규 색상 아님, 재사용) | 스와이프 삭제 어포던스 배경 + 아이콘은 `colors.surface` |
-| Destructive(사진 삭제) | `colors.textMuted` | 삭제 아이콘 배지, semantic red 아님 — "가벼운 편집 액션"(D-04) 취급에 맞춰 accent도 별도 destructive 색도 쓰지 않음 |
+| Destructive(체크인 전체 삭제 스와이프) | `colors.pin` (신규 색상 아님, 재사용) | 스와이프 삭제 어포던스 배경 + 아이콘은 `colors.surface` |
+| Destructive(사진 삭제) | `colors.textMuted` | 삭제 아이콘 배지, semantic red 아님 — "가벼운 편집 액션"(D-04) 취급에 맞춰 accent/Pin도 별도 destructive 색도 쓰지 않음 |
 
-Accent 예산 확인: 이 phase가 accent를 쓰는 유일한 신규 위치는 스와이프 삭제 배경이며, "액센트 1개, 절대 늘리지 않음" 원칙은 **새 색상을 만들지 않았으므로** 유지된다(기존 색의 새 용도 확장, Phase 4가 궤적선에 `accentSoft`를 재사용한 것과 동일한 선례).
+Accent 예산 확인: 이 phase는 accent를 전혀 쓰지 않는다(스와이프 삭제도 Pin으로 전환) — "액센트 1개, 절대 늘리지 않음" 원칙과 무관.
 
-### 색상 결정: 스와이프 삭제 어포던스는 `accent`(빨강 아님)를 재사용
+### 색상 결정: 스와이프 삭제 어포던스는 `pin`(빨강 아님)을 재사용 (2026-09-01 갱신)
 
-REQUIREMENTS.md(REQ-checkin-swipe-delete)와 `footlog-product-design.md` T11이 모두 "빨간색이 아니라 기존 올리브그린 톤 유지"라고 명시한다 — "기존"이라는 표현이 핵심: 팔레트에 올리브그린은 `colors.accent` 하나뿐이므로, 이는 새 색상을 만들라는 지시가 아니라 **이미 있는 accent를 재사용하라는 지시**로 읽는 게 문서와 가장 일치한다. DESIGN.md의 "시맨틱 색상 없음"(success/warning/error 색 자체를 두지 않음) 원칙과도 충돌하지 않는다 — 이 색은 "위험/삭제"라는 새 시맨틱 카테고리가 아니라, 이미 있는 단일 accent 색을 그대로 가져다 쓰는 것이기 때문이다.
-- 배경: `colors.accent`
+REQUIREMENTS.md(REQ-checkin-swipe-delete)와 `footlog-product-design.md` T11이 모두 "빨간색이 아니라 기존 올리브그린 톤 유지"라고 명시했었지만, DESIGN.md가 2026-08-31 18:10 갱신에서 accent의 승인 용도를 캘린더 탭 전용 2개(오늘 표시 밑줄, 스크러버 선택 위치)로 좁히고 체크인 관련 색상 정체성을 전부 `colors.pin`(테라코타)으로 이전했다 — 이 UI-SPEC 최초 작성(17:30)이 그 갱신보다 먼저라 재검증되지 않은 채 accent를 그대로 지정했던 것이 `/gsd:plan-phase 5`의 gsd-plan-checker에서 블로커로 지적됨. 스와이프 삭제는 체크인 행에 대한 파괴적 액션이므로 "체크인을 만들고 보고 그 자리로 돌아가는 행위 전체가 하나의 정체성 색"이라는 DESIGN.md 2026-08-31 원칙을 그대로 따르는 것이 accent를 새 용도로 확장하는 것보다 문서와 더 일치한다 — 3가지 옵션(accent 신규 승인 / Pin 전환 / accentSoft) 목업을 창업자에게 제시했고 Pin을 명시적으로 선택했다(DESIGN.md Decisions Log 2026-09-01 참고, REQUIREMENTS.md도 동시 갱신). DESIGN.md의 "시맨틱 색상 없음"(success/warning/error 색 자체를 두지 않음) 원칙과 충돌하지 않는다 — Pin은 "위험/삭제"가 아니라 "체크인"이라는 단일 정체성을 가리키는 색이며, 완료/실패 이분법과 짝짓지 않는다는 원칙도 그대로 지킨다.
+- 배경: `colors.pin`
 - 아이콘(`trash`, SF Symbol): `colors.surface`
 - accessibilityLabel: "삭제"
 
@@ -218,7 +218,7 @@ Stack.Screen (push, 탭바 노출 유지 — product-design.md 네비게이션 �
 ### 스와이프 삭제 (`CheckinListRow`, `TodayBottomSheet` 리스트)
 
 - 왼쪽 스와이프로 오른쪽에서 삭제 어포던스 노출(iOS 표준 스와이프 방향).
-- 어포던스: 폭 72px, 배경 `colors.accent`, 중앙 `trash` SF Symbol(`colors.surface`), accessibilityLabel "삭제".
+- 어포던스: 폭 72px, 배경 `colors.pin`, 중앙 `trash` SF Symbol(`colors.surface`), accessibilityLabel "삭제".
 - 스와이프가 임계값을 넘으면 삭제 확정(별도 확인 다이얼로그 없음, iOS 네이티브 스와이프 삭제 관례) → 리스트에서 즉시 사라짐 + 4초 스낵바.
 - 메모/사진 유무와 무관하게 모든 체크인에 동일 적용(REQ-checkin-swipe-delete, "빈 체크인 예외 없음" 확정 사항).
 

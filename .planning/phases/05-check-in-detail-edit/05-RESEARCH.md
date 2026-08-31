@@ -51,8 +51,9 @@ None — 논의가 phase 스코프 안에 머물렀음(05-CONTEXT.md `<deferred>
   radius.md, 인터랙션 전부 비활성) → "지도 앱에서 열기"(텍스트 버튼, `colors.textMuted`,
   accent 아님) → 사진(있으면 최대 240px, 없으면 160px 빈 슬롯) → 메모(`journalEntry`,
   multiline, minHeight 96px).
-- **색상:** 스와이프 삭제 어포던스 배경 `colors.accent` + 아이콘 `colors.surface`(폭
-  72px). 정적 지도 마커는 `colors.pinSoft`(저장된 체크인 규칙과 동일). `Alert.alert`의
+- **색상:** 스와이프 삭제 어포던스 배경 `colors.pin`(2026-09-01 accent에서 전환, DESIGN.md
+  Decisions Log 참고) + 아이콘 `colors.surface`(폭 72px). 정적 지도 마커는
+  `colors.pinSoft`(저장된 체크인 규칙과 동일). `Alert.alert`의
   "저장하지 않고 나가기" 버튼은 `style: 'destructive'` 금지 — 전부 `default`.
 - **미저장 경고 다이얼로그(신규 카피, 3버튼):** 제목 "저장하지 않은 변경사항이 있어요",
   "계속 편집"(default) / "저장하지 않고 나가기"(default) / "저장하고 나가기"(default).
@@ -78,7 +79,7 @@ None — 논의가 phase 스코프 안에 머물렀음(05-CONTEXT.md `<deferred>
 | REQ-checkin-detail-layout | 시간 → 정적 지도 미리보기 → "지도 앱에서 열기" → 사진 → 메모, 고정 레이아웃 | Architecture Patterns §2(정적 지도 미리보기), Don't Hand-Roll(날짜 포맷), UI-SPEC 레이아웃 인용 |
 | REQ-checkin-detail-flush | 저장되지 않은 메모 수정 내용은 AppState 백그라운드 전환 시 강제 flush | Architecture Patterns §5(기존 AppState flush 패턴 재사용), Code Examples "AppState 배경 flush" |
 | REQ-maps-deeplink | "지도 앱에서 열기"는 저장되지 않은 수정 내용을 잃지 않고 지도 앱으로 딥링크 | Architecture Patterns §5 + §6(딥링크 URL/Linking), Code Examples "Maps 딥링크" |
-| REQ-checkin-swipe-delete | 스와이프 삭제는 올리브그린 어포던스 + 4초 undo 스낵바, 메모/사진 유무 무관 전부 적용 | Architecture Patterns §3(ReanimatedSwipeable), §7(지연 삭제 패턴), Common Pitfalls "BottomSheetFlatList 제스처 충돌" |
+| REQ-checkin-swipe-delete | 스와이프 삭제는 Pin(테라코타) 어포던스 + 4초 undo 스낵바, 메모/사진 유무 무관 전부 적용 | Architecture Patterns §3(ReanimatedSwipeable), §7(지연 삭제 패턴), Common Pitfalls "BottomSheetFlatList 제스처 충돌" |
 </phase_requirements>
 
 ## Summary
@@ -336,7 +337,7 @@ import { SwipeDirection } from 'react-native-gesture-handler';
   rightThreshold={40}
   overshootRight={false}
   renderRightActions={() => (
-    <View style={styles.deleteAffordance /* width:72, backgroundColor: colors.accent */}>
+    <View style={styles.deleteAffordance /* width:72, backgroundColor: colors.pin */}>
       <SymbolView name="trash" tintColor={colors.surface} />
     </View>
   )}
@@ -721,7 +722,10 @@ export function formatLocalMonthDay(
 
 ## Open Questions
 
-1. **지연 삭제의 실제 DB DELETE가 실패하면 어떤 UX를 보여주나?**
+> **상태(2026-09-01, `/gsd:plan-phase 5` 계획 단계):** 아래 3건 모두 **RESOLVED**.
+> 각 항목의 Recommendation이 그대로 채택돼 특정 PLAN 태스크에 배선됐다 — 미해결 항목은 없다.
+
+1. **지연 삭제의 실제 DB DELETE가 실패하면 어떤 UX를 보여주나?** — ✅ **RESOLVED**
    - What we know: UI-SPEC은 "지연 삭제 패턴 채택 권장"까지만 명시하고, 4초 타이머
      만료 후 실제 `deleteCheckin` 호출이 실패하는 경우(디스크 문제 등)의 UX는
      REQUIREMENTS/CONTEXT/UI-SPEC 어디에도 없다.
@@ -732,8 +736,13 @@ export function formatLocalMonthDay(
    - Recommendation: `runWithSingleRetry`로 조용히 1회 재시도하고, 그래도 실패하면
      별도 UI 없이 `console.error`만 남긴다(다음 목록 새로고침 시 row가 다시 보이는
      것 자체가 암묵적 "실행취소된 것처럼" 자연 복구) — 계획 단계에서 사용자 확인 권장.
+   - **Resolution (2026-09-01):** Recommendation 그대로 채택. `05-05-PLAN.md` Task 3의
+     `onCommit` 로직이 `runWithSingleRetry(() => deleteCheckin(...))` → 실패 시 새 오류 UI
+     없이 `console.error` + `hiddenIds`에서 id 제거(다음 `reloadTodayCheckins`에서 행이 다시
+     나타나는 것이 자연스러운 피드백)로 명시돼 있고, 그 판단 근거를 코드 주석에 남기는 것까지
+     태스크 범위에 포함됐다. 새 실패 UI를 만들지 않는 것이 이 phase의 확정 스코프다.
 
-2. **체크인 삭제 시 첨부 사진 파일도 함께 삭제해야 하는가?**
+2. **체크인 삭제 시 첨부 사진 파일도 함께 삭제해야 하는가?** — ✅ **RESOLVED**
    - What we know: `photo_path`는 `documentDirectory`를 가리키는 단일 필드이고,
      REQ/CONTEXT/UI-SPEC 어디에도 "체크인 삭제 시 사진 정리" 요구사항이 명시돼
      있지 않다(사진 삭제 UX인 D-03/D-04는 상세화면 안에서의 개별 편집만 다룸).
@@ -744,13 +753,23 @@ export function formatLocalMonthDay(
      `photo_path`가 있었다면 `deleteFile(photoPath)`를 non-blocking으로 호출. 다만
      이 phase의 요구사항 문서에 명시가 없으므로 계획 단계에서 사용자 확인이 필요한
      항목으로 표시.
+   - **Resolution (2026-09-01):** 정리하는 쪽으로 확정. `05-02-PLAN.md` Task 3이
+     `PhotoStorageDeps.deleteFile` 포트를 추가하고, `05-05-PLAN.md` Task 3이 DB DELETE 성공
+     **후에만** non-blocking으로 `deleteFile`을 호출하도록 순서를 계약했다(wiring 테스트가
+     줄 번호 인덱스 비교로 순서를 게이트). 고아 파일 누적으로 인한 저장공간 누수를 막는 쪽이
+     기본값이며, 파일 삭제 실패는 데이터 유실이 아니므로 사용자에게 노출하지 않는다.
 
-3. **동시에 여러 행을 스와이프 삭제하면 스낵바를 어떻게 처리하나?**
+3. **동시에 여러 행을 스와이프 삭제하면 스낵바를 어떻게 처리하나?** — ✅ **RESOLVED**
    - What we know: UI-SPEC은 단일 스낵바 UI만 스펙했고 동시성 케이스는 다루지 않음.
    - What's unclear: 새 스와이프가 이전 pending 삭제를 즉시 확정(Pattern 7의 A2
      가정)할지, 큐잉해 순차 노출할지.
    - Recommendation: 단일 스낵바 + 즉시 확정(A2)이 iOS 네이티브 메일 앱 등의 관례와
      가장 가깝고 구현도 단순 — 계획 단계에서 확정.
+   - **Resolution (2026-09-01):** 단일 스낵바 + 즉시 확정으로 확정. `05-05-PLAN.md` Task 1의
+     `createPendingDeleteController`가 대기 항목을 **하나만** 유지하고(큐잉하지 않음),
+     `request(b)`가 들어오면 `a`를 즉시 커밋한다. 이 동작은 `<behavior>` 케이스
+     ("`request(a)` 직후 `request(b)` → `a`가 즉시 커밋되고 `b`만 대기")로 유닛 테스트에
+     고정된다.
 
 ## Environment Availability
 

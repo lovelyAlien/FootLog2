@@ -44,7 +44,7 @@
 - [ ] **REQ-checkin-detail-layout** (M16, PD-T28; M15 확장): 상세화면은 시간(모노스페이스) → 정적 지도 미리보기 → "지도 앱에서 열기" → 사진 → 메모 순서로 고정된 레이아웃을 갖는다.
 - [ ] **REQ-checkin-detail-flush** (M17, PD-T29; M15 확장): 저장되지 않은 메모 수정 내용은 `AppState` 백그라운드 전환 시 강제로 flush된다.
 - [ ] **REQ-maps-deeplink** (M18, PD-T26; M17에 의존): "지도 앱에서 열기"는 저장되지 않은 수정 내용을 잃지 않고 지도 앱으로 딥링크한다.
-- [ ] **REQ-checkin-swipe-delete** (M19, PD-T11): 스와이프 삭제는 (빨강이 아닌) 올리브그린 어포던스와 4초 undo 스낵바를 사용하며, 메모/사진 유무와 무관하게 모든 삭제에 동일하게 적용된다.
+- [ ] **REQ-checkin-swipe-delete** (M19, PD-T11; 색상 2026-09-01 갱신 — DESIGN.md Decisions Log 참고): 스와이프 삭제는 (빨강이 아닌) Pin(테라코타) 어포던스와 4초 undo 스낵바를 사용하며, 메모/사진 유무와 무관하게 모든 삭제에 동일하게 적용된다.
 
 ### Calendar tab
 
