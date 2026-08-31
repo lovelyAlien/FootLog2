@@ -140,7 +140,16 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
   3. "지도 앱에서 열기"는 저장되지 않은 수정 내용을 잃지 않고 지도 앱에서 위치를 연다.
   4. 사용자는 메모/사진 유무와 무관하게 체크인을 스와이프 삭제할 수 있으며(빨강이 아닌 올리브그린 어포던스), 4초 스낵바로 되돌릴 수 있다.
 
-**Plans**: TBD
+**Plans**: 7 plans (5 waves)
+
+- [ ] 05-01-PLAN.md — 라우트 폴더 재구성((tabs)/index/{_layout,index}.tsx) + 회귀 가드 5개 파일 경로 갱신 (wave 1)
+- [ ] 05-02-PLAN.md — 데이터/유틸 레이어: getCheckinById·deleteCheckin·formatLocalMonthDay·PhotoStorageDeps.deleteFile (wave 1)
+- [ ] 05-03-PLAN.md — 상세화면 [id] 라우트 + 조회 + 시각/정적지도/사진 고정 레이아웃 (wave 2)
+- [ ] 05-04-PLAN.md — 메모 편집·저장 + beforeRemove 미저장 경고 + AppState flush + Maps 딥링크 (wave 3)
+- [ ] 05-05-PLAN.md — 리스트 행 탭 진입 + 스와이프 삭제 + 4초 지연 삭제/undo 스낵바 (wave 3)
+- [ ] 05-06-PLAN.md — 상세화면 사진 교체/삭제(D-03/D-04) + 파일 삭제 순서 원자성 (wave 4)
+- [ ] 05-07-PLAN.md — 전체 게이트 + 시뮬레이터 제스처 경합/시각 검증 + 사용자 확인 (wave 5)
+
 **UI hint**: yes
 
 ### Phase 6: Calendar Tab
