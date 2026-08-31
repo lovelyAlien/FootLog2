@@ -56,13 +56,25 @@ describe('상세 라우트 구조 계약', () => {
 });
 
 describe('상세화면 고정 레이아웃 순서 (REQ-checkin-detail-layout)', () => {
-  it('Test 5 (05-04-PLAN.md가 딥링크 버튼과 메모를 추가하면 5요소로 확장 예정): formatLocalTime < MapView < photo_path 순서로 등장한다', () => {
-    const timeIndex = detailScreenCodeOnly.indexOf('formatLocalTime');
-    const mapIndex = detailScreenCodeOnly.indexOf('MapView');
-    const photoIndex = detailScreenCodeOnly.indexOf('photo_path');
+  // 05-04-PLAN.md Task 3 — 05-03-PLAN.md가 예고한 대로 3요소를 5요소로 확장한다:
+  // formatLocalTime(시각) < MapView(정적 지도) < openInMaps(지도 앱 열기) < photo_path
+  // (사진) < notePlaceholder(메모). photo_path는 데이터 로드 useEffect(row?.photo_path)
+  // 안에도 등장하므로, 실제 렌더 JSX(<ScrollView 이후)만 슬라이스해 순서를 검사한다 —
+  // 그렇지 않으면 로드 로직의 이른 등장이 레이아웃 순서 단언을 오염시킨다.
+  it('Test 5: formatLocalTime < MapView < openInMaps < photo_path < notePlaceholder 순서로 등장한다(렌더 JSX 범위)', () => {
+    const jsxStart = detailScreenCodeOnly.indexOf('<ScrollView');
+    expect(jsxStart).toBeGreaterThanOrEqual(0);
+    const jsx = detailScreenCodeOnly.slice(jsxStart);
+    const timeIndex = jsx.indexOf('formatLocalTime');
+    const mapIndex = jsx.indexOf('MapView');
+    const openInMapsIndex = jsx.indexOf('openInMaps');
+    const photoIndex = jsx.indexOf('photo_path');
+    const noteIndex = jsx.indexOf('notePlaceholder');
     expect(timeIndex).toBeGreaterThanOrEqual(0);
     expect(mapIndex).toBeGreaterThan(timeIndex);
-    expect(photoIndex).toBeGreaterThan(mapIndex);
+    expect(openInMapsIndex).toBeGreaterThan(mapIndex);
+    expect(photoIndex).toBeGreaterThan(openInMapsIndex);
+    expect(noteIndex).toBeGreaterThan(photoIndex);
   });
 
   it('Test 6: formatLocalMonthDay가 등장한다 (헤더 타이틀)', () => {
@@ -111,5 +123,83 @@ describe('D-05: 상세화면에 체크인 삭제 진입점이 없다', () => {
     expect(detailScreenCodeOnly).not.toMatch(/deleteCheckin/);
     expect(detailScreenCodeOnly).not.toMatch(/trash/);
     expect(detailScreenCodeOnly).not.toContain('삭제');
+  });
+});
+
+// 05-04-PLAN.md Task 3 — 이하 4개 describe는 05-04-PLAN.md가 신규로 추가하는 회귀
+// 가드다(미저장 경고/AppState flush/Maps 딥링크/자동저장 미채택).
+describe('미저장 경고 (D-01)', () => {
+  it('Test 14: addListener("beforeRemove"가 등장하고 isDirtyRef 조기 반환 가드가 존재한다', () => {
+    expect(detailScreenCodeOnly).toMatch(/addListener\('beforeRemove'/);
+    expect(detailScreenCodeOnly).toMatch(/if\s*\(!isDirtyRef\.current\)\s*return;/);
+  });
+
+  it('Test 15: e.preventDefault()가 등장하고 e.data.action이 정확히 2회(저장 안 함 + 저장 후 나가기) 등장한다', () => {
+    expect(detailScreenCodeOnly).toMatch(/e\.preventDefault\(\)/);
+    const matches = detailScreenCodeOnly.match(/e\.data\.action/g) ?? [];
+    expect(matches.length).toBe(2);
+  });
+
+  it('Test 16: CHECKIN_DETAIL_COPY의 3개 버튼 키(keepEditing/discardAndLeave/saveAndLeave)가 전부 등장한다', () => {
+    expect(detailScreenCodeOnly).toMatch(/CHECKIN_DETAIL_COPY\.keepEditing/);
+    expect(detailScreenCodeOnly).toMatch(/CHECKIN_DETAIL_COPY\.discardAndLeave/);
+    expect(detailScreenCodeOnly).toMatch(/CHECKIN_DETAIL_COPY\.saveAndLeave/);
+  });
+
+  it("Test 17 (빨강 금지 회귀 가드): style: 'destructive'가 0회 등장한다", () => {
+    expect(detailScreenCodeOnly).not.toMatch(/style:\s*'destructive'/);
+  });
+});
+
+describe('AppState 백그라운드 flush (REQ-checkin-detail-flush, D-02)', () => {
+  it("Test 18: AppState.addEventListener('change'가 등장하고 nextAppState === 'active' 가드가 존재한다", () => {
+    expect(detailScreenCodeOnly).toMatch(/AppState\.addEventListener\('change'/);
+    expect(detailScreenCodeOnly).toMatch(/nextAppState === 'active'/);
+  });
+
+  it('Test 19: subscription.remove() cleanup이 존재한다', () => {
+    expect(detailScreenCodeOnly).toMatch(/subscription\.remove\(\)/);
+  });
+
+  it('Test 20 (D-02 — 조용한 flush): AppState 리스너 콜백 블록 안에 Alert가 등장하지 않는다', () => {
+    const listenerStart = detailScreenCodeOnly.indexOf("AppState.addEventListener('change'");
+    const cleanupIndex = detailScreenCodeOnly.indexOf('subscription.remove()', listenerStart);
+    expect(listenerStart).toBeGreaterThanOrEqual(0);
+    expect(cleanupIndex).toBeGreaterThan(listenerStart);
+    const listenerBlock = detailScreenCodeOnly.slice(listenerStart, cleanupIndex);
+    expect(listenerBlock).not.toMatch(/Alert/);
+  });
+});
+
+describe('Maps 딥링크 (REQ-maps-deeplink)', () => {
+  it('Test 21: maps.apple.com이 등장하고 canOpenURL은 등장하지 않는다', () => {
+    expect(detailScreenCodeOnly).toMatch(/maps\.apple\.com/);
+    expect(detailScreenCodeOnly).not.toMatch(/canOpenURL/);
+  });
+
+  it('Test 22 (flush 선행 계약): handleOpenInMaps 안에서 flushNoteAndPhoto 호출이 Linking.openURL 호출보다 앞선다', () => {
+    const handlerStart = detailScreenCodeOnly.indexOf('handleOpenInMaps');
+    expect(handlerStart).toBeGreaterThanOrEqual(0);
+    const handlerBody = detailScreenCodeOnly.slice(handlerStart);
+    const flushIndex = handlerBody.indexOf('flushNoteAndPhoto');
+    const openUrlIndex = handlerBody.indexOf('Linking.openURL');
+    expect(flushIndex).toBeGreaterThanOrEqual(0);
+    expect(openUrlIndex).toBeGreaterThan(flushIndex);
+  });
+
+  it('Test 23 (T-05-08): URL 템플릿 보간 인자가 checkin.lat/checkin.lng뿐이다', () => {
+    expect(detailScreenCodeOnly).toMatch(/ll=\$\{checkin\.lat\},\$\{checkin\.lng\}/);
+  });
+});
+
+describe('자동저장 미채택 (D-01 vs Phase 7)', () => {
+  // Phase 7(하루 마무리 회고)의 5초 디바운스 자동저장 패턴으로 이 화면을 "통일"하려는
+  // 유혹을 막는 가드 — 사용자가 05-CONTEXT.md D-01에서 명시적 미저장 경고 방식을
+  // 선택했으므로, 디바운스/타이머/blur 기반 자동저장 경로가 이 화면 소스에 존재해서는
+  // 안 된다.
+  it('Test 24: setTimeout/debounce/onBlur가 등장하지 않는다', () => {
+    expect(detailScreenCodeOnly).not.toMatch(/setTimeout/);
+    expect(detailScreenCodeOnly).not.toMatch(/debounce/);
+    expect(detailScreenCodeOnly).not.toMatch(/onBlur/);
   });
 });
