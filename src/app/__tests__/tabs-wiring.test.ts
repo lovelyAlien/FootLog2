@@ -19,17 +19,19 @@ const layoutSource = readSource(path.join('(tabs)', '_layout.tsx'));
 const layoutCodeOnly = stripComments(layoutSource);
 const calendarSource = readSource(path.join('(tabs)', 'calendar.tsx'));
 const calendarCodeOnly = stripComments(calendarSource);
-const todayIndexSource = readSource(path.join('(tabs)', 'index.tsx'));
+const todayIndexSource = readSource(path.join('(tabs)', 'index', 'index.tsx'));
 const todayIndexCodeOnly = stripComments(todayIndexSource);
+const todayIndexLayoutSource = readSource(path.join('(tabs)', 'index', '_layout.tsx'));
+const todayIndexLayoutCodeOnly = stripComments(todayIndexLayoutSource);
 const contentSource = fs.readFileSync(
   path.join(APP_DIR, '..', 'today', 'content.ts'),
   'utf-8'
 );
 
 describe('라우트 구조 계약', () => {
-  it('Test 1: (tabs)/_layout.tsx, (tabs)/index.tsx, (tabs)/calendar.tsx가 전부 존재한다', () => {
+  it('Test 1: (tabs)/_layout.tsx, (tabs)/index/index.tsx, (tabs)/calendar.tsx가 전부 존재한다', () => {
     expect(fs.existsSync(path.join(APP_DIR, '(tabs)', '_layout.tsx'))).toBe(true);
-    expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'index.tsx'))).toBe(true);
+    expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'index', 'index.tsx'))).toBe(true);
     expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'calendar.tsx'))).toBe(true);
   });
 
@@ -39,6 +41,21 @@ describe('라우트 구조 계약', () => {
 
   it('Test 3: src/app/priming.tsx가 (tabs) 밖에 그대로 존재한다', () => {
     expect(fs.existsSync(path.join(APP_DIR, 'priming.tsx'))).toBe(true);
+  });
+
+  it('Test 16 (2026-09-01 추가, 05-01-PLAN.md 이동 완료 회귀 가드): (tabs)/index.tsx(파일)가 더 이상 존재하지 않는다', () => {
+    expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'index.tsx'))).toBe(false);
+  });
+
+  it('Test 17 (2026-09-01 추가, 05-RESEARCH.md Pitfall 2 회귀 가드): (tabs)/index/_layout.tsx가 존재하고 Stack과 headerShown: false를 명시한다', () => {
+    expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'index', '_layout.tsx'))).toBe(true);
+    expect(todayIndexLayoutCodeOnly).toMatch(/import\s*\{[^}]*\bStack\b[^}]*\}\s*from\s*['"]expo-router['"]/);
+    expect(todayIndexLayoutCodeOnly).toMatch(/<Stack\b/);
+    expect(todayIndexLayoutCodeOnly).toMatch(/headerShown:\s*false/);
+  });
+
+  it('Test 18 (2026-09-01 추가, 폴더화 이후 탭 세그먼트 이름 고정 회귀 가드): (tabs)/_layout.tsx가 여전히 <Tabs.Screen name="index" ...>를 등록한다', () => {
+    expect(layoutCodeOnly).toMatch(/<Tabs\.Screen\s+name="index"/);
   });
 });
 
