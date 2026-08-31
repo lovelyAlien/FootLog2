@@ -20,6 +20,8 @@ import {
   getTodayCheckins,
   updateCheckinNoteAndPhoto,
   runWithSingleRetry,
+  getCheckinById,
+  deleteCheckin,
   type NewCheckinParams,
 } from './checkinRepo';
 
@@ -335,6 +337,92 @@ describe('getTodayCheckins', () => {
         lat: 37.5,
         lng: 127.0,
       });
+    } finally {
+      close();
+    }
+  });
+});
+
+describe('getCheckinById', () => {
+  it('존재하는 id로 조회하면 해당 CheckinRow를 모든 컬럼과 함께 반환한다', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      await commitCheckin(
+        db,
+        validParams({ id: 'checkin-1', lat: 37.5, lng: 127.0 })
+      );
+
+      const row = await getCheckinById(db, 'checkin-1');
+
+      expect(row).toMatchObject({
+        id: 'checkin-1',
+        lat: 37.5,
+        lng: 127.0,
+      });
+    } finally {
+      close();
+    }
+  });
+
+  it('존재하지 않는 id로 조회하면 null을 반환한다(undefined 아님)', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      const row = await getCheckinById(db, 'nonexistent-id');
+
+      expect(row).toBeNull();
+    } finally {
+      close();
+    }
+  });
+});
+
+describe('deleteCheckin', () => {
+  it('삭제 후 같은 id로 getCheckinById가 null을 반환한다', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      await commitCheckin(db, validParams({ id: 'checkin-1' }));
+
+      await deleteCheckin(db, 'checkin-1');
+
+      const row = await getCheckinById(db, 'checkin-1');
+      expect(row).toBeNull();
+    } finally {
+      close();
+    }
+  });
+
+  it('다른 체크인 row는 영향받지 않는다(같은 날짜의 다른 id는 getTodayCheckins에 그대로 남는다)', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      await commitCheckin(
+        db,
+        validParams({ id: 'checkin-1', localDateKey: '2026-08-27' })
+      );
+      await commitCheckin(
+        db,
+        validParams({ id: 'checkin-2', localDateKey: '2026-08-27' })
+      );
+
+      await deleteCheckin(db, 'checkin-1');
+
+      const rows = await getTodayCheckins(db, '2026-08-27');
+      expect(rows.map((r) => r.id)).toEqual(['checkin-2']);
+    } finally {
+      close();
+    }
+  });
+
+  it('존재하지 않는 id로 호출해도 throw하지 않는다(멱등)', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      await expect(deleteCheckin(db, 'nonexistent-id')).resolves.not.toThrow();
     } finally {
       close();
     }

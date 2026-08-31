@@ -36,8 +36,12 @@ export type CryptoDeps = Pick<typeof Crypto, 'randomUUID'>;
 // 테스트 더블이 불필요하게 복잡해진다(03-RESEARCH.md Pitfall 2). 대신 프로덕션이 실제로
 // 필요로 하는 동작(사진 원본을 documentDirectory로 복사) 하나만 함수 포트로 좁힌다.
 // 반환값은 복사된 목적지 파일의 uri 문자열.
+// deleteFile(05-02-PLAN.md Task 3, 05-RESEARCH.md Pitfall 4)도 같은 근거로 이 포트에
+// 포함된다 — 사진 삭제/교체(D-03/D-04) 시 화면이 expo-file-system을 직접 import하지
+// 않도록 좁힌 함수 포트로만 노출한다.
 export type PhotoStorageDeps = {
   copyIntoDocumentDirectory(sourceUri: string, fileName: string): Promise<string>;
+  deleteFile(uri: string): Promise<void>;
 };
 
 // expo-image-manipulator SDK 57 새 API는 체이닝 컨텍스트 객체

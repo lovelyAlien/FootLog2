@@ -74,6 +74,14 @@ export const defaultPhotoStorageDeps: PhotoStorageDeps = {
     await sourceFile.copy(destinationFile);
     return destinationFile.uri;
   },
+  // 05-02-PLAN.md Task 3 — 사진 삭제/교체(D-03/D-04) 시 구 파일 정리에 쓴다. 문자열
+  // 경로 접합이나 구 버전(legacy) 모듈의 삭제 함수를 쓰지 않는다 — 이 파일이 이미
+  // 채택한 새 클래스 API(File/Paths)만 사용한다(05-RESEARCH.md §State of the Art:
+  // 구 버전 삭제 함수는 최상위 import에서 런타임 throw하는 경고 스텁).
+  async deleteFile(uri) {
+    const file = new File(uri);
+    await file.delete();
+  },
 };
 
 // 구 버전의 단일 호출형 리사이즈 함수(deprecated, 04-RESEARCH.md Pitfall 2)는 쓰지 않는다
