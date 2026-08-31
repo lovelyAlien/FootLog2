@@ -17,6 +17,7 @@ import { upsertDraft, getDraft } from './draftRepo';
 import {
   commitCheckin,
   getLatestCheckinCoordinate,
+  getTodayCheckins,
   updateCheckinNoteAndPhoto,
   runWithSingleRetry,
   type NewCheckinParams,
@@ -238,6 +239,102 @@ describe('getLatestCheckinCoordinate', () => {
 
       const latest = await getLatestCheckinCoordinate(db);
       expect(latest).toBeNull();
+    } finally {
+      close();
+    }
+  });
+});
+
+describe('getTodayCheckins', () => {
+  it("local_date_key = '2026-08-27'인 row만 반환하고 다른 날짜 row는 제외한다", async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      await commitCheckin(
+        db,
+        validParams({ id: 'today-1', localDateKey: '2026-08-27' })
+      );
+      await commitCheckin(
+        db,
+        validParams({ id: 'other-day', localDateKey: '2026-08-26' })
+      );
+
+      const rows = await getTodayCheckins(db, '2026-08-27');
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe('today-1');
+    } finally {
+      close();
+    }
+  });
+
+  it('반환 배열이 timestamp_utc 오름차순이다(삽입 순서가 뒤섞여도)', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      // 늦은 timestamp를 먼저 insert해 ORDER BY가 정렬을 결정함을 확인한다.
+      await commitCheckin(
+        db,
+        validParams({
+          id: 'late',
+          localDateKey: '2026-08-27',
+          timestampUtc: '2026-08-27T05:00:00.000Z',
+        })
+      );
+      await commitCheckin(
+        db,
+        validParams({
+          id: 'early',
+          localDateKey: '2026-08-27',
+          timestampUtc: '2026-08-27T01:00:00.000Z',
+        })
+      );
+
+      const rows = await getTodayCheckins(db, '2026-08-27');
+
+      expect(rows.map((r) => r.id)).toEqual(['early', 'late']);
+    } finally {
+      close();
+    }
+  });
+
+  it('해당 날짜에 체크인이 없으면 빈 배열을 반환한다(null 아님)', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      const rows = await getTodayCheckins(db, '2026-08-27');
+
+      expect(rows).toEqual([]);
+    } finally {
+      close();
+    }
+  });
+
+  it('반환된 row가 CheckinRow 전체 컬럼(note, photo_path, lat, lng 포함)을 담는다', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      await commitCheckin(
+        db,
+        validParams({ id: 'today-1', localDateKey: '2026-08-27', lat: 37.5, lng: 127.0 })
+      );
+      await updateCheckinNoteAndPhoto(db, 'today-1', {
+        note: '메모',
+        photoPath: 'file:///documents/x.jpg',
+        now: '2026-08-27T00:10:00.000Z',
+      });
+
+      const rows = await getTodayCheckins(db, '2026-08-27');
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        id: 'today-1',
+        note: '메모',
+        photo_path: 'file:///documents/x.jpg',
+        lat: 37.5,
+        lng: 127.0,
+      });
     } finally {
       close();
     }

@@ -16,7 +16,7 @@ import {
 export const DATABASE_NAME = 'footlog.db';
 export const DATABASE_VERSION = 2;
 
-export type MigratableDb = Pick<SQLiteDatabase, 'getFirstAsync' | 'execAsync' | 'runAsync'>;
+export type MigratableDb = Pick<SQLiteDatabase, 'getFirstAsync' | 'execAsync' | 'runAsync' | 'getAllAsync'>;
 
 export async function migrateDbIfNeeded(db: MigratableDb): Promise<void> {
   const result = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
