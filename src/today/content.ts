@@ -8,4 +8,9 @@ export const TODAY_COPY = {
   calendarPlaceholder: '캘린더는 곧 추가돼요',
   // 04-UI-SPEC.md §Copywriting Contract — 바텀시트 empty state. 가운뎃점은 U+00B7 `·`.
   emptyState: '아직 기록이 없어요 · 체크인하면 지도가 채워져요',
+  // 05-UI-SPEC.md §Copywriting Contract / §Undo 스낵바 — 스와이프 삭제 4초 undo
+  // 스낵바 문구. 여기서 문구를 발명하지 않고 승인된 문서에서 그대로 전사한다.
+  deletedSnackbar: '삭제했어요',
+  undoCta: '실행취소',
+  deleteAffordanceLabel: '삭제',
 } as const;
