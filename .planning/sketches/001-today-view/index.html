@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sketch 001 — Today View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital@1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #e4e0d6;
+    font-family: var(--font-system);
+    color: var(--color-text);
+  }
+  body { padding-top: 52px; padding-bottom: 40px; }
+
+  /* ---------- variant nav ---------- */
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #1f1f1d; border-bottom: 1px solid #000;
+    padding: 8px 12px; display: flex; gap: 8px; align-items: center;
+    font-family: var(--font-system); font-size: 13px;
+  }
+  #variant-nav .label { color: #a7a49a; margin-right: 4px; }
+  .variant-tab {
+    background: transparent; border: 1px solid #4a493f; color: #d8d5c9;
+    padding: 6px 12px; border-radius: var(--radius-full); cursor: pointer;
+    font-size: 12.5px; transition: all 0.15s ease;
+  }
+  .variant-tab:hover { border-color: var(--color-accent-soft); }
+  .variant-tab.active { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+
+  .variant { display: none; }
+  .variant.active { display: block; }
+
+  .variant-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 24px 12px 12px;
+  }
+  .variant-question {
+    max-width: 390px; text-align: center; font-size: 13px; color: #6b6b62;
+    line-height: 1.5; padding: 0 8px;
+  }
+  .variant-caption {
+    font-size: 11px; color: #8a8879; letter-spacing: 0.02em; text-transform: uppercase;
+  }
+
+  /* ---------- phone frame ---------- */
+  .phone {
+    width: 390px; height: 844px;
+    background: var(--color-bg);
+    border-radius: 44px;
+    box-shadow: 0 0 0 10px #17171533, 0 20px 40px rgba(0,0,0,0.35);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .status-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 47px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 24px 6px; font-size: 13px; font-weight: 600; z-index: 500;
+    color: var(--color-text); pointer-events: none;
+  }
+  .notch {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 28px; background: #000; border-radius: 0 0 18px 18px;
+    z-index: 600;
+  }
+
+  /* ---------- map ---------- */
+  .map-area {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 70% 25%, var(--color-map-water) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 35% at 20% 65%, var(--color-map-water) 0%, transparent 55%),
+      var(--color-map-land);
+    overflow: hidden;
+  }
+  .map-area svg.roads { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .map-area .blob {
+    position: absolute; background: var(--color-map-land); border-radius: 40%;
+    opacity: 0.6;
+  }
+
+  .user-dot {
+    position: absolute; width: 14px; height: 14px; border-radius: 50%;
+    background: #4A90D9; border: 2.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+  }
+
+  /* pins (teardrop — Phase 3 pinWrapper/pinDrop shape, reused per UI-SPEC) */
+  .pin {
+    position: absolute; width: 28px; height: 34px; margin-left: -14px; margin-top: -34px;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  .pin .drop {
+    width: 28px; height: 28px;
+    border-top-left-radius: 14px; border-top-right-radius: 14px; border-bottom-right-radius: 14px;
+    border-bottom-left-radius: 0;
+    transform: rotate(-45deg);
+  }
+  .pin.saved .drop { background: var(--color-accent-soft); }
+  .pin.confirm .drop { background: var(--color-accent); }
+  .pin.confirm { animation: pin-drop var(--motion-pin-drop) ease-out; }
+  @keyframes pin-drop {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* ---------- banners ---------- */
+  .banner-stack { position: absolute; top: 47px; left: 0; right: 0; z-index: 400; }
+
+  /* ---------- floating buttons ---------- */
+  .fab-checkin, .fab-recenter {
+    position: absolute; z-index: 700;
+    transition: bottom 0.05s linear;
+  }
+  .fab-checkin {
+    left: 50%; transform: translateX(-50%);
+    height: 48px; min-width: 44px; padding: 0 24px;
+    background: var(--color-accent); border-radius: var(--radius-full);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+    color: var(--color-surface); font-size: 15px; font-weight: 500;
+    border: none; cursor: pointer;
+  }
+  .fab-recenter {
+    right: 24px;
+    width: 44px; height: 44px; border-radius: var(--radius-full);
+    background: var(--color-surface); border: 1px solid var(--color-line);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm); cursor: pointer;
+  }
+  .fab-recenter svg { width: 20px; height: 20px; fill: var(--color-text-muted); }
+
+  /* ---------- bottom sheet ---------- */
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--color-surface);
+    border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    z-index: 600;
+    touch-action: none;
+    user-select: none;
+    display: flex; flex-direction: column;
+  }
+  .sheet.snapping { transition: height var(--motion-sheet-snap) ease-in-out; }
+  .sheet-handle-zone {
+    height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab;
+    flex-shrink: 0;
+  }
+  .sheet-handle-zone:active { cursor: grabbing; }
+  .sheet-handle {
+    width: 36px; height: 4px; border-radius: var(--radius-full); background: var(--color-line);
+  }
+  .sheet-body { overflow: hidden; flex: 1; }
+  .sheet-empty {
+    padding: 0 var(--space-lg) var(--space-sm);
+    font-size: var(--text-helper); color: var(--color-text-muted);
+  }
+  .checkin-row {
+    padding: var(--space-sm) var(--space-lg);
+    min-height: 44px;
+    border-bottom: 1px solid var(--color-line);
+    display: flex; align-items: baseline; gap: var(--space-xs);
+  }
+  .checkin-row .t {
+    font-family: var(--font-mono); font-size: var(--text-timestamp); font-weight: 500;
+    font-variant-numeric: tabular-nums; flex-shrink: 0; color: var(--color-text);
+  }
+  .checkin-row .note {
+    font-family: var(--font-journal); font-style: italic; font-size: var(--text-journal);
+    font-weight: 400; line-height: 22.5px; color: var(--color-text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* ---------- action card (D-04 branch B — check-in in progress) ---------- */
+  .action-card {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--color-surface);
+    border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md); z-index: 600;
+    padding: var(--space-lg);
+  }
+  .action-card .phase-label {
+    font-size: var(--text-helper); color: var(--color-text-muted); margin-bottom: var(--space-xs);
+  }
+  .action-card .note-input {
+    width: 100%; border: 1px solid var(--color-line); border-radius: var(--radius-md);
+    background: var(--color-bg); padding: var(--space-sm);
+    font-family: var(--font-journal); font-style: italic; font-size: var(--text-journal);
+    color: var(--color-text); resize: none; margin: var(--space-sm) 0;
+  }
+  .action-card .cta {
+    width: 100%; height: 48px; border: none; border-radius: var(--radius-full);
+    background: var(--color-accent); color: var(--color-surface);
+    font-size: 15px; font-weight: 500; cursor: pointer;
+  }
+
+  /* ---------- tab bar ---------- */
+  .tabbar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 83px;
+    background: var(--color-surface); border-top: 1px solid var(--color-line);
+    display: flex; z-index: 800;
+    padding-bottom: 20px; /* home indicator safe area */
+  }
+  .tabbar .tab {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 500; cursor: pointer; background: none; border: none;
+    padding-top: 8px;
+  }
+  .tabbar .tab.active { color: var(--color-text); }
+  .tabbar .tab:not(.active) { color: var(--color-text-muted); }
+  .home-indicator {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 134px; height: 5px; border-radius: var(--radius-full); background: var(--color-text);
+    opacity: 0.85; z-index: 900;
+  }
+
+  /* ---------- toolbar (sketch-tooling.md) ---------- */
+  #sketch-tools {
+    position: fixed; bottom: 12px; right: 12px; z-index: 9999;
+    font-family: system-ui; font-size: 12px;
+    background: rgba(0,0,0,0.75); color: #fff;
+    padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools button {
+    background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;
+    padding: 3px 8px; font-size: 11px; cursor: pointer;
+  }
+  #sketch-tools button.active { background: var(--color-accent); border-color: var(--color-accent); }
+
+  .annot {
+    position: absolute; pointer-events: none; z-index: 5000;
+    font-family: monospace; font-size: 9px; background: #000; color: #0f0;
+    padding: 1px 4px; border-radius: 2px; white-space: nowrap;
+  }
+  .annot-outline { outline: 1px dashed rgba(255,0,0,0.6) !important; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="label">Sketch 001 — Today View</span>
+  <button class="variant-tab active" onclick="showVariant('a')">A: 체크인 있음(기본)</button>
+  <button class="variant-tab" onclick="showVariant('b')">B: 빈 상태(오늘 첫 체크인 전)</button>
+  <button class="variant-tab" onclick="showVariant('c')">C: 체크인 진행 중</button>
+</div>
+
+<!-- ============================= VARIANT A ============================= -->
+<div id="variant-a" class="variant active">
+  <div class="variant-wrap">
+    <div class="variant-caption">Variant A — 기본(체크인 3건)</div>
+    <div class="variant-question">지도에 저장된 핀(accentSoft)과 궤적선이 있고, 바텀시트를 손가락으로 드래그하면 CLOSED↔OPEN 사이를 실시간으로 따라옵니다(220ms 스냅). 핸들을 잡고 드래그해 보세요.</div>
+    <div class="phone" id="phone-a">
+      <div class="notch"></div>
+      <div class="status-bar"><span>9:41</span><span>🔋 100%</span></div>
+      <div class="map-area">
+        <svg class="roads" viewBox="0 0 390 844" preserveAspectRatio="none">
+          <path d="M0,300 C120,280 260,340 390,310" stroke="#D2CDC1" stroke-width="6" fill="none" opacity="0.8"/>
+          <path d="M40,0 C60,180 20,420 90,844" stroke="#D2CDC1" stroke-width="5" fill="none" opacity="0.7"/>
+          <path d="M390,150 C300,220 340,420 260,600" stroke="#D2CDC1" stroke-width="4" fill="none" opacity="0.6"/>
+        </svg>
+        <!-- trajectory polyline connecting 3 saved pins -->
+        <svg class="roads" viewBox="0 0 390 844" preserveAspectRatio="none">
+          <polyline points="110,210 200,340 260,460" fill="none" stroke="#D8DDC9" stroke-width="2.5"/>
+        </svg>
+        <div class="pin saved" style="left:110px; top:210px;"><div class="drop"></div></div>
+        <div class="pin saved" style="left:200px; top:340px;"><div class="drop"></div></div>
+        <div class="pin saved" style="left:260px; top:460px;"><div class="drop"></div></div>
+        <div class="user-dot" style="left:180px; top:520px;"></div>
+      </div>
+
+      <div class="fab-checkin" id="fab-checkin-a" style="bottom: 104px;">체크인</div>
+      <div class="fab-recenter" id="fab-recenter-a" style="bottom: 104px;" title="현재 위치로 이동" aria-label="현재 위치로 이동">
+        <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9-1h-2.06A7.001 7.001 0 0013 2.06V0h-2v2.06A7.001 7.001 0 003.06 9H1v2h2.06A7.001 7.001 0 0011 20.94V23h2v-2.06A7.001 7.001 0 0020.94 13H23v-2h-2.06A7.001 7.001 0 0013 4.06V4h.94A7.001 7.001 0 0121 11z"/></svg>
+      </div>
+
+      <div class="sheet snapping" id="sheet-a" style="height: 80px;">
+        <div class="sheet-handle-zone" id="handle-a"><div class="sheet-handle"></div></div>
+        <div class="sheet-body">
+          <div class="checkin-row"><span class="t">09:21</span></div>
+          <div class="checkin-row"><span class="t">12:47</span><span class="note">동네 새로 생긴 카페, 조용해서 좋다</span></div>
+          <div class="checkin-row"><span class="t">18:03</span><span class="note">퇴근길 공원 한바퀴</span></div>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <button class="tab active">오늘</button>
+        <button class="tab">캘린더</button>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= VARIANT B ============================= -->
+<div id="variant-b" class="variant">
+  <div class="variant-wrap">
+    <div class="variant-caption">Variant B — 빈 상태(오늘 체크인 0건)</div>
+    <div class="variant-question">지도엔 핀도 궤적선도 없고, 위치 권한 전이면 파란 점(내 위치)도 없습니다. 시트에는 "아직 기록이 없어요" 한 줄만 — 점선 자리표시자나 숫자 배지는 없습니다.</div>
+    <div class="phone" id="phone-b">
+      <div class="notch"></div>
+      <div class="status-bar"><span>9:41</span><span>🔋 100%</span></div>
+      <div class="map-area">
+        <svg class="roads" viewBox="0 0 390 844" preserveAspectRatio="none">
+          <path d="M0,300 C120,280 260,340 390,310" stroke="#D2CDC1" stroke-width="6" fill="none" opacity="0.8"/>
+          <path d="M40,0 C60,180 20,420 90,844" stroke="#D2CDC1" stroke-width="5" fill="none" opacity="0.7"/>
+        </svg>
+      </div>
+
+      <div class="fab-checkin" id="fab-checkin-b" style="bottom: 104px;">체크인</div>
+      <div class="fab-recenter" id="fab-recenter-b" style="bottom: 104px;" title="현재 위치로 이동" aria-label="현재 위치로 이동">
+        <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9-1h-2.06A7.001 7.001 0 0013 2.06V0h-2v2.06A7.001 7.001 0 003.06 9H1v2h2.06A7.001 7.001 0 0011 20.94V23h2v-2.06A7.001 7.001 0 0020.94 13H23v-2h-2.06A7.001 7.001 0 0013 4.06V4h.94A7.001 7.001 0 0121 11z"/></svg>
+      </div>
+
+      <div class="sheet snapping" id="sheet-b" style="height: 80px;">
+        <div class="sheet-handle-zone" id="handle-b"><div class="sheet-handle"></div></div>
+        <div class="sheet-body">
+          <div class="sheet-empty" style="padding-top:14px;">아직 기록이 없어요 · 체크인하면 지도가 채워져요</div>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <button class="tab active">오늘</button>
+        <button class="tab">캘린더</button>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= VARIANT C ============================= -->
+<div id="variant-c" class="variant">
+  <div class="variant-wrap">
+    <div class="variant-caption">Variant C — 체크인 진행 중(확인 핀 + 액션카드)</div>
+    <div class="variant-question">체크인 진행 중엔 오늘 뷰의 바텀시트가 완전히 사라지고(D-04) 액션카드가 그 자리를 대신합니다. 이미 저장된 핀들은 지도에 계속 보이고, 하단 탭바도 계속 탭 가능합니다(D-09) — "캘린더"를 눌러도 막히지 않습니다.</div>
+    <div class="phone" id="phone-c">
+      <div class="notch"></div>
+      <div class="status-bar"><span>9:41</span><span>🔋 100%</span></div>
+      <div class="map-area">
+        <svg class="roads" viewBox="0 0 390 844" preserveAspectRatio="none">
+          <path d="M0,300 C120,280 260,340 390,310" stroke="#D2CDC1" stroke-width="6" fill="none" opacity="0.8"/>
+          <path d="M40,0 C60,180 20,420 90,844" stroke="#D2CDC1" stroke-width="5" fill="none" opacity="0.7"/>
+        </svg>
+        <svg class="roads" viewBox="0 0 390 844" preserveAspectRatio="none">
+          <polyline points="110,210 200,340" fill="none" stroke="#D8DDC9" stroke-width="2.5"/>
+        </svg>
+        <div class="pin saved" style="left:110px; top:210px;"><div class="drop"></div></div>
+        <div class="pin saved" style="left:200px; top:340px;"><div class="drop"></div></div>
+        <div class="pin confirm" style="left:230px; top:520px;"><div class="drop"></div></div>
+      </div>
+
+      <div class="fab-recenter" style="bottom: 296px;" title="현재 위치로 이동" aria-label="현재 위치로 이동">
+        <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9-1h-2.06A7.001 7.001 0 0013 2.06V0h-2v2.06A7.001 7.001 0 003.06 9H1v2h2.06A7.001 7.001 0 0011 20.94V23h2v-2.06A7.001 7.001 0 0020.94 13H23v-2h-2.06A7.001 7.001 0 0013 4.06V4h.94A7.001 7.001 0 0121 11z"/></svg>
+      </div>
+
+      <div class="action-card">
+        <div class="phase-label">확인 · 이 위치가 맞나요?</div>
+        <textarea class="note-input" rows="2" placeholder="메모 (선택)" readonly>퇴근길, 새로 생긴 골목</textarea>
+        <button class="cta">확인</button>
+      </div>
+
+      <div class="tabbar">
+        <button class="tab active">오늘</button>
+        <button class="tab">캘린더</button>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <span>Sketch 001</span>
+  <button id="annot-toggle" onclick="toggleAnnotations()">토큰 라벨</button>
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+/* ---------- draggable bottom sheet (variant A / B) ---------- */
+function initSheet(suffix) {
+  const sheet = document.getElementById('sheet-' + suffix);
+  const handle = document.getElementById('handle-' + suffix);
+  const fabCheckin = document.getElementById('fab-checkin-' + suffix);
+  const fabRecenter = document.getElementById('fab-recenter-' + suffix);
+  if (!sheet) return;
+
+  const CLOSED = 80;
+  const OPEN = 844 - 47 - 32; // insets.top(≈47 status bar) + spacing.xl(32)
+  let startY = 0, startHeight = CLOSED, dragging = false;
+
+  function applyHeight(h, animate) {
+    h = Math.max(CLOSED, Math.min(OPEN, h));
+    sheet.classList.toggle('snapping', !!animate);
+    sheet.style.height = h + 'px';
+    const fabBottom = h + 24; // spacing.lg — D-05
+    fabCheckin.style.bottom = fabBottom + 'px';
+    fabRecenter.style.bottom = fabBottom + 'px';
+  }
+
+  function pointerDown(e) {
+    dragging = true;
+    startY = (e.touches ? e.touches[0].clientY : e.clientY);
+    startHeight = sheet.getBoundingClientRect().height;
+    sheet.classList.remove('snapping');
+    e.preventDefault();
+  }
+  function pointerMove(e) {
+    if (!dragging) return;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY);
+    const delta = startY - y;
+    applyHeight(startHeight + delta, false);
+  }
+  function pointerUp() {
+    if (!dragging) return;
+    dragging = false;
+    const current = sheet.getBoundingClientRect().height;
+    const mid = (CLOSED + OPEN) / 2;
+    applyHeight(current > mid ? OPEN : CLOSED, true);
+  }
+
+  handle.addEventListener('mousedown', pointerDown);
+  window.addEventListener('mousemove', pointerMove);
+  window.addEventListener('mouseup', pointerUp);
+  handle.addEventListener('touchstart', pointerDown, {passive:false});
+  window.addEventListener('touchmove', pointerMove, {passive:false});
+  window.addEventListener('touchend', pointerUp);
+
+  handle.addEventListener('dblclick', () => {
+    const current = sheet.getBoundingClientRect().height;
+    applyHeight(current > (CLOSED + OPEN)/2 ? CLOSED : OPEN, true);
+  });
+}
+initSheet('a');
+initSheet('b');
+
+/* ---------- tab bar taps (all variants — D-09: always tappable) ---------- */
+document.querySelectorAll('.tabbar .tab').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const bar = e.target.closest('.tabbar');
+    bar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    e.target.classList.add('active');
+  });
+});
+
+/* ---------- action card CTA feedback (variant C) ---------- */
+document.querySelectorAll('.action-card .cta').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.textContent = '저장 중…';
+    btn.style.opacity = '0.6';
+    setTimeout(() => { btn.textContent = '완료'; btn.style.opacity = '1'; }, 600);
+  });
+});
+
+/* ---------- annotation toggle ---------- */
+let annotOn = false;
+let annotEls = [];
+function toggleAnnotations() {
+  annotOn = !annotOn;
+  document.getElementById('annot-toggle').classList.toggle('active', annotOn);
+  document.querySelectorAll('.annot').forEach(a => a.remove());
+  document.querySelectorAll('.annot-outline').forEach(a => a.classList.remove('annot-outline'));
+  if (!annotOn) return;
+
+  const targets = [
+    { sel: '.variant.active .fab-checkin', label: 'accent #7C8660 · pill 48px' },
+    { sel: '.variant.active .fab-recenter', label: 'surface + line border · 44×44' },
+    { sel: '.variant.active .sheet, .variant.active .action-card', label: 'surface #FBFAF6 · radius.lg 16px' },
+    { sel: '.variant.active .checkin-row', label: 'spacing.lg 24px / spacing.sm 12px · min-h 44px' },
+    { sel: '.variant.active .pin.saved', label: 'accentSoft #D8DDC9' },
+    { sel: '.variant.active .pin.confirm', label: 'accent #7C8660' },
+    { sel: '.variant.active .tabbar', label: 'surface + line top-border' },
+  ];
+  targets.forEach(({sel, label}) => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    el.classList.add('annot-outline');
+    const rect = el.getBoundingClientRect();
+    const tag = document.createElement('div');
+    tag.className = 'annot';
+    tag.textContent = label;
+    tag.style.left = (rect.left + 4) + 'px';
+    tag.style.top = (rect.top - 12) + 'px';
+    document.body.appendChild(tag);
+  });
+}
+</script>
+
+</body>
+</html>

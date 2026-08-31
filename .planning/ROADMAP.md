@@ -25,7 +25,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] **Phase 1: Foundation** - Expo/EAS 스캐폴드, 디자인 토큰, 그리고 나머지 전부를 그 위에 지을 수 있는 SQLite 마이그레이션 프레임워크가 존재한다. (completed 2026-08-26)
 - [x] **Phase 2: Notification Infrastructure** - 앱이 체크인/회고 리마인더를 신뢰성 있게 스케줄링하고 스스로 복구하며, 확정된 권한 프롬프트 문구와 거부 상태 UI 패턴을 갖춘다. (completed 2026-08-27)
 - [x] **Phase 3: Check-in Core Loop** - 사용자가 자유형 체크인(위치 + 선택적 사진/메모)을 GPS·저장 실패를 포함해 안정적으로 남길 수 있다. (completed 2026-08-27)
-- [ ] **Phase 4: Today View** - 사용자가 오늘의 체크인들을 지도에서 보여주는 홈 화면과, 새 체크인을 위한 마찰 낮은 진입점을 갖는다.
+- [x] **Phase 4: Today View** - 사용자가 오늘의 체크인들을 지도에서 보여주는 홈 화면과, 새 체크인을 위한 마찰 낮은 진입점을 갖는다. (completed 2026-08-31)
 - [ ] **Phase 5: Check-in Detail & Edit** - 사용자가 기록된 개별 체크인을 조회·수정·삭제할 수 있다.
 - [ ] **Phase 6: Calendar Tab** - 사용자가 월 그리드와 빠른 날짜별 스크러버로 과거 날짜를 훑어볼 수 있다.
 - [ ] **Phase 7: Day-end Reflection** - 사용자가 하루 루프의 핵심 요소인 짧은 하루 마무리 회고를 완료할 수 있다.
@@ -124,7 +124,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] 04-04-PLAN.md — @gorhom/bottom-sheet 도입(정당성 게이트) + CheckinListRow + TodayBottomSheet (wave 2)
 - [x] 04-05-PLAN.md — 오늘 체크인 조회 배선 + accentSoft 저장 핀 + Polyline 궤적선 (wave 3)
 - [x] 04-06-PLAN.md — 바텀시트 마운트 게이트(D-04) + animatedPosition 기반 플로팅 버튼 오프셋(D-05) (wave 4)
-- [ ] 04-07-PLAN.md — EAS Dev Client 재빌드 + 시뮬레이터 자체 검증 + 실기기 전용 항목 검증 (wave 5)
+- [x] 04-07-PLAN.md — EAS Dev Client 재빌드 + 시뮬레이터 자체 검증 + 실기기 전용 항목 검증 (wave 5)
 
 **UI hint**: yes
 
@@ -199,7 +199,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Foundation | 5/5 | Complete   | 2026-08-26 |
 | 2. Notification Infrastructure | 8/8 | Complete   | 2026-08-27 |
 | 3. Check-in Core Loop | 12/12 | Complete   | 2026-08-28 |
-| 4. Today View | 6/7 | In Progress|  |
+| 4. Today View | 7/7 | Complete   | 2026-08-31 |
 | 5. Check-in Detail & Edit | 0/TBD | Not started | - |
 | 6. Calendar Tab | 0/TBD | Not started | - |
 | 7. Day-end Reflection | 0/TBD | Not started | - |
