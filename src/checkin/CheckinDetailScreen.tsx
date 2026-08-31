@@ -19,11 +19,12 @@
 // D-05: 이 화면에 체크인 전체 삭제 진입점을 두지 않는다 — 삭제는 오늘 뷰 리스트
 // 스와이프로만 제공되며(05-05-PLAN.md), 상세화면은 편집 전용 공간으로 유지한다.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppState, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as Linking from 'expo-linking';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { formatLocalTime, formatLocalMonthDay, toIsoTimestamp } from './localDate';
-import { CHECKIN_COPY } from './checkinFlow';
+import { CHECKIN_COPY, CHECKIN_DETAIL_COPY } from './checkinFlow';
 import { MAP_REGION_DELTA } from './config';
 import MapView, { Marker } from 'react-native-maps';
 import { useNavigation } from 'expo-router';
@@ -123,10 +124,44 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
   // 콜백)과 의도적으로 다른 모델이며, 이 화면의 핵심 결정이라 "일관성" 명목으로 blur
   // 저장을 되돌리기 가장 쉬운 지점이다 — 되돌리지 말 것.
 
+  // AppState 백그라운드 강제 flush(REQ-checkin-detail-flush, D-02) — (tabs)/index/
+  // index.tsx의 기존 리스너와 동일한 관용구를 복제한다(같은 리스너를 공유/재사용하는
+  // 게 아니라 각 화면이 각자의 dirty state에 대해 같은 패턴을 한 번 더 구독). 반드시
+  // active 가드를 먼저 확인한다 — active로 돌아올 때도 콜백이 불리므로 이 가드가
+  // 없으면 포그라운드 복귀 시 의도치 않은 저장이 발생한다(05-RESEARCH.md
+  // Anti-Patterns). 가드를 통과하면 dirty일 때만 조용히 flush한다 — 다이얼로그/Alert를
+  // 절대 띄우지 않는다(D-02: OS 백그라운드 전환은 조용히, 경고는 인앱 이탈 전용).
+  // deps는 [flushNoteAndPhoto] 하나만 둔다 — flushNoteAndPhoto가 [db, checkinId]에만
+  // 의존하는 안정적 useCallback이라 매 키 입력마다 이 리스너가 재구독되지 않는다
+  // (isDirtyRef/noteRef ref 미러 관용구가 최신 값 접근을 담당).
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') return;
+      if (isDirtyRef.current) {
+        flushNoteAndPhoto();
+      }
+    });
+    return () => subscription.remove();
+  }, [flushNoteAndPhoto]);
+
   // 로드 전(state 초기값) + 존재하지 않는 id(getCheckinById가 null 반환) 둘 다 같은
   // 빈 렌더로 처리한다 — 이 화면은 "이미 존재하는 체크인 1건"에 대한 화면이라 빈
   // 상태 개념이 없다(05-UI-SPEC.md §Copywriting Contract "Empty state: 해당 없음").
   if (!checkin) return null;
+
+  // "지도 앱에서 열기" — flush를 먼저 await한 뒤에만 Linking.openURL을 호출한다(순서가
+  // 이 계약의 핵심 — 뒤집으면 저장되지 않은 메모가 딥링크로 인한 background 전환 중에
+  // 유실될 위험이 생긴다). Task 3의 AppState 리스너가 별도로도 안전망이 되지만, 호출
+  // 직전에도 명시적으로 한 번 더 flush해 두 경로 모두 안전망이 되게 한다(DRY 다중
+  // 트리거 원칙, day-end-reflection-map.md와 동일). 이중 저장은 같은 값을 두 번 쓰는
+  // 것뿐이라 부작용이 없다. URL 템플릿에는 checkin.lat/checkin.lng(SQLite REAL, TS
+  // number 타입) 두 값만 보간한다 — 메모 등 사용자 자유 입력 문자열은 절대 URL 구성에
+  // 참여하지 않는다(T-05-08). URL scheme 존재 여부를 사전 확인하는 별도 체크는
+  // 생략한다 — iOS 시스템 앱이라 항상 존재한다(product-design.md:943).
+  const handleOpenInMaps = async () => {
+    await flushNoteAndPhoto();
+    await Linking.openURL(`http://maps.apple.com/?ll=${checkin.lat},${checkin.lng}`);
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -165,8 +200,20 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
         </Marker>
       </MapView>
 
-      {/* "지도 앱에서 열기" 버튼(레이아웃 3번 슬롯, 지도와 사진 사이)은 05-04-PLAN.md
-          Task 2가 이 지점에 이어 붙인다 — 이 커밋은 아직 그 버튼을 렌더하지 않는다. */}
+      {/* 3. "지도 앱에서 열기" — 가벼운 보조 액션이라 muted 톤 텍스트 버튼을 쓴다. 진행
+          상태 강조용 토큰과 목록 행 스와이프 어포던스 전용 토큰(05-05-PLAN.md,
+          DESIGN.md 2026-08-31 갱신) 둘 다 이 버튼에는 쓰지 않는다 — 이 화면 전체가
+          그 두 토큰의 승인된 용도 목록 밖이다. */}
+      <Pressable
+        onPress={handleOpenInMaps}
+        accessibilityRole="button"
+        accessibilityLabel={CHECKIN_DETAIL_COPY.openInMaps}
+        style={styles.openInMapsButton}
+      >
+        <Text style={[typography.placeName, styles.openInMapsLabel]}>
+          {CHECKIN_DETAIL_COPY.openInMaps}
+        </Text>
+      </Pressable>
 
       {checkin.photo_path ? (
         <Image source={{ uri: checkin.photo_path }} style={styles.photo} contentFit="contain" />
@@ -239,6 +286,15 @@ const styles = StyleSheet.create({
   },
   time: {
     color: colors.textPrimary,
+  },
+  openInMapsButton: {
+    marginTop: spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  openInMapsLabel: {
+    color: colors.textMuted,
   },
   map: {
     width: '100%',
