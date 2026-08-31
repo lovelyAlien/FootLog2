@@ -132,3 +132,16 @@ export const CHECKIN_COPY = {
   unsavedExitAlert: '이 체크인은 저장되지 않았어요',
   unsavedExitAlertButton: '확인',
 } as const;
+
+// CHECKIN_DETAIL_COPY — 05-04-PLAN.md Task 1. 체크인 상세화면(편집 흐름) 전용 문구
+// 단일 출처. CHECKIN_COPY(체크인 캡처 흐름)와 일부러 섞지 않는다 — 캡처 흐름 문구가
+// 바뀌어도 이 편집 흐름의 회귀 가드가 함께 흔들리지 않게 하기 위함, 그 반대도 마찬가지.
+// 05-UI-SPEC.md §Copywriting Contract "미저장 경고 다이얼로그(D-01, 신규 카피)" +
+// §Screen & Component Notes "3. 지도 앱에서 열기" 절이 확정한 문구를 그대로 전사한다.
+export const CHECKIN_DETAIL_COPY = {
+  unsavedTitle: '저장하지 않은 변경사항이 있어요',
+  keepEditing: '계속 편집',
+  discardAndLeave: '저장하지 않고 나가기',
+  saveAndLeave: '저장하고 나가기',
+  openInMaps: '지도 앱에서 열기',
+} as const;
