@@ -128,6 +128,16 @@ None - no external service configuration required.
   3. CLOSED/DRAGGING/OPEN 3단 스냅 애니메이션과 버튼 연속 추적이 실기기/시뮬레이터에서 시각적으로 매끄러운지
 - 코드 레벨 회귀 가드(D-04/D-05/D-09, 크로스페이드, 카메라 호출 6개 지점, gesture-handler 미사용)는 이번 plan에서 테스트로 전부 고정됐다 — 다음 plan은 시각적/체감 검증에 집중할 수 있다.
 
+## Self-Check: PASSED
+
+- FOUND: `src/app/(tabs)/index.tsx`
+- FOUND: `src/app/__tests__/today-wiring.test.ts`
+- FOUND: `.planning/phases/04-today-view/04-06-SUMMARY.md`
+- FOUND commit: `94d8343` (Task 1 — UI-SPEC 정정)
+- FOUND commit: `499df25` (Task 2 — 바텀시트 마운트 게이트 + 버튼 오프셋)
+- FOUND commit: `699f788` (Task 3 — 회귀 가드 테스트)
+- FOUND commit: `3a3d349` (SUMMARY 작성)
+
 ---
 *Phase: 04-today-view*
 *Completed: 2026-08-31*
