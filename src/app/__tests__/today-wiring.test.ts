@@ -124,9 +124,9 @@ describe('src/app/(tabs)/index.tsx 궤적선 계약 (REQ-trajectory-line)', () =
 });
 
 describe('src/app/(tabs)/index.tsx accent 예산 계약', () => {
-  it('colors.accent(단어 경계)가 2회 이하로 유지된다 (2026-08-31: 지도 마커가 colors.pin으로 이전, foundation-wiring Test 6과 동일 상한)', () => {
+  it('colors.accent(단어 경계)가 전혀 등장하지 않는다 (2026-08-31: 체크인 버튼/지도 마커/재센터 아이콘 모두 colors.pin으로 이전, foundation-wiring Test 6과 동일)', () => {
     const occurrences = codeOnly.match(/\bcolors\.accent\b/g) ?? [];
-    expect(occurrences.length).toBeLessThanOrEqual(2);
+    expect(occurrences.length).toBe(0);
   });
 });
 

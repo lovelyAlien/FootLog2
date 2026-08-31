@@ -81,17 +81,20 @@ describe('src/app/(tabs)/index.tsx 배선 계약', () => {
     expect(indexSource).toMatch(/spacing/);
   });
 
-  it('Test 6 (2026-08-31 갱신): colors.accent가 UI 크롬 용도(체크인 알약버튼, 로딩 인디케이터)에만 등장하고 지도 마커로는 확장되지 않는다', () => {
-    // 2026-08-31 — 지도 위 체크인 핀(진행 중/저장됨)과 이동 궤적선을 colors.pin/
-    // pinSoft(테라코타, DESIGN.md 참고)로 전환했다. accent는 다시 UI 크롬 전용으로
-    // 좁혀져 상한이 5에서 2(체크인 버튼 배경 + 로딩 인디케이터)로 내려간다.
+  it('Test 6 (2026-08-31 갱신): colors.accent가 이 화면에서 전혀 등장하지 않는다 — 체크인/지도 마커/재센터 아이콘이 모두 colors.pin으로 통일됨', () => {
+    // 2026-08-31 — 지도 위 체크인 핀(진행 중/저장됨)과 이동 궤적선에 이어, 체크인
+    // 버튼(+캡처 중 상태)과 재센터 버튼 아이콘도 colors.pin/pinSoft(테라코타,
+    // DESIGN.md 참고)로 전환했다. 이 화면 안에서 accent는 더 이상 쓰이지 않는다 —
+    // 남은 accent 승인 용도(오늘 표시 밑줄, 스크러버)는 캘린더 탭 소관이라 이
+    // 파일과 무관하다.
     const codeOnly = stripComments(indexSource);
     // colors.accentSoft는 별도 토큰이라 단어 경계(\b)가 accent와 Soft 사이에서
     // 끊기지 않으므로 이 정규식에 걸리지 않는다 — colors.accent만 정확히 센다.
     const occurrences = codeOnly.match(/\bcolors\.accent\b/g) ?? [];
-    expect(occurrences.length).toBeLessThanOrEqual(2);
+    expect(occurrences.length).toBe(0);
+    expect(codeOnly).not.toMatch(/\bcolors\.accentSoft\b/);
 
-    expect(codeOnly).toMatch(/checkinButton:\s*\{[^}]*backgroundColor:\s*colors\.accent/s);
+    expect(codeOnly).toMatch(/checkinButton:\s*\{[^}]*backgroundColor:\s*colors\.pin\b/s);
     // 지도 마커가 accent로 되돌아가는 회귀를 막는다 — pinConfident는 colors.pin이어야 한다.
     expect(codeOnly).not.toMatch(/pinConfident:\s*\{[^}]*backgroundColor:\s*colors\.accent\b/s);
     expect(codeOnly).toMatch(/pinConfident:\s*\{[^}]*backgroundColor:\s*colors\.pin\b/s);

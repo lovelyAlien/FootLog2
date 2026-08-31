@@ -199,11 +199,15 @@ describe('src/app/(tabs)/index.tsx 내 위치 재센터링 버튼 배선 계약'
     expect(block).toMatch(/animateToRegion/);
   });
 
-  it('Test 31: 재센터링 버튼은 accent 컬러를 쓰지 않는다 (DESIGN.md 6개 승인 용도 밖 — 중립색 사용)', () => {
+  it('Test 31 (2026-08-31 갱신): 재센터링 버튼은 accent 컬러를 쓰지 않는다 (colors.pin으로 대체 — DESIGN.md 체크인 정체성 색 통일)', () => {
     const match = codeOnly.match(/recenterButton:\s*\{[\s\S]*?\n  \},/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
     expect(block).not.toMatch(/colors\.accent\b/);
+    // 아이콘 tintColor는 recenterButton 스타일 블록이 아니라 <SymbolView> JSX prop이라
+    // 별도로 확인한다 — textMuted(회색)에서 colors.pin(테라코타)으로 전환됐다.
+    expect(codeOnly).toMatch(/tintColor=\{colors\.pin\}/);
+    expect(codeOnly).not.toMatch(/tintColor=\{colors\.textMuted\}/);
   });
 
   it('Test 32: expo-location을 직접 import하지 않고 checkin/deps의 defaultLocationDeps를 통해서만 접근한다', () => {
@@ -237,12 +241,13 @@ describe('src/app/(tabs)/index.tsx 나침반 모드 토글 배선 계약 (재센
     expect(indexSource).toMatch(/location\.north\.line\.fill/);
   });
 
-  it('Test 37: 재센터링 버튼 아이콘은 모드와 무관하게 colors.textMuted를 쓰고 accent는 쓰지 않는다', () => {
+  it('Test 37 (2026-08-31 갱신): 재센터링 버튼 아이콘은 모드와 무관하게 colors.pin을 쓰고 accent/textMuted는 쓰지 않는다', () => {
     const match = codeOnly.match(/<SymbolView[\s\S]*?\/>/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
-    expect(block).toMatch(/colors\.textMuted/);
+    expect(block).toMatch(/colors\.pin\b/);
     expect(block).not.toMatch(/colors\.accent\b/);
+    expect(block).not.toMatch(/colors\.textMuted\b/);
   });
 
   it('Test 38: handleRecenterPress는 여전히 permission → resolveInstantPosition → animateToRegion 순서를 유지한 뒤 모드를 전환한다 (deps 배열은 [] 유지)', () => {

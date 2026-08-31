@@ -1087,7 +1087,7 @@ export default function Index() {
             >
               <Animated.View style={{ opacity: buttonContentOpacity }}>
                 {isCapturing ? (
-                  <ActivityIndicator color={colors.accent} />
+                  <ActivityIndicator color={colors.pin} />
                 ) : (
                   <Text style={[typography.placeName, styles.checkinButtonLabel]}>
                     {CHECKIN_COPY.checkinCta}
@@ -1107,7 +1107,7 @@ export default function Index() {
             >
               <SymbolView
                 name={orientationMode === 'compass' ? 'location.north.line.fill' : 'location.fill'}
-                tintColor={colors.textMuted}
+                tintColor={colors.pin}
               />
             </Pressable>
           </Reanimated.View>
@@ -1139,12 +1139,12 @@ const styles = StyleSheet.create({
     minWidth: 44,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.full,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.pin,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkinButtonCapturing: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.pinSoft,
   },
   checkinButtonLabel: {
     color: colors.surface,
