@@ -1,13 +1,23 @@
 // src/checkin/photos.ts
 // 03-CONTEXT.md D-01(사진 첨부 UI + 카메라/사진 라이브러리 권한 요청)과 D-02(원본을
-// `documentDirectory`에 복사)를 데이터/서비스 계층으로 구현한다. 리사이징(최대 1600px)과
-// 최종 저장 규약은 Phase 4(REQ-photo-resize) 몫이므로 여기서 건드리지 않는다.
+// `documentDirectory`에 복사)를 데이터/서비스 계층으로 구현한다. Phase 4(REQ-photo-resize)에서
+// 리사이징 단계가 추가됐다 — 진행 순서는 픽커 원본 → resize(최대 MAX_PHOTO_DIMENSION_PX) →
+// documentDirectory 복사다. 리사이즈 라이브러리의 saveAsync() 기본 출력 위치가
+// cacheDirectory라서(04-RESEARCH.md), 리사이징 결과를 그대로 photo_path로 쓰면 OS가
+// 저장공간 압박 시 지울 수 있다(threat T-4-05) — 그래서 리사이징 결과를 반드시 기존
+// copyIntoDocumentDirectory 포트에 한 번 더 통과시킨다.
 //
-// 이 파일은 'expo-image-picker'/'expo-file-system'/'expo-crypto'를 직접 import하지
-// 않는다 — deps.ts가 조립한 기본 구현을 인자 기본값으로만 받는다(config.ts 헤더 규약,
-// 03-01이 세운 격리 회귀 가드).
-import type { ImagePickerDeps, CryptoDeps, PhotoStorageDeps } from './config';
-import { defaultImagePickerDeps, defaultCryptoDeps, defaultPhotoStorageDeps } from './deps';
+// 이 파일은 카메라/사진 라이브러리/암호/리사이즈용 네이티브 패키지를 어느 것도 직접
+// import하지 않는다 — deps.ts가 조립한 기본 구현을 인자 기본값으로만 받는다(config.ts
+// 헤더 규약, 03-01이 세운 격리 회귀 가드).
+import type { ImagePickerDeps, CryptoDeps, PhotoStorageDeps, ResizeDeps } from './config';
+import { MAX_PHOTO_DIMENSION_PX } from './config';
+import {
+  defaultImagePickerDeps,
+  defaultCryptoDeps,
+  defaultPhotoStorageDeps,
+  defaultResizeDeps,
+} from './deps';
 
 export type PhotoSource = 'camera' | 'library';
 
@@ -48,7 +58,7 @@ export type PickedPhoto = { uri: string; source: PhotoSource; fileName: string }
 export type PickPhotoResult =
   | PickedPhoto
   | null
-  | { error: 'permission_denied' | 'copy_failed' };
+  | { error: 'permission_denied' | 'copy_failed' | 'resize_failed' };
 
 export async function pickAndCopyPhoto(
   source: PhotoSource,
@@ -56,11 +66,13 @@ export async function pickAndCopyPhoto(
     picker?: ImagePickerDeps;
     storage?: PhotoStorageDeps;
     crypto?: CryptoDeps;
+    resize?: ResizeDeps;
   } = {}
 ): Promise<PickPhotoResult> {
   const picker = deps.picker ?? defaultImagePickerDeps;
   const storage = deps.storage ?? defaultPhotoStorageDeps;
   const crypto = deps.crypto ?? defaultCryptoDeps;
+  const resize = deps.resize ?? defaultResizeDeps;
 
   const granted = await ensurePhotoPermission(source, picker);
   if (!granted) {
@@ -87,8 +99,19 @@ export async function pickAndCopyPhoto(
   const uuid = crypto.randomUUID();
   const fileName = buildPhotoFileName(source, uuid);
 
+  // 리사이징을 documentDirectory 복사보다 먼저 수행한다 — resize 결과 uri를 복사 단계에
+  // 넘겨야 최종 photo_path가 리사이징된 파일을 가리킨다(threat T-4-05).
+  let resizedUri: string;
   try {
-    const destinationUri = await storage.copyIntoDocumentDirectory(asset.uri, fileName);
+    resizedUri = await resize.resizeToMaxDimension(asset.uri, MAX_PHOTO_DIMENSION_PX);
+  } catch (error) {
+    // 예외를 밖으로 던지지 않되 로그는 남긴다(프로미스/에러 미삼킴 규약).
+    console.error('Failed to resize photo', error);
+    return { error: 'resize_failed' };
+  }
+
+  try {
+    const destinationUri = await storage.copyIntoDocumentDirectory(resizedUri, fileName);
     return { uri: destinationUri, source, fileName };
   } catch (error) {
     // 예외를 밖으로 던지지 않되 로그는 남긴다(프로미스/에러 미삼킴 규약).
