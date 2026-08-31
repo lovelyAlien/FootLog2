@@ -43,47 +43,47 @@ import type { MarkerDragStartEndEvent, Region } from 'react-native-maps';
 // 않는다 — 시트 제스처는 @gorhom/bottom-sheet 내부가 처리한다(checkin-wiring gesture-handler 미사용 회귀 가드).
 import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, motion, radius, spacing, typography } from '../../theme/tokens';
-import { fetchNotificationPermission, shouldShowPriming } from '../../notifications/permissions';
-import type { PermissionSnapshot } from '../../notifications/permissions';
-import { NotificationDeniedBanner } from '../../components/NotificationDeniedBanner';
-import { LocationDeniedBanner } from '../../components/LocationDeniedBanner';
-import { CheckinActionCard } from '../../components/CheckinActionCard';
-import { TodayBottomSheet } from '../../today/TodayBottomSheet';
+import { colors, motion, radius, spacing, typography } from '../../../theme/tokens';
+import { fetchNotificationPermission, shouldShowPriming } from '../../../notifications/permissions';
+import type { PermissionSnapshot } from '../../../notifications/permissions';
+import { NotificationDeniedBanner } from '../../../components/NotificationDeniedBanner';
+import { LocationDeniedBanner } from '../../../components/LocationDeniedBanner';
+import { CheckinActionCard } from '../../../components/CheckinActionCard';
+import { TodayBottomSheet } from '../../../today/TodayBottomSheet';
 import {
   checkinReducer,
   initialCheckinState,
   canEditNoteAndPhoto,
   CHECKIN_COPY,
-} from '../../checkin/checkinFlow';
-import { fetchLocationPermission, requestLocationPermission } from '../../checkin/permissions';
-import { resolveCheckinLocation } from '../../checkin/location';
-import type { FallbackSources, ResolvedLocation } from '../../checkin/location';
-import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../../checkin/draftRepo';
+} from '../../../checkin/checkinFlow';
+import { fetchLocationPermission, requestLocationPermission } from '../../../checkin/permissions';
+import { resolveCheckinLocation } from '../../../checkin/location';
+import type { FallbackSources, ResolvedLocation } from '../../../checkin/location';
+import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../../../checkin/draftRepo';
 import {
   commitCheckin,
   getLatestCheckinCoordinate,
   getTodayCheckins,
   updateCheckinNoteAndPhoto,
-} from '../../checkin/checkinRepo';
-import type { NewCheckinParams } from '../../checkin/checkinRepo';
-import { defaultCryptoDeps, defaultLocationDeps } from '../../checkin/deps';
+} from '../../../checkin/checkinRepo';
+import type { NewCheckinParams } from '../../../checkin/checkinRepo';
+import { defaultCryptoDeps, defaultLocationDeps } from '../../../checkin/deps';
 import {
   CAPTURE_TIMEOUT_MS,
   LAST_KNOWN_MAX_AGE_MS,
   LOCATION_ACCURACY_BALANCED,
-} from '../../checkin/config';
+} from '../../../checkin/config';
 import {
   PHOTO_ACTION_SHEET_CANCEL_INDEX,
   PHOTO_ACTION_SHEET_OPTIONS,
   PHOTO_SOURCE_BY_ACTION_SHEET_INDEX,
   pickAndCopyPhoto,
-} from '../../checkin/photos';
-import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../../checkin/localDate';
-import type { CheckinRow, LocationSource } from '../../db/schema';
-import type { CheckinState } from '../../checkin/checkinFlow';
+} from '../../../checkin/photos';
+import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../../../checkin/localDate';
+import type { CheckinRow, LocationSource } from '../../../db/schema';
+import type { CheckinState } from '../../../checkin/checkinFlow';
 import { SymbolView } from 'expo-symbols';
-import { buildTrajectoryCoordinates } from '../../today/trajectory';
+import { buildTrajectoryCoordinates } from '../../../today/trajectory';
 
 // 확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 — GPS 좌표 근방을 자연스럽게 보여줄
 // 정도의 값이며, 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
