@@ -11,6 +11,7 @@ import { stripComments } from '../../test-utils/stripComments';
 
 const APP_DIR = path.join(__dirname, '..');
 const SRC_DIR = path.join(__dirname, '..', '..');
+const TODAY_SCREEN_PATH = path.join('(tabs)', 'index.tsx');
 
 function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(APP_DIR, relativePath), 'utf-8');
@@ -84,8 +85,8 @@ describe('중복 자가진단 리스너 회귀 가드 (T-02-19)', () => {
   });
 });
 
-describe('src/app/index.tsx 배선 계약 (Plan 02-07)', () => {
-  const indexSource = readSource('index.tsx');
+describe('src/app/(tabs)/index.tsx 배선 계약 (Plan 02-07)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
 
   it('Test 6: <NotificationDeniedBanner />를 렌더링한다', () => {
     expect(indexSource).toMatch(/<NotificationDeniedBanner \/>/);
