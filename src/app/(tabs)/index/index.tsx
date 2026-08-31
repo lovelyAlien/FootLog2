@@ -33,7 +33,7 @@ import {
   View,
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import type { MarkerDragStartEndEvent, Region } from 'react-native-maps';
 // reanimated default export는 반드시 `Reanimated`로 바인딩한다 — `Animated`로 쓰면
@@ -62,12 +62,14 @@ import type { FallbackSources, ResolvedLocation } from '../../../checkin/locatio
 import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../../../checkin/draftRepo';
 import {
   commitCheckin,
+  deleteCheckin,
   getLatestCheckinCoordinate,
   getTodayCheckins,
+  runWithSingleRetry,
   updateCheckinNoteAndPhoto,
 } from '../../../checkin/checkinRepo';
 import type { NewCheckinParams } from '../../../checkin/checkinRepo';
-import { defaultCryptoDeps, defaultLocationDeps } from '../../../checkin/deps';
+import { defaultCryptoDeps, defaultLocationDeps, defaultPhotoStorageDeps } from '../../../checkin/deps';
 import {
   CAPTURE_TIMEOUT_MS,
   LAST_KNOWN_MAX_AGE_MS,
@@ -85,6 +87,9 @@ import type { CheckinRow, LocationSource } from '../../../db/schema';
 import type { CheckinState } from '../../../checkin/checkinFlow';
 import { SymbolView } from 'expo-symbols';
 import { buildTrajectoryCoordinates } from '../../../today/trajectory';
+import { createPendingDeleteController } from '../../../today/pendingDelete';
+import type { PendingDeleteItem } from '../../../today/pendingDelete';
+import { UndoSnackbar } from '../../../today/UndoSnackbar';
 
 // MAP_REGION_DELTA(확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 근사치)는
 // 05-03-PLAN.md Task 2부터 src/checkin/config.ts로 옮겨졌다 — CheckinDetailScreen.tsx의
@@ -211,6 +216,13 @@ export default function Index() {
   // 스냅 지점(TodayBottomSheet)과 플로팅 버튼 오프셋 계산(floatingButtonStyle)이
   // 공유하는 공통 좌표계 기준이다(04-06-PLAN.md Task 2, D-05).
   const [containerHeight, setContainerHeight] = useState(0);
+  // 05-05-PLAN.md — 지연 삭제(스와이프) 대기 중인 행을 리스트/지도 핀/궤적선에서
+  // 함께 숨긴다. undo 창(4초) 동안 리스트에서만 사라지고 지도에 핀이 남아있으면
+  // 상태가 어긋나 보이므로, 아래 filteredTodayCheckins를 세 곳(시트/핀/궤적선)이
+  // 공유한다.
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  // 스낵바 표시 여부 — pendingDelete 컨트롤러의 onChange가 채운다.
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const mapRef = useRef<MapView>(null);
   const lastMapCoordinateRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -414,12 +426,117 @@ export default function Index() {
     reloadTodayCheckins();
   }, [reloadTodayCheckins]);
 
-  // 궤적선 좌표 — getTodayCheckins가 이미 timestamp_utc 오름차순으로 정렬해 반환하므로
-  // 여기서 다시 정렬하지 않는다(D-11 단일 쿼리 계약).
-  const trajectoryCoordinates = useMemo(
-    () => buildTrajectoryCoordinates(todayCheckins),
-    [todayCheckins]
+  // 05-05-PLAN.md — 지연 삭제 대기 중인 항목을 리스트/지도 핀/궤적선 세 곳 모두에서
+  // 함께 숨긴다(리스트에서만 사라지면 undo 창 동안 지도 상태가 어긋나 보인다).
+  const filteredTodayCheckins = useMemo(
+    () => todayCheckins.filter((checkin) => !hiddenIds.has(checkin.id)),
+    [todayCheckins, hiddenIds]
   );
+
+  // 궤적선 좌표 — getTodayCheckins가 이미 timestamp_utc 오름차순으로 정렬해 반환하므로
+  // 여기서 다시 정렬하지 않는다(D-11 단일 쿼리 계약). 지연 삭제 대기 중인 항목은
+  // filteredTodayCheckins가 이미 제외했다.
+  const trajectoryCoordinates = useMemo(
+    () => buildTrajectoryCoordinates(filteredTodayCheckins),
+    [filteredTodayCheckins]
+  );
+
+  // 05-05-PLAN.md Task 3 — 지연 삭제 커밋 로직(4초 타이머 만료 또는 언마운트 즉시
+  // 확정 시 pendingDelete.ts가 호출). 순서: deleteCheckin(단일 재시도) → 성공 시
+  // (a) photo_path가 있으면 파일을 non-blocking으로 정리(DB row는 이미 지워졌으므로
+  // 실패해도 고아 파일만 남길 뿐 데이터 유실이 아니다 — 05-RESEARCH.md Assumption A3),
+  // (b) reloadTodayCheckins로 목록을 새로 읽는다. 실패(2회 다)면 별도 재시도 UI를
+  // 띄우지 않고 hiddenIds에서 제거해 다음 reload에서 행이 자연스럽게 다시 나타나게
+  // 한다 — 스낵바가 이미 사라진 뒤 새 오류 UI를 띄우는 게 더 혼란스럽고, 이 실패
+  // UX는 요구사항 어디에도 정의돼 있지 않다(05-RESEARCH.md Open Question #1 권장안).
+  const commitPendingDelete = useCallback(
+    (item: PendingDeleteItem) => {
+      const unhide = () => {
+        setHiddenIds((prev) => {
+          if (!prev.has(item.id)) return prev;
+          const next = new Set(prev);
+          next.delete(item.id);
+          return next;
+        });
+      };
+      runWithSingleRetry(() => deleteCheckin(db, item.id))
+        .then((result) => {
+          if (!result.ok) {
+            console.error('Failed to commit swipe delete after retry', item.id);
+            unhide();
+            return;
+          }
+          if (item.photoPath) {
+            defaultPhotoStorageDeps.deleteFile(item.photoPath).catch((error) => {
+              console.error('Failed to delete photo file for swiped-away checkin', error);
+            });
+          }
+          reloadTodayCheckins();
+          unhide();
+        })
+        .catch((error) => {
+          console.error('Unexpected error while committing swipe delete', error);
+          unhide();
+        });
+    },
+    [db, reloadTodayCheckins]
+  );
+
+  // commitPendingDelete가 항상 최신 db/reloadTodayCheckins를 참조하도록 ref로
+  // 미러링한다 — 아래 컨트롤러는 마운트 시 1회만 생성되므로, 클로저가 최초 렌더의
+  // 오래된 콜백을 붙잡지 않게 한다(이 파일의 stateRef와 동일한 관용구).
+  const commitPendingDeleteRef = useRef(commitPendingDelete);
+  useEffect(() => {
+    commitPendingDeleteRef.current = commitPendingDelete;
+  }, [commitPendingDelete]);
+
+  // 지연 삭제 컨트롤러 — 마운트 시 1회만 생성한다(buttonContentOpacity와 동일한
+  // useState 지연 초기화 관용구).
+  const pendingDeleteController = useState(() =>
+    createPendingDeleteController({
+      onCommit: (item) => commitPendingDeleteRef.current(item),
+      onChange: (id) => setPendingId(id),
+    })
+  )[0];
+
+  // 언마운트 시 대기 중인 삭제를 취소가 아니라 즉시 확정한다 — 타이머만 정리하는
+  // 방식으로 바꾸지 말 것. 사용자가 "실행취소"를 누르지 않았는데도 화면을 떠났다는
+  // 이유로 삭제가 조용히 취소되면, 다음 로드에서 지워졌어야 할 행이 부활한다
+  // (pendingDelete.ts 헤더 주석과 동일 계약, T-05-13 — checkin-wiring.test.ts가
+  // dispose() cleanup 계약을 별도로 회귀 가드한다).
+  useEffect(() => {
+    return () => {
+      pendingDeleteController.dispose();
+    };
+  }, [pendingDeleteController]);
+
+  // 리스트 행 스와이프 삭제 확정(임계값 초과) — 즉시 리스트에서 숨기고 지연 삭제
+  // 컨트롤러에 위임한다. 확인 다이얼로그 없음(iOS 네이티브 스와이프 삭제 관례).
+  const handleDeleteRequest = useCallback(
+    (checkin: CheckinRow) => {
+      setHiddenIds((prev) => new Set(prev).add(checkin.id));
+      pendingDeleteController.request({ id: checkin.id, photoPath: checkin.photo_path });
+    },
+    [pendingDeleteController]
+  );
+
+  // 스낵바 "실행취소" — 숨김 해제 후 컨트롤러에 취소를 위임한다.
+  const handleUndoDelete = useCallback(() => {
+    setHiddenIds((prev) => {
+      if (pendingId === null || !prev.has(pendingId)) return prev;
+      const next = new Set(prev);
+      next.delete(pendingId);
+      return next;
+    });
+    pendingDeleteController.undo();
+  }, [pendingDeleteController, pendingId]);
+
+  // 행 탭 → 상세화면 진입(D-03 반전, 05-CONTEXT.md/05-UI-SPEC.md). pathname+params
+  // 객체 형태를 쓴다 — expo-router가 동적 세그먼트를 직접 인코딩해 id에 특수문자가
+  // 있어도 경로가 깨지지 않는다(T-05-15).
+  const handleRowPress = useCallback((id: string) => {
+    router.push({ pathname: '/[id]', params: { id } });
+  }, []);
 
   const isCapturing = state.phase === 'CAPTURING';
   const showActionCard = state.phase !== 'IDLE' && !isCapturing;
@@ -1021,7 +1138,7 @@ export default function Index() {
           />
         )}
 
-        {todayCheckins.map((checkin) => (
+        {filteredTodayCheckins.map((checkin) => (
           <Marker
             key={checkin.id}
             coordinate={{ latitude: checkin.lat, longitude: checkin.lng }}
@@ -1079,9 +1196,11 @@ export default function Index() {
               containerHeight <= 0(레이아웃 측정 전)이면 TodayBottomSheet 자신이 null을
               반환한다(04-04-PLAN.md 계약). */}
           <TodayBottomSheet
-            checkins={todayCheckins}
+            checkins={filteredTodayCheckins}
             containerHeight={containerHeight}
             animatedPosition={sheetPosition}
+            onRowPress={handleRowPress}
+            onDeleteRequest={handleDeleteRequest}
           />
           <Reanimated.View style={[styles.checkinButtonContainer, floatingButtonStyle]}>
             <Pressable
@@ -1119,6 +1238,15 @@ export default function Index() {
           </Reanimated.View>
         </>
       )}
+
+      {/* 05-05-PLAN.md — 스낵바 배치(absolute, 화면 하단)는 부모인 이 화면이 소유한다
+          (UndoSnackbar 컴포넌트 계약). 이 화면 자체가 탭바를 제외한 콘텐츠 영역이라
+          별도 insets.bottom 보정 없이도 탭바를 가리지 않는다. showActionCard 분기와
+          무관하게 항상 렌더한다 — 스와이프 삭제 대기 중에 새 체크인을 시작해도 undo
+          창(4초)이 유지돼야 한다. */}
+      <View style={styles.undoSnackbarContainer} pointerEvents="box-none">
+        <UndoSnackbar visible={pendingId !== null} onUndo={handleUndoDelete} />
+      </View>
     </View>
   );
 }
@@ -1173,6 +1301,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  // 05-05-PLAN.md — undo 스낵바 배치. 화면 하단(탭바는 이 View 바깥이라 이미 제외됨).
+  // pointerEvents="box-none"로 스낵바가 안 보일 때(visible=false, null 렌더)
+  // 이 컨테이너가 하단 지도 탭 제스처를 가로채지 않게 한다.
+  undoSnackbarContainer: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: spacing.lg,
   },
   // 구글맵 스타일 물방울(teardrop) 핀 — SVG 없이 순수 View/StyleSheet로 구현한다
   // (react-native-gesture-handler를 안 쓰는 것과 같은 이유로 불필요한 의존성 추가를

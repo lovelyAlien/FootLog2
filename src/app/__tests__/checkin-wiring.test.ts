@@ -547,3 +547,57 @@ describe('src/app/(tabs)/index.tsx 최초 진입 시 내 위치 기준 확대 �
     expect(draftEffectBlock).toMatch(/fetchLocationPermission/);
   });
 });
+
+describe('src/app/(tabs)/index.tsx 행 탭/지연 삭제 배선 계약 (2026-09-01 추가, 05-05-PLAN.md Task 3)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 71: 행 탭이 router.push({ pathname: \'/[id]\', ... })로 상세화면에 진입한다', () => {
+    expect(codeOnly).toMatch(/router\.push\(\{/);
+    expect(codeOnly).toMatch(/pathname:\s*'\/\[id\]'/);
+  });
+
+  it('Test 72: createPendingDeleteController가 등장하고, cleanup에 dispose()가 등장한다', () => {
+    expect(codeOnly).toMatch(/createPendingDeleteController/);
+    expect(codeOnly).toMatch(/pendingDeleteController\.dispose\(\)/);
+  });
+
+  // T-05-13 회귀 가드 — dispose()를 clearTimeout으로 되돌리면 언마운트 시 삭제가
+  // "취소"로 바뀌어(현재는 "즉시 확정"), 사용자가 실행취소를 누르지 않았는데도
+  // 화면을 떠났다는 이유로 삭제가 조용히 취소된다 — 다음 로드에서 지워졌어야 할
+  // 행이 부활한다. 파일 전체가 아니라 지연 삭제 컨트롤러의 cleanup effect 블록만
+  // 좁혀서 검사한다 — 이 파일에는 resolveInstantPosition의 GPS-vs-타임아웃 레이스가
+  // 쓰는, 이 기능과 무관한 기존 clearTimeout(timer!) 호출이 이미 존재하기 때문이다.
+  it('Test 73 (T-05-13 회귀 가드): 지연 삭제 컨트롤러의 cleanup effect는 clearTimeout이 아니라 dispose()로 정리한다', () => {
+    const match = codeOnly.match(
+      /useEffect\(\(\) => \{\s*return \(\) => \{\s*pendingDeleteController\.dispose\(\);[\s\S]*?\n  \}, \[pendingDeleteController\]\);/
+    );
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).not.toMatch(/clearTimeout/);
+  });
+
+  it('Test 74: deleteCheckin 호출이 runWithSingleRetry로 감싸져 있다', () => {
+    expect(codeOnly).toMatch(/runWithSingleRetry\(\(\)\s*=>\s*deleteCheckin\(/);
+  });
+
+  // Pitfall 5와 동일 계열의 순서 계약 — DB 삭제 성공 후에만 파일을 정리한다.
+  it('Test 75: deleteFile이 등장하고, 그 호출이 deleteCheckin 호출보다 뒤 인덱스에 있다', () => {
+    const deleteCheckinIndex = codeOnly.indexOf('deleteCheckin(');
+    const deleteFileIndex = codeOnly.indexOf('deleteFile(');
+    expect(deleteCheckinIndex).toBeGreaterThan(-1);
+    expect(deleteFileIndex).toBeGreaterThan(-1);
+    expect(deleteFileIndex).toBeGreaterThan(deleteCheckinIndex);
+  });
+
+  it('Test 76: hiddenIds 필터(filteredTodayCheckins)가 TodayBottomSheet에 넘기는 배열과 지도 핀/궤적선 배열 양쪽 모두에 적용된다', () => {
+    expect(codeOnly).toMatch(/const filteredTodayCheckins = useMemo\(/);
+    expect(codeOnly).toMatch(/checkins=\{filteredTodayCheckins\}/);
+    expect(codeOnly).toMatch(/\{filteredTodayCheckins\.map\(/);
+    expect(codeOnly).toMatch(/buildTrajectoryCoordinates\(filteredTodayCheckins\)/);
+  });
+
+  it('Test 77: UNDO_WINDOW_MS 단일 출처 — 4000 리터럴이 이 파일에 등장하지 않는다', () => {
+    expect(codeOnly).not.toMatch(/\b4000\b/);
+  });
+});

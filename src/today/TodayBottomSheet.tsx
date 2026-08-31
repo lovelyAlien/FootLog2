@@ -9,6 +9,10 @@
 // `onChange(index)` 콜백에만 의존하지 않는 이유: 그건 스냅 도달 시점에만 발화해
 // 드래그 중 버튼이 실시간으로 따라오지 못하고 튀게 만든다 — DRAGGING 상태의
 // "손가락을 실시간으로 따라간다" 요구(04-UI-SPEC.md)와 배치된다.
+//
+// 05-05-PLAN.md — onRowPress/onDeleteRequest를 CheckinListRow에 그대로 전달만 한다.
+// 이 시트 자신은 네비게이션이나 삭제 로직을 갖지 않는다(순수 전달) — 삭제 어포던스
+// 배경색도 CheckinListRow 안에만 있고 이 파일에는 등장하지 않는다.
 import { useMemo } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import BottomSheet, { BottomSheetFlatList, useBottomSheetTimingConfigs } from '@gorhom/bottom-sheet';
@@ -29,12 +33,19 @@ export type TodayBottomSheetProps = {
   containerHeight: number;
   // 부모가 소유하는 reanimated SharedValue — 시트가 계속 써 넣고, 부모가 읽는다(D-05).
   animatedPosition: SharedValue<number>;
+  // 05-05-PLAN.md — 행 탭 시 상세화면으로 이동시킬 id를 부모에게 알린다.
+  onRowPress: (id: string) => void;
+  // 05-05-PLAN.md — 스와이프 삭제 확정(임계값 초과) 시 부모의 지연 삭제 컨트롤러에
+  // 위임한다. 이 시트는 어떤 삭제 로직도 갖지 않는다.
+  onDeleteRequest: (checkin: CheckinRow) => void;
 };
 
 export function TodayBottomSheet({
   checkins,
   containerHeight,
   animatedPosition,
+  onRowPress,
+  onDeleteRequest,
 }: TodayBottomSheetProps) {
   const insets = useSafeAreaInsets();
 
@@ -78,7 +89,13 @@ export function TodayBottomSheet({
         <BottomSheetFlatList
           data={checkins}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <CheckinListRow checkin={item} />}
+          renderItem={({ item }) => (
+            <CheckinListRow
+              checkin={item}
+              onPress={onRowPress}
+              onDeleteRequest={onDeleteRequest}
+            />
+          )}
         />
       )}
     </BottomSheet>
