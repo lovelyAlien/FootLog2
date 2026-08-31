@@ -118,9 +118,9 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 
 **Plans**: 7 plans (5 waves)
 
-- [ ] 04-01-PLAN.md — MigratableDb getAllAsync 확장 + getTodayCheckins 단일 공유 쿼리 + 궤적 좌표 파생 (wave 1)
-- [ ] 04-02-PLAN.md — expo-image-manipulator 도입 + 방향 인식 1600px 리사이징 → documentDirectory 저장 (wave 1)
-- [ ] 04-03-PLAN.md — (tabs) 탭 셸(오늘/캘린더) + 캘린더 플레이스홀더 + 오늘 화면 라우트 이동 (wave 1)
+- [x] 04-01-PLAN.md — MigratableDb getAllAsync 확장 + getTodayCheckins 단일 공유 쿼리 + 궤적 좌표 파생 (wave 1)
+- [x] 04-02-PLAN.md — expo-image-manipulator 도입 + 방향 인식 1600px 리사이징 → documentDirectory 저장 (wave 1)
+- [x] 04-03-PLAN.md — (tabs) 탭 셸(오늘/캘린더) + 캘린더 플레이스홀더 + 오늘 화면 라우트 이동 (wave 1)
 - [ ] 04-04-PLAN.md — @gorhom/bottom-sheet 도입(정당성 게이트) + CheckinListRow + TodayBottomSheet (wave 2)
 - [ ] 04-05-PLAN.md — 오늘 체크인 조회 배선 + accentSoft 저장 핀 + Polyline 궤적선 (wave 3)
 - [ ] 04-06-PLAN.md — 바텀시트 마운트 게이트(D-04) + animatedPosition 기반 플로팅 버튼 오프셋(D-05) (wave 4)
@@ -199,7 +199,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Foundation | 5/5 | Complete   | 2026-08-26 |
 | 2. Notification Infrastructure | 8/8 | Complete   | 2026-08-27 |
 | 3. Check-in Core Loop | 12/12 | Complete   | 2026-08-28 |
-| 4. Today View | 0/7 | Not started | - |
+| 4. Today View | 3/7 | In Progress|  |
 | 5. Check-in Detail & Edit | 0/TBD | Not started | - |
 | 6. Calendar Tab | 0/TBD | Not started | - |
 | 7. Day-end Reflection | 0/TBD | Not started | - |

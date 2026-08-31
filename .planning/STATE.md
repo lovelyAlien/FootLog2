@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 4 UI-SPEC 승인 완료
-last_updated: "2026-08-30T07:43:55.976Z"
-last_activity: 2026-08-30 -- Phase 04 planning complete
+last_updated: "2026-08-31T04:19:36.314Z"
+last_activity: 2026-08-31 -- Phase 04 execution started
 progress:
   total_phases: 8
   completed_phases: 3
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-25)
 
 **Core value:** 체크인을 남기는 행위가 실제 매일의 사용을 버텨낼 만큼 마찰이 적어야 합니다 — 이 습관이 형성되지 않으면 앱의 다른 어떤 부분도 의미가 없습니다.
-**Current focus:** Phase 4 — today view
+**Current focus:** Phase 04 — today-view
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-08-30 -- Phase 04 planning complete
+Phase: 04 (today-view) — EXECUTING
+Plan: 1 of 7
+Status: Executing Phase 04
+Last activity: 2026-08-31 -- Phase 04 execution started
 
 Progress: [█░░░░░░░] 13% (1/8 phases)
 
