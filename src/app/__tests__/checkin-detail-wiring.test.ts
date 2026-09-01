@@ -392,3 +392,45 @@ describe('키보드가 메모 입력을 가리지 않는다 (2026-09-01 사용�
     expect(block).toMatch(/automaticallyAdjustKeyboardInsets/);
   });
 });
+
+describe('편집 중 스와이프백 차단 (2026-09-01 사용자 피드백 — beforeRemove 경고를 근본적으로 회피)', () => {
+  it('Test 50: handleChangeNote가 dirty 진입 시 navigation.setOptions({ gestureEnabled: false })를 호출한다', () => {
+    const start = detailScreenCodeOnly.indexOf('function handleChangeNote');
+    const end = detailScreenCodeOnly.indexOf('handleEditNotePress', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const block = detailScreenCodeOnly.slice(start, end);
+    expect(block).toMatch(/isDirtyRef\.current\s*=\s*true/);
+    expect(block).toMatch(/navigation\.setOptions\(\{\s*gestureEnabled:\s*false\s*\}\)/);
+  });
+
+  it('Test 51: flushNoteAndPhoto 성공 분기가 navigation.setOptions({ gestureEnabled: true })로 스와이프백을 복원한다', () => {
+    const start = detailScreenCodeOnly.indexOf('const flushNoteAndPhoto');
+    const end = detailScreenCodeOnly.indexOf('function handleChangeNote');
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const block = detailScreenCodeOnly.slice(start, end);
+    expect(block).toMatch(/isDirtyRef\.current\s*=\s*false;\s*setSaveFailed\(false\);\s*navigation\.setOptions\(\{\s*gestureEnabled:\s*true\s*\}\)/);
+  });
+
+  it('Test 52: handlePickPhoto 성공 분기도 gestureEnabled를 true로 복원한다(메모가 dirty였다가 사진 저장으로 같이 커밋되는 경우)', () => {
+    const start = detailScreenCodeOnly.indexOf('handlePickPhoto');
+    const end = detailScreenCodeOnly.indexOf('handleDeletePhoto');
+    const block = detailScreenCodeOnly.slice(start, end);
+    expect(block).toMatch(/isDirtyRef\.current\s*=\s*false;\s*setSaveFailed\(false\);\s*navigation\.setOptions\(\{\s*gestureEnabled:\s*true\s*\}\)/);
+  });
+
+  it('Test 53: handleDeletePhoto 성공 분기도 gestureEnabled를 true로 복원한다', () => {
+    const start = detailScreenCodeOnly.indexOf('handleDeletePhoto');
+    const end = detailScreenCodeOnly.indexOf('if (!checkin) return null;');
+    const block = detailScreenCodeOnly.slice(start, end);
+    expect(block).toMatch(/isDirtyRef\.current\s*=\s*false;\s*setSaveFailed\(false\);\s*navigation\.setOptions\(\{\s*gestureEnabled:\s*true\s*\}\)/);
+  });
+
+  it('Test 54 (카운트 회귀 가드): gestureEnabled: false가 1회, gestureEnabled: true가 3회 등장한다', () => {
+    const falseOccurrences = detailScreenCodeOnly.match(/gestureEnabled:\s*false/g) ?? [];
+    const trueOccurrences = detailScreenCodeOnly.match(/gestureEnabled:\s*true/g) ?? [];
+    expect(falseOccurrences.length).toBe(1);
+    expect(trueOccurrences.length).toBe(3);
+  });
+});
