@@ -148,6 +148,7 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
     if (result.ok) {
       isDirtyRef.current = false;
       setSaveFailed(false);
+      navigation.setOptions({ gestureEnabled: true });
     } else {
       // 아직 저장되지 않았다 — dirty를 내리지 않는다.
       setSaveFailed(true);
@@ -158,6 +159,13 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
     setNote(next);
     noteRef.current = next;
     isDirtyRef.current = true;
+    // 2026-09-01 사용자 피드백 — beforeRemove가 native-stack에서 "완전히 지원되지
+    // 않는다"는 React Navigation 경고 자체를 근본적으로 피한다: 미저장 변경이 있는
+    // 동안은 엣지 스와이프백 제스처를 아예 등록하지 않는다. 이러면 뒤로가기는 항상
+    // 헤더 버튼(확실히 JS POP 디스패치를 타는 경로)으로만 가능해지고, beforeRemove
+    // 리스너가 막아야 하는 인터랙티브 제스처 자체가 없어진다. 헤더 뒤로가기는
+    // 여전히 정상 동작한다(gestureEnabled는 스와이프 제스처만 끈다).
+    navigation.setOptions({ gestureEnabled: false });
   }
   // 텍스트필드 blur(포커스만 이탈) 시점에 반응하는 핸들러는 의도적으로 붙이지 않는다
   // — blur는 아무 것도 저장하지 않고 dirty 상태만 유지한다(05-UI-SPEC.md §저장 트리거
@@ -241,6 +249,7 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
               // positive), 이전에 실패했던 저장 실패 카드가 계속 남아있게 된다.
               isDirtyRef.current = false;
               setSaveFailed(false);
+              navigation.setOptions({ gestureEnabled: true });
               setCheckin((prev) => (prev ? { ...prev, photo_path: result.uri } : prev));
               if (previousPhotoPath) {
                 // 구 파일 정리는 non-blocking이다 — DB는 이미 새 사진을 가리키고
@@ -288,6 +297,7 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
       // 05-REVIEW.md WR-02 — handlePickPhoto와 동일한 이유로 초기화한다.
       isDirtyRef.current = false;
       setSaveFailed(false);
+      navigation.setOptions({ gestureEnabled: true });
       setCheckin((prev) => (prev ? { ...prev, photo_path: null } : prev));
       // 구 파일 정리는 non-blocking이다 — DB는 이미 빈 슬롯 상태를 가리키고
       // 있으므로 이 호출이 실패해도 고아 파일만 남길 뿐 데이터 유실이 아니다.
