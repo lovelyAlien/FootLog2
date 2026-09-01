@@ -1315,7 +1315,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.mapControlButtonBackground,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.mapControlButtonShadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.18,
     shadowRadius: 4,

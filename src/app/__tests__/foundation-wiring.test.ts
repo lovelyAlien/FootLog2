@@ -119,11 +119,7 @@ describe('src/ 전체 하드코딩 hex 컬러 회귀 가드', () => {
 
       const source = fs.readFileSync(filePath, 'utf-8');
       const codeOnly = stripComments(source);
-      // 재센터 버튼 shadowColor: '#000' 예외 — Apple Maps 스타일 섀도우는 시멘틱 색상 범주 밖
-      // (DESIGN.md 2026-09-01, 동일 예외 범주는 mapControlButtonBackground/mapControlIcon/
-      // mapControlBadgeBackground/mapControlBadgeNeedle)
-      const codeSansRecenterShadow = codeOnly.replace(/shadowColor:\s*['"]#000['"]/g, '');
-      if (/#[0-9A-Fa-f]{3,6}\b/.test(codeSansRecenterShadow)) {
+      if (/#[0-9A-Fa-f]{3,6}\b/.test(codeOnly)) {
         offenders.push(relativePath);
       }
     }

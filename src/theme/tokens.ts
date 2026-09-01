@@ -26,6 +26,7 @@ export const colors = {
   mapControlIcon: '#007AFF', // 재센터 버튼 아이콘(시스템 블루) — 위와 동일 예외
   mapControlBadgeBackground: '#2C2C2C', // 나침반 배지 배경(짙은 단색) — 위와 동일 예외
   mapControlBadgeNeedle: '#FF3B30', // 나침반 배지 빨간 삼각형/N 텍스트 — 위와 동일 예외
+  mapControlButtonShadow: '#000000', // 재센터 버튼 그림자 색상 — 위와 동일 예외(애플 지도 스타일, 2026-09-01)
 } as const;
 
 export const typography = {
