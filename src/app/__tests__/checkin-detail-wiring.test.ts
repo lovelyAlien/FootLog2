@@ -287,3 +287,64 @@ describe('사진 편집은 미저장 경고 대상이 아니다 (D-04)', () => {
     expect(detailScreenCodeOnly).not.toMatch(/UndoSnackbar/);
   });
 });
+
+describe('05-REVIEW.md 코드 리뷰 대응 회귀 가드', () => {
+  it('Test 36 (WR-01): 초기 체크인 로드가 .then 뒤에 .catch(로 에러를 처리한다', () => {
+    const start = detailScreenCodeOnly.indexOf('getCheckinById(db, checkinId)');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const block = detailScreenCodeOnly.slice(start, start + 500);
+    const thenIndex = block.indexOf('.then(');
+    const catchIndex = block.indexOf('.catch(');
+    expect(thenIndex).toBeGreaterThanOrEqual(0);
+    expect(catchIndex).toBeGreaterThan(thenIndex);
+  });
+
+  it('Test 37 (WR-02): handlePickPhoto 성공 분기가 isDirtyRef/saveFailed를 초기화한다', () => {
+    const start = detailScreenCodeOnly.indexOf('handlePickPhoto');
+    const end = detailScreenCodeOnly.indexOf('handleDeletePhoto');
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const block = detailScreenCodeOnly.slice(start, end);
+    expect(block).toMatch(/isDirtyRef\.current\s*=\s*false/);
+    expect(block).toMatch(/setSaveFailed\(false\)/);
+  });
+
+  it('Test 38 (WR-02): handleDeletePhoto 성공 분기가 isDirtyRef/saveFailed를 초기화한다', () => {
+    const start = detailScreenCodeOnly.indexOf('handleDeletePhoto');
+    const end = detailScreenCodeOnly.indexOf('if (!checkin) return null;');
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const block = detailScreenCodeOnly.slice(start, end);
+    expect(block).toMatch(/isDirtyRef\.current\s*=\s*false/);
+    expect(block).toMatch(/setSaveFailed\(false\)/);
+  });
+
+  it('Test 39 (WR-03): handlePickPhoto의 사진 DB 쓰기가 runWithSingleRetry로 감싸여 있다', () => {
+    const start = detailScreenCodeOnly.indexOf('handlePickPhoto');
+    const end = detailScreenCodeOnly.indexOf('handleDeletePhoto');
+    const block = detailScreenCodeOnly.slice(start, end);
+    const retryIndex = block.indexOf('runWithSingleRetry(');
+    const updateIndex = block.indexOf('updateCheckinNoteAndPhoto');
+    expect(retryIndex).toBeGreaterThanOrEqual(0);
+    expect(updateIndex).toBeGreaterThan(retryIndex);
+  });
+
+  it('Test 40 (WR-03): handleDeletePhoto의 사진 DB 쓰기가 runWithSingleRetry로 감싸여 있다', () => {
+    const start = detailScreenCodeOnly.indexOf('handleDeletePhoto');
+    const end = detailScreenCodeOnly.indexOf('if (!checkin) return null;');
+    const block = detailScreenCodeOnly.slice(start, end);
+    const retryIndex = block.indexOf('runWithSingleRetry(');
+    const updateIndex = block.indexOf('updateCheckinNoteAndPhoto');
+    expect(retryIndex).toBeGreaterThanOrEqual(0);
+    expect(updateIndex).toBeGreaterThan(retryIndex);
+  });
+
+  it('Test 41 (WR-03): 사진 DB 쓰기 실패 시 setPhotoError(true)가 등장한다(pick 실패 2곳 + write 실패 2곳 = 4)', () => {
+    const occurrences = detailScreenCodeOnly.match(/setPhotoError\(true\)/g) ?? [];
+    expect(occurrences.length).toBe(4);
+  });
+
+  it('Test 42 (사진 고정 크기): photo 스타일이 contentFit="cover"로 렌더된다(가로/세로 사진 모두 동일한 박스 크기로 보이도록)', () => {
+    expect(detailScreenCodeOnly).toMatch(/contentFit="cover"/);
+  });
+});
