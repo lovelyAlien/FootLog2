@@ -41,7 +41,7 @@ import type { MarkerDragStartEndEvent, Region } from 'react-native-maps';
 // checkin-wiring Test 46이 깨지고 native driver 크로스페이드가 무너진다
 // (04-06-PLAN.md Task 2). react-native-gesture-handler는 이 화면에서 직접 import하지
 // 않는다 — 시트 제스처는 @gorhom/bottom-sheet 내부가 처리한다(checkin-wiring gesture-handler 미사용 회귀 가드).
-import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Reanimated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, motion, radius, spacing, typography } from '../../../theme/tokens';
 import { fetchNotificationPermission, shouldShowPriming } from '../../../notifications/permissions';
@@ -123,6 +123,9 @@ const EXTREME_ZOOM_OUT_RATIO = 10;
 
 // 확인 핀 히트 영역 확장값 — 24px 원을 최소 터치 타겟 크기까지 넓힌다.
 const PIN_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
+
+const COMPASS_BADGE_HIT_SLOP = { top: 4, bottom: 4, left: 4, right: 4 }; // 36pt 배지를 44pt 터치 타겟까지 확장
+const COMPASS_BADGE_BOTTOM_OFFSET = 44 + spacing.xs; // 재센터 버튼 높이(44, recenterButton 스타일과 동일) + 간격
 
 // 이동 궤적선 두께 — 2px, 실선. 색상은 2026-08-31부터 colors.pinSoft(테라코타, DESIGN.md 참고).
 const TRAJECTORY_STROKE_WIDTH = 2;
@@ -579,6 +582,16 @@ export default function Index() {
       return { bottom: insets.bottom + spacing.xl };
     }
     return { bottom: containerHeight - sheetPosition.value + spacing.lg };
+  }, [containerHeight, insets.bottom]);
+
+  // 나침반 배지는 재센터 버튼 바로 위에 스택된다 — floatingButtonStyle과 동일한
+  // bottom 계산에 COMPASS_BADGE_BOTTOM_OFFSET만 더한다
+  // (docs/designs/recenter-compass-badge.md 설계안 참고).
+  const compassBadgeFloatingStyle = useAnimatedStyle(() => {
+    if (containerHeight <= 0) {
+      return { bottom: insets.bottom + spacing.xl + COMPASS_BADGE_BOTTOM_OFFSET };
+    }
+    return { bottom: containerHeight - sheetPosition.value + spacing.lg + COMPASS_BADGE_BOTTOM_OFFSET };
   }, [containerHeight, insets.bottom]);
 
   // 체크인 버튼과 로딩 인디케이터 사이 전환에 크로스페이드를 적용한다
@@ -1258,6 +1271,24 @@ export default function Index() {
               />
             </Pressable>
           </Reanimated.View>
+          {orientationMode === 'compass' && (
+            <Reanimated.View
+              entering={FadeIn.duration(motion.saveStateCrossfadeMs)}
+              exiting={FadeOut.duration(motion.saveStateCrossfadeMs)}
+              style={[styles.compassBadgeContainer, compassBadgeFloatingStyle, { right: spacing.lg }]}
+            >
+              <Pressable
+                onPress={resetHeadingToNorth}
+                accessibilityRole="button"
+                accessibilityLabel="지도를 북쪽으로 정렬"
+                hitSlop={COMPASS_BADGE_HIT_SLOP}
+                style={styles.compassBadge}
+              >
+                <View style={styles.compassBadgeNeedle} />
+                <Text style={styles.compassBadgeLabel}>N</Text>
+              </Pressable>
+            </Reanimated.View>
+          )}
         </>
       )}
 
@@ -1319,6 +1350,33 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.18,
     shadowRadius: 4,
+  },
+  compassBadgeContainer: {
+    position: 'absolute',
+  },
+  compassBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: colors.mapControlBadgeBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compassBadgeNeedle: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderBottomWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: colors.mapControlBadgeNeedle,
+    marginBottom: 1,
+  },
+  compassBadgeLabel: {
+    fontSize: 9,
+    fontWeight: '500',
+    color: colors.mapControlButtonBackground,
   },
   actionCardContainer: {
     position: 'absolute',

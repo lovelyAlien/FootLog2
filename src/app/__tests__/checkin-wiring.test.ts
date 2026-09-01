@@ -612,3 +612,41 @@ describe('src/app/(tabs)/index.tsx 행 탭/지연 삭제 배선 계약 (2026-09-
     expect(codeOnly).not.toMatch(/\b4000\b/);
   });
 });
+
+describe('src/app/(tabs)/index.tsx 나침반 배지 배선 계약 (2026-09-01 추가, 애플 지도 스타일 분리)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 79: 나침반 배지는 orientationMode가 compass일 때만 조건부 렌더된다', () => {
+    expect(codeOnly).toMatch(/\{orientationMode === 'compass' && \(/);
+  });
+
+  it('Test 80: 배지 접근성 라벨이 "지도를 북쪽으로 정렬"이고 hitSlop이 등장한다', () => {
+    expect(indexSource).toMatch(/accessibilityLabel="지도를 북쪽으로 정렬"/);
+    expect(indexSource).toMatch(/\bCOMPASS_BADGE_HIT_SLOP\b/);
+  });
+
+  it('Test 81: 배지 onPress가 resetHeadingToNorth로 배선된다', () => {
+    const match = codeOnly.match(
+      /<Pressable\s+onPress=\{resetHeadingToNorth\}[\s\S]*?accessibilityLabel="지도를 북쪽으로 정렬"/
+    );
+    expect(match).not.toBeNull();
+  });
+
+  it('Test 82: 배지 스타일이 colors.mapControlBadgeBackground/mapControlBadgeNeedle을 쓰고 accent/pin은 쓰지 않는다', () => {
+    const bgMatch = codeOnly.match(/compassBadge:\s*\{[\s\S]*?\n  \},/);
+    expect(bgMatch).not.toBeNull();
+    expect(bgMatch ? bgMatch[0] : '').toMatch(/colors\.mapControlBadgeBackground/);
+
+    const needleMatch = codeOnly.match(/compassBadgeNeedle:\s*\{[\s\S]*?\n  \},/);
+    expect(needleMatch).not.toBeNull();
+    expect(needleMatch ? needleMatch[0] : '').toMatch(/colors\.mapControlBadgeNeedle/);
+
+    expect(codeOnly).not.toMatch(/compassBadge[\s\S]{0,400}colors\.accent\b/);
+  });
+
+  it('Test 83: 배지 등장/소멸 애니메이션이 motion.saveStateCrossfadeMs(180ms)를 재사용한다 (새 모션 값 추가 금지)', () => {
+    expect(codeOnly).toMatch(/entering=\{FadeIn\.duration\(motion\.saveStateCrossfadeMs\)\}/);
+    expect(codeOnly).toMatch(/exiting=\{FadeOut\.duration\(motion\.saveStateCrossfadeMs\)\}/);
+  });
+});
