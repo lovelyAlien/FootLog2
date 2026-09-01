@@ -125,7 +125,8 @@ const EXTREME_ZOOM_OUT_RATIO = 10;
 const PIN_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
 
 const COMPASS_BADGE_HIT_SLOP = { top: 4, bottom: 4, left: 4, right: 4 }; // 36pt 배지를 44pt 터치 타겟까지 확장
-const COMPASS_BADGE_BOTTOM_OFFSET = 44 + spacing.xs; // 재센터 버튼 높이(44, recenterButton 스타일과 동일) + 간격
+const RECENTER_BUTTON_SIZE = 44; // 재센터 버튼 너비/높이 — 나침반 배지 정렬/오프셋 계산이 이 값을 공유한다
+const COMPASS_BADGE_BOTTOM_OFFSET = RECENTER_BUTTON_SIZE + spacing.xs; // 재센터 버튼 높이 + 간격
 
 // 이동 궤적선 두께 — 2px, 실선. 색상은 2026-08-31부터 colors.pinSoft(테라코타, DESIGN.md 참고).
 const TRAJECTORY_STROKE_WIDTH = 2;
@@ -1340,8 +1341,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   recenterButton: {
-    width: 44,
-    height: 44,
+    width: RECENTER_BUTTON_SIZE,
+    height: RECENTER_BUTTON_SIZE,
     borderRadius: radius.full,
     backgroundColor: colors.mapControlButtonBackground,
     alignItems: 'center',
@@ -1353,6 +1354,8 @@ const styles = StyleSheet.create({
   },
   compassBadgeContainer: {
     position: 'absolute',
+    width: RECENTER_BUTTON_SIZE,
+    alignItems: 'center',
   },
   compassBadge: {
     width: 36,

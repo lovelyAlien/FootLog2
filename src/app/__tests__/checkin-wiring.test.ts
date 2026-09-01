@@ -618,7 +618,8 @@ describe('src/app/(tabs)/index.tsx 나침반 배지 배선 계약 (2026-09-01 �
   const codeOnly = stripComments(indexSource);
 
   it('Test 79: 나침반 배지는 orientationMode가 compass일 때만 조건부 렌더된다', () => {
-    expect(codeOnly).toMatch(/\{orientationMode === 'compass' && \(/);
+    const match = codeOnly.match(/\{orientationMode === 'compass' && \([\s\S]*?styles\.compassBadgeContainer[\s\S]*?\)\}/);
+    expect(match).not.toBeNull();
   });
 
   it('Test 80: 배지 접근성 라벨이 "지도를 북쪽으로 정렬"이고 hitSlop이 등장한다', () => {
@@ -648,5 +649,23 @@ describe('src/app/(tabs)/index.tsx 나침반 배지 배선 계약 (2026-09-01 �
   it('Test 83: 배지 등장/소멸 애니메이션이 motion.saveStateCrossfadeMs(180ms)를 재사용한다 (새 모션 값 추가 금지)', () => {
     expect(codeOnly).toMatch(/entering=\{FadeIn\.duration\(motion\.saveStateCrossfadeMs\)\}/);
     expect(codeOnly).toMatch(/exiting=\{FadeOut\.duration\(motion\.saveStateCrossfadeMs\)\}/);
+  });
+
+  it('Test 84 (2026-09-01 최종 리뷰 수정 — 중심 정렬 회귀 가드): compassBadgeContainer가 RECENTER_BUTTON_SIZE 폭 + alignItems center로 재센터 버튼과 중심을 맞춘다', () => {
+    const match = codeOnly.match(/compassBadgeContainer:\s*\{[\s\S]*?\n  \},/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/width:\s*RECENTER_BUTTON_SIZE/);
+    expect(block).toMatch(/alignItems:\s*'center'/);
+  });
+
+  it('Test 85 (2026-09-01 최종 리뷰 수정): COMPASS_BADGE_BOTTOM_OFFSET과 recenterButton 크기가 RECENTER_BUTTON_SIZE 상수를 공유한다 (44 리터럴 중복 방지 회귀 가드)', () => {
+    expect(codeOnly).toMatch(/const RECENTER_BUTTON_SIZE = 44;/);
+    expect(codeOnly).toMatch(/const COMPASS_BADGE_BOTTOM_OFFSET = RECENTER_BUTTON_SIZE \+ spacing\.xs;/);
+    const recenterButtonMatch = codeOnly.match(/recenterButton:\s*\{[\s\S]*?\n  \},/);
+    expect(recenterButtonMatch).not.toBeNull();
+    const block = recenterButtonMatch ? recenterButtonMatch[0] : '';
+    expect(block).toMatch(/width:\s*RECENTER_BUTTON_SIZE/);
+    expect(block).toMatch(/height:\s*RECENTER_BUTTON_SIZE/);
   });
 });

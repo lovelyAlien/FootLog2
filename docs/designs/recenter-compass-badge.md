@@ -13,7 +13,7 @@ Source todo: `.planning/todos/pending/2026-09-01-recenter-button-apple-maps-pari
 
 ## Premises
 1. **동작 모델**: 재센터 버튼은 기존 동작(탭 → 위치 이동+follow 진입, 연속 탭 → north↔compass 헤딩 토글)을 그대로 유지한다. 나침반 배지는 이 토글의 대체가 아니라, `orientationMode === 'compass'`일 때만 나타나는 별도의 "북쪽으로 리셋" 전용 컨트롤이다.
-2. **배치**: 두 컨트롤 모두 화면 우하단, 기존 재센터 버튼과 같은 `right: spacing.lg` 정렬. 배지는 재센터 버튼 바로 위에 세로로 스택(간격 `spacing.xs` 8px) — 첨부 스크린샷 실측 배치 기준.
+2. **배치**: 두 컨트롤 모두 화면 우하단, 기존 재센터 버튼과 같은 `right: spacing.lg` 정렬. 배지는 재센터 버튼 바로 위에 세로로 스택(간격 `spacing.xs` 8px) — 첨부 스크린샷 실측 배치 기준. **중심 정렬(2026-09-01 최종 리뷰 수정)**: 배지(36pt)와 버튼(44pt) 크기가 달라 둘 다 우측 가장자리만 맞추면 중심이 4pt 어긋난다 — 배지 컨테이너에 버튼과 동일한 44pt 폭 + `alignItems: 'center'`를 줘서 두 컨트롤의 수직 중심선을 일치시킨다(애플 지도 실제 배치와 일치, 시각 비교 목업으로 확정).
 3. **가시성**: 배지는 `orientationMode === 'compass'`일 때만 렌더되며 180ms 페이드 인/아웃(기존 "저장 상태 전환" 모션 토큰 재사용, 새 모션 값 추가 안 함). north 모드로 돌아가거나 사용자가 지도를 손으로 팬(`handlePanDrag`)하면 사라진다.
 4. **배지 탭 동작**: `handlePanDrag`(678~685번 줄)의 "north로 리셋" 분기 — heading 구독 해제 + `orientationModeRef`/`setOrientationMode('north')` + `animateCamera({heading:0, pitch:0})` — 를 `resetToNorth` 함수로 추출해 배지 `onPress`와 공유한다. 위치 follow 자체는 해제하지 않고 회전만 리셋한다.
 5. **색상 — 애플 지도 스타일로 예외 적용(중요 결정)**: 사용자가 "애플 지도와 완전히 동일하게" 색상까지 명시적으로 요청 — 2026-08-31 DESIGN.md 결정(재센터 버튼 아이콘을 Pin 테라코타로 통일)을 이 두 컨트롤에 한해 되돌린다.
