@@ -143,6 +143,23 @@ useEffect(() => {
 
 ---
 
+## Resolution (2026-09-01)
+
+All findings above were fixed the same day, each with a failing test written first:
+
+- **CR-01** — `useFocusEffect` added to `src/app/(tabs)/index/index.tsx` so the Today list re-syncs on return from the detail screen (`fix(05-review): CR-01`).
+- **WR-01/02/03** — `.catch()` on initial load, `isDirtyRef`/`saveFailed` reset after photo writes, `runWithSingleRetry` + `photoError` on photo DB write failures (`fix(05-review): WR-01/02/03 해결 + 사진을 cover로 고정 크기 렌더`).
+
+While confirming these fixes with the user, three more issues surfaced from live use and were fixed in the same pass:
+
+- 사진 표시 크기 불일치 → `contentFit` `contain`→`cover`.
+- 메모가 항상 편집 가능해 편집 중인지 구분이 안 됨 → 뷰/편집 모드 분리, 명시적 편집/저장 버튼(`feat(05-review): 메모 편집/저장 버튼 추가 + 키보드가 입력을 안 가리게 수정`).
+- 편집 중 스와이프백/헤더 뒤로가기 시 "removed natively but didn't get removed from JS state" 콘솔 에러 재현 → `gestureEnabled` 토글(스와이프) + 커스텀 JS `headerLeft` 버튼(헤더)으로 두 네이티브 트리거 모두 JS가 먼저 결정권을 갖게 재설계(`fix(05-review): 편집 중 스와이프백 제스처 비활성화`, `fix(05-review): 커스텀 헤더 뒤로가기 버튼으로 native-stack beforeRemove 경고 근본 해결`).
+
+사용자가 각 수정을 실기기/시뮬레이터에서 직접 확인 후 순차 승인함("모두 확인했어. 승인." — 사진/메모 UX 1차 승인, 이어서 커스텀 헤더 버튼 재확인 후 2차 승인). 전체 테스트 33 suites/506 tests 그린, `tsc` 클린.
+
+---
+
 _Reviewed: 2026-09-01T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
