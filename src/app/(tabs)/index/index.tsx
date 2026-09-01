@@ -1254,7 +1254,7 @@ export default function Index() {
             >
               <SymbolView
                 name={orientationMode === 'compass' ? 'location.north.line.fill' : 'location.fill'}
-                tintColor={colors.pin}
+                tintColor={colors.mapControlIcon}
               />
             </Pressable>
           </Reanimated.View>
@@ -1312,11 +1312,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.full,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.mapControlButtonBackground,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.line,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
   },
   actionCardContainer: {
     position: 'absolute',

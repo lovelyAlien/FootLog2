@@ -199,15 +199,15 @@ describe('src/app/(tabs)/index.tsx 내 위치 재센터링 버튼 배선 계약'
     expect(block).toMatch(/animateToRegion/);
   });
 
-  it('Test 31 (2026-08-31 갱신): 재센터링 버튼은 accent 컬러를 쓰지 않는다 (colors.pin으로 대체 — DESIGN.md 체크인 정체성 색 통일)', () => {
+  it('Test 31 (2026-09-01 갱신): 재센터링 버튼은 애플 지도 스타일로 흰 배경 + 시스템 블루 아이콘을 쓴다 (2026-08-31 Pin 통일에서 되돌림 — DESIGN.md 2026-09-01 예외)', () => {
     const match = codeOnly.match(/recenterButton:\s*\{[\s\S]*?\n  \},/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
+    expect(block).toMatch(/colors\.mapControlButtonBackground/);
     expect(block).not.toMatch(/colors\.accent\b/);
-    // 아이콘 tintColor는 recenterButton 스타일 블록이 아니라 <SymbolView> JSX prop이라
-    // 별도로 확인한다 — textMuted(회색)에서 colors.pin(테라코타)으로 전환됐다.
-    expect(codeOnly).toMatch(/tintColor=\{colors\.pin\}/);
-    expect(codeOnly).not.toMatch(/tintColor=\{colors\.textMuted\}/);
+    expect(block).not.toMatch(/colors\.surface\b/);
+    expect(codeOnly).toMatch(/tintColor=\{colors\.mapControlIcon\}/);
+    expect(codeOnly).not.toMatch(/tintColor=\{colors\.pin\}/);
   });
 
   it('Test 32: expo-location을 직접 import하지 않고 checkin/deps의 defaultLocationDeps를 통해서만 접근한다', () => {
@@ -241,12 +241,13 @@ describe('src/app/(tabs)/index.tsx 나침반 모드 토글 배선 계약 (재센
     expect(indexSource).toMatch(/location\.north\.line\.fill/);
   });
 
-  it('Test 37 (2026-08-31 갱신): 재센터링 버튼 아이콘은 모드와 무관하게 colors.pin을 쓰고 accent/textMuted는 쓰지 않는다', () => {
+  it('Test 37 (2026-09-01 갱신): 재센터링 버튼 아이콘은 모드와 무관하게 colors.mapControlIcon을 쓰고 accent/pin/textMuted는 쓰지 않는다', () => {
     const match = codeOnly.match(/<SymbolView[\s\S]*?\/>/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
-    expect(block).toMatch(/colors\.pin\b/);
+    expect(block).toMatch(/colors\.mapControlIcon\b/);
     expect(block).not.toMatch(/colors\.accent\b/);
+    expect(block).not.toMatch(/colors\.pin\b/);
     expect(block).not.toMatch(/colors\.textMuted\b/);
   });
 
