@@ -33,7 +33,7 @@ import {
   View,
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useFocusEffect } from 'expo-router';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import type { MarkerDragStartEndEvent, Region } from 'react-native-maps';
 // reanimated default export는 반드시 `Reanimated`로 바인딩한다 — `Animated`로 쓰면
@@ -425,6 +425,21 @@ export default function Index() {
   useEffect(() => {
     reloadTodayCheckins();
   }, [reloadTodayCheckins]);
+
+  // 05-REVIEW.md CR-01 — 상세화면([id].tsx)에서 메모/사진을 편집하고 뒤로가기로
+  // 돌아왔을 때 이 화면을 갱신하는 유일한 경로. AppState 리스너는 앱이 백그라운드로
+  // 나갔다 돌아올 때만 반응하고 인앱 네비게이션(뒤로가기)에는 반응하지 않는다 — 이
+  // 경로가 없으면 목록의 메모 미리보기가 오래된 채로 남을 뿐 아니라, 상세화면에서
+  // 사진을 교체한 직후 같은 행을 스와이프 삭제하면 캐시된 옛 photo_path로 삭제
+  // 대상을 잘못 잡아 실제 새 사진 파일이 디스크에 orphan으로 남는다(DB row는 이미
+  // 삭제됐으니 아무도 그 파일을 정리하지 않는다). 마운트 시 1회 로드와 별개로 둔다 —
+  // 위 useEffect를 지우면 마운트 최초 포커스 타이밍에 대한 드래프트 복구 순서 가정이
+  // 깨질 수 있다.
+  useFocusEffect(
+    useCallback(() => {
+      reloadTodayCheckins();
+    }, [reloadTodayCheckins])
+  );
 
   // 05-05-PLAN.md — 지연 삭제 대기 중인 항목을 리스트/지도 핀/궤적선 세 곳 모두에서
   // 함께 숨긴다(리스트에서만 사라지면 undo 창 동안 지도 상태가 어긋나 보인다).
