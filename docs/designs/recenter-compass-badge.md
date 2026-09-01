@@ -18,7 +18,7 @@ Source todo: `.planning/todos/pending/2026-09-01-recenter-button-apple-maps-pari
 4. **배지 탭 동작**: `handlePanDrag`(678~685번 줄)의 "north로 리셋" 분기 — heading 구독 해제 + `orientationModeRef`/`setOrientationMode('north')` + `animateCamera({heading:0, pitch:0})` — 를 `resetToNorth` 함수로 추출해 배지 `onPress`와 공유한다. 위치 follow 자체는 해제하지 않고 회전만 리셋한다.
 5. **색상 — 애플 지도 스타일로 예외 적용(중요 결정)**: 사용자가 "애플 지도와 완전히 동일하게" 색상까지 명시적으로 요청 — 2026-08-31 DESIGN.md 결정(재센터 버튼 아이콘을 Pin 테라코타로 통일)을 이 두 컨트롤에 한해 되돌린다.
    - 재센터 버튼(44×44 유지): 배경 흰색(`#FFFFFF`), 테두리 대신 옅은 그림자, 아이콘은 시스템 블루(`#007AFF`) — `location.fill` / `location.north.line.fill` 아이콘 이름은 그대로 재사용.
-   - 나침반 배지(신규, 36×36): 짙은 반투명 배경(`rgba(40,40,40,0.85)`), 안쪽에 작은 빨간 삼각형(북 방향 포인터, `#FF3B30` — iOS systemRed) + "N" 텍스트(9px, 흰색, 500).
+   - 나침반 배지(신규, 36×36): 짙은 단색 배경(`#2C2C2C` — `tokens.test.ts`가 모든 색상 토큰을 불투명 6자리 hex로 고정하는 회귀 가드가 있어 반투명 대신 단색 채택), 안쪽에 작은 빨간 삼각형(북 방향 포인터, `#FF3B30` — iOS systemRed) + "N" 텍스트(9px, 흰색, 500).
    - 이 두 컨트롤은 DESIGN.md "semantic 색상 없음 / 빨강 금지" 원칙의 명시적 예외로 문서화한다(아래 DESIGN.md 갱신 항목 참고).
 6. **접근성**: 배지는 `accessibilityRole="button"`, `accessibilityLabel="지도를 북쪽으로 정렬"`. 36×36으로 44pt 터치 타겟 기준에 못 미치므로 `hitSlop`으로 44pt까지 히트 영역만 확장한다(시각적 크기는 애플 지도 실측 기준 유지). 재센터 버튼의 기존 `accessibilityLabel="현재 위치로 이동"`은 변경 없음.
 
