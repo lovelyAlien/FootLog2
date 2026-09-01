@@ -55,6 +55,9 @@ GSD 실행 중 `checkpoint:human-verify` 같은 사용자 확인 게이트나, Q
 달린 YAML frontmatter로 검색 가능. 이 저장소의 문서화된 영역에서 구현하거나 디버깅할 때
 참고할 만하다.
 
+`CONCEPTS.md` — 이 프로젝트의 공유 도메인 용어집(엔티티/프로세스/상태 개념). 코드베이스를
+파악하거나 도메인 개념을 논의할 때 참고할 만하다.
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
