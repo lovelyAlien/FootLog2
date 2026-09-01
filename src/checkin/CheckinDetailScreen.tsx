@@ -99,14 +99,22 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
   }, []);
 
   useEffect(() => {
-    getCheckinById(db, checkinId).then((row) => {
-      if (!isMountedRef.current) return;
-      setCheckin(row);
-      const initialNote = row?.note ?? '';
-      setNote(initialNote);
-      noteRef.current = initialNote;
-      photoPathRef.current = row?.photo_path ?? null;
-    });
+    getCheckinById(db, checkinId)
+      .then((row) => {
+        if (!isMountedRef.current) return;
+        setCheckin(row);
+        const initialNote = row?.note ?? '';
+        setNote(initialNote);
+        noteRef.current = initialNote;
+        photoPathRef.current = row?.photo_path ?? null;
+      })
+      .catch((error) => {
+        // 05-REVIEW.md WR-01 — 프로미스 미삼킴 규약(이 파일의 다른 모든 async 호출과
+        // 동일). .catch 없이 이 프로미스가 거부되면 checkin state가 영원히 null로
+        // 남아 위 `if (!checkin) return null;`이 빈 화면을 무기한 렌더한다 — 사용자
+        // 입장에서는 진단 단서도 재시도 방법도 없는 "고장난 화면"과 구분되지 않는다.
+        console.error('Failed to load checkin for detail screen', error);
+      });
   }, [db, checkinId]);
 
   useEffect(() => {
@@ -181,32 +189,43 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
             // 지역 변수로 붙잡아 둔다(성공 후 photoPathRef가 갱신되면 더는 읽을
             // 수 없다).
             const previousPhotoPath = photoPathRef.current;
-            updateCheckinNoteAndPhoto(db, checkinId, {
-              // note 인자로 noteRef.current를 함께 넘기는 이유: 이 갱신 함수가 note와
-              // photoPath 두 필드를 함께 받는 계약이라, 사진만 바꿀 때도 현재 메모
-              // 값을 같이 보내지 않으면 편집 중이던 메모가 덮어쓰기로 사라진다.
-              note: noteRef.current || null,
-              photoPath: result.uri,
-              now: toIsoTimestamp(),
-            })
-              .then(() => {
-                if (!isMountedRef.current) return;
-                photoPathRef.current = result.uri;
-                setCheckin((prev) => (prev ? { ...prev, photo_path: result.uri } : prev));
-                if (previousPhotoPath) {
-                  // 구 파일 정리는 non-blocking이다 — DB는 이미 새 사진을 가리키고
-                  // 있으므로 이 호출이 실패해도 고아 파일만 남길 뿐 데이터 유실이
-                  // 아니다(사용자에게 오류를 노출하지 않는다).
-                  defaultPhotoStorageDeps
-                    .deleteFile(previousPhotoPath)
-                    .catch((error) => {
-                      console.error('Failed to delete replaced photo file', error);
-                    });
-                }
+            // 05-REVIEW.md WR-03 — 메모 저장(flushNoteAndPhoto)과 동일하게
+            // runWithSingleRetry(단일 재시도)로 감싼다. 사진 쓰기만 예외적으로
+            // console.error 하나로 끝내던 것을 다른 모든 DB 쓰기 경로와 같은
+            // 신뢰성 등급으로 맞춘다 — 실패하면 사용자에게 photoError로 알린다.
+            runWithSingleRetry(() =>
+              updateCheckinNoteAndPhoto(db, checkinId, {
+                // note 인자로 noteRef.current를 함께 넘기는 이유: 이 갱신 함수가 note와
+                // photoPath 두 필드를 함께 받는 계약이라, 사진만 바꿀 때도 현재 메모
+                // 값을 같이 보내지 않으면 편집 중이던 메모가 덮어쓰기로 사라진다.
+                note: noteRef.current || null,
+                photoPath: result.uri,
+                now: toIsoTimestamp(),
               })
-              .catch((error) => {
-                console.error('Failed to persist replaced photo to checkin row', error);
-              });
+            ).then((writeResult) => {
+              if (!isMountedRef.current) return;
+              if (!writeResult.ok) {
+                setPhotoError(true);
+                return;
+              }
+              photoPathRef.current = result.uri;
+              // 05-REVIEW.md WR-02 — 이 쓰기가 noteRef.current를 함께 저장했으므로,
+              // 그 시점에 미저장 메모 편집이 있었다면 이제 저장이 끝난 것이다.
+              // isDirtyRef/saveFailed를 그대로 두면 저장이 실제로는 성공했는데도
+              // 뒤로가기 시 "저장하지 않은 변경사항" 경고가 잘못 뜨거나(false
+              // positive), 이전에 실패했던 저장 실패 카드가 계속 남아있게 된다.
+              isDirtyRef.current = false;
+              setSaveFailed(false);
+              setCheckin((prev) => (prev ? { ...prev, photo_path: result.uri } : prev));
+              if (previousPhotoPath) {
+                // 구 파일 정리는 non-blocking이다 — DB는 이미 새 사진을 가리키고
+                // 있으므로 이 호출이 실패해도 고아 파일만 남길 뿐 데이터 유실이
+                // 아니다(사용자에게 오류를 노출하지 않는다).
+                defaultPhotoStorageDeps.deleteFile(previousPhotoPath).catch((error) => {
+                  console.error('Failed to delete replaced photo file', error);
+                });
+              }
+            });
           })
           .catch((error) => {
             console.error('Failed to pick and copy photo', error);
@@ -227,24 +246,30 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
   const handleDeletePhoto = useCallback(() => {
     const previousPhotoPath = photoPathRef.current;
     if (!previousPhotoPath) return;
-    updateCheckinNoteAndPhoto(db, checkinId, {
-      note: noteRef.current || null,
-      photoPath: null,
-      now: toIsoTimestamp(),
-    })
-      .then(() => {
-        if (!isMountedRef.current) return;
-        photoPathRef.current = null;
-        setCheckin((prev) => (prev ? { ...prev, photo_path: null } : prev));
-        // 구 파일 정리는 non-blocking이다 — DB는 이미 빈 슬롯 상태를 가리키고
-        // 있으므로 이 호출이 실패해도 고아 파일만 남길 뿐 데이터 유실이 아니다.
-        defaultPhotoStorageDeps.deleteFile(previousPhotoPath).catch((error) => {
-          console.error('Failed to delete removed photo file', error);
-        });
+    // 05-REVIEW.md WR-03 — handlePickPhoto와 동일하게 runWithSingleRetry로 감싼다.
+    runWithSingleRetry(() =>
+      updateCheckinNoteAndPhoto(db, checkinId, {
+        note: noteRef.current || null,
+        photoPath: null,
+        now: toIsoTimestamp(),
       })
-      .catch((error) => {
-        console.error('Failed to persist photo removal to checkin row', error);
+    ).then((writeResult) => {
+      if (!isMountedRef.current) return;
+      if (!writeResult.ok) {
+        setPhotoError(true);
+        return;
+      }
+      photoPathRef.current = null;
+      // 05-REVIEW.md WR-02 — handlePickPhoto와 동일한 이유로 초기화한다.
+      isDirtyRef.current = false;
+      setSaveFailed(false);
+      setCheckin((prev) => (prev ? { ...prev, photo_path: null } : prev));
+      // 구 파일 정리는 non-blocking이다 — DB는 이미 빈 슬롯 상태를 가리키고
+      // 있으므로 이 호출이 실패해도 고아 파일만 남길 뿐 데이터 유실이 아니다.
+      defaultPhotoStorageDeps.deleteFile(previousPhotoPath).catch((error) => {
+        console.error('Failed to delete removed photo file', error);
       });
+    });
   }, [db, checkinId]);
 
   // AppState 백그라운드 강제 flush(REQ-checkin-detail-flush, D-02) — (tabs)/index/
@@ -391,7 +416,11 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
       >
         {checkin.photo_path ? (
           <View style={styles.photoWrapper}>
-            <Image source={{ uri: checkin.photo_path }} style={styles.photo} contentFit="contain" />
+            {/* 2026-09-01 사용자 피드백 — contain은 사진 비율에 따라 레터/필러박싱이
+                생겨 같은 240pt 박스 안에서도 체감 크기가 사진마다 달라 보였다. cover로
+                바꿔 항상 박스를 꽉 채우도록 한다(가장자리 크롭 발생, 박스 자체는
+                이미 고정 크기라 크롭 자체는 새로운 트레이드오프가 아니다). */}
+            <Image source={{ uri: checkin.photo_path }} style={styles.photo} contentFit="cover" />
             {/* 제거 배지는 사진 이미지 위 오버레이라 이 화면에서 absolute 배치를 쓰는
                 유일한 지점이다 — 화면 전체 레이아웃 배치가 아니라 사진 이미지 내부의
                 아이콘-오버레이 관계이므로 프레젠테이셔널 계약("배치는 부모가
