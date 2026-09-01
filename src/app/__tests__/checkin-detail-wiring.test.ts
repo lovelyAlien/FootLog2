@@ -348,3 +348,47 @@ describe('05-REVIEW.md 코드 리뷰 대응 회귀 가드', () => {
     expect(detailScreenCodeOnly).toMatch(/contentFit="cover"/);
   });
 });
+
+describe('메모 편집/저장 UX (2026-09-01 사용자 피드백 — 항상 편집 가능 대신 명시적 편집/저장 버튼)', () => {
+  it('Test 43: CHECKIN_DETAIL_COPY.editNote/saveNote 키가 등장한다', () => {
+    expect(detailScreenCodeOnly).toMatch(/CHECKIN_DETAIL_COPY\.editNote/);
+    expect(detailScreenCodeOnly).toMatch(/CHECKIN_DETAIL_COPY\.saveNote/);
+  });
+
+  it('Test 44: isEditingNote state로 뷰/편집 모드를 조건부 렌더한다', () => {
+    expect(detailScreenCodeOnly).toMatch(/isEditingNote/);
+    expect(detailScreenCodeOnly).toMatch(/isEditingNote\s*\?/);
+  });
+
+  it('Test 45: 편집 버튼이 setIsEditingNote(true)를 호출한다', () => {
+    expect(detailScreenCodeOnly).toMatch(/setIsEditingNote\(true\)/);
+  });
+
+  it('Test 46: handleSaveNotePress가 flushNoteAndPhoto 호출 후 성공 시에만 편집 모드를 닫는다', () => {
+    const start = detailScreenCodeOnly.indexOf('handleSaveNotePress');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const block = detailScreenCodeOnly.slice(start, start + 400);
+    expect(block).toMatch(/flushNoteAndPhoto\(\)/);
+    expect(block).toMatch(/setIsEditingNote\(false\)/);
+  });
+
+  it('Test 47: 편집 모드 TextInput에 autoFocus가 붙어 편집 진입 즉시 입력 가능하다', () => {
+    const editingBlockStart = detailScreenCodeOnly.indexOf('isEditingNote ?');
+    expect(editingBlockStart).toBeGreaterThanOrEqual(0);
+    const block = detailScreenCodeOnly.slice(editingBlockStart, editingBlockStart + 600);
+    expect(block).toMatch(/<TextInput[\s\S]*?autoFocus/);
+  });
+
+  it('Test 48: 뷰 모드에서는 note가 있으면 note를, 없으면 notePlaceholder를 보여준다', () => {
+    expect(detailScreenCodeOnly).toMatch(/note\s*\|\|\s*CHECKIN_COPY\.notePlaceholder/);
+  });
+});
+
+describe('키보드가 메모 입력을 가리지 않는다 (2026-09-01 사용자 피드백)', () => {
+  it('Test 49: ScrollView에 automaticallyAdjustKeyboardInsets이 붙어있다', () => {
+    const start = detailScreenCodeOnly.indexOf('<ScrollView');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const block = detailScreenCodeOnly.slice(start, start + 300);
+    expect(block).toMatch(/automaticallyAdjustKeyboardInsets/);
+  });
+});
