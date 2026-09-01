@@ -31,6 +31,13 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [ ] **Phase 7: Day-end Reflection** - 사용자가 하루 루프의 핵심 요소인 짧은 하루 마무리 회고를 완료할 수 있다.
 - [ ] **Phase 8: Export & Polish** - 사용자가 데이터를 로컬로 내보낼 수 있고, 앱이 이름/접근성 기준을 충족한다.
 
+**Phase 9~12: 백엔드/인증/클라우드(2단계)** — 1단계 로드맵(Phase 1~8)과 별도 트랙으로, 1단계 실사용 트라이얼 완료 게이트를 사용자 명시적 승인으로 우회하고 착수됨(2026-09-01). PROJECT.md Out of Scope / Key Decisions 참고.
+
+- [ ] **Phase 9: Backend Foundation** - Spring Boot(Kotlin) 백엔드 프로젝트가 스캐폴딩되고, 서버측 DB 스키마와 마이그레이션 프레임워크가 존재한다.
+- [ ] **Phase 10: Authentication (Kakao OAuth2/PKCE)** - 사용자가 카카오 계정으로 OAuth2/PKCE 로그인해 인증 토큰을 발급받는다.
+- [ ] **Phase 11: Object Storage (S3-compatible)** - 체크인 사진이 S3 호환 오브젝트 스토리지에 업로드·조회된다.
+- [ ] **Phase 12: Client-Server Sync** - 클라이언트 SQLite와 서버 DB 간 local-first 동기화가 이뤄진다.
+
 ## Phase Details
 
 ### Phase 1: Foundation
@@ -156,14 +163,25 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 
 **Goal**: 사용자가 월 그리드와 빠른 날짜별 스크러버로 과거 날짜를 훑어볼 수 있다.
 **Depends on**: Phase 5
-**Requirements**: REQ-calendar-grid, REQ-past-date-view, REQ-date-scrubber
+**Requirements**: REQ-calendar-grid, REQ-past-date-view, REQ-date-scrubber, REQ-settings-screen
 **Success Criteria** (what must be TRUE):
 
   1. 사용자가 캘린더 탭을 열면 오늘 날짜가 시각적으로 밑줄 표시된 월 그리드가 보이며, 과거 날짜를 탭하면 (체크인 버튼 없이) 그날의 읽기전용 지도+시트 뷰가 열린다.
   2. 과거 날짜 뷰에서 사용자는 플로팅 가로 날짜 스크러버를 드래그해 실시간으로 날짜 사이를 이동할 수 있으며, 범위 경계에서는 하드 클램프(러버밴딩 없음)되고 44×44pt 터치 타겟을 사용한다.
   3. 스크러버를 터치하면 바텀시트가 강제로 접혀 스크러빙 중에도 지도가 계속 보인다.
+  4. Today 뷰 상단의 햄버거 아이콘(≡)을 탭하면 설정 화면이 열리며, 알림 빈도/하루 마무리 알림 토글(기본 켜짐)/버전 정보 3개 항목을 보여준다.
 
-**Plans**: TBD
+**Plans**: 8 plans (5 waves)
+
+- [ ] 06-01-PLAN.md — app_settings 스키마/마이그레이션 v3 + settingsRepo (wave 1)
+- [ ] 06-02-PLAN.md — 월 그리드·스크러버 순수 산수 + 월 범위 기록 조회 (wave 1)
+- [ ] 06-03-PLAN.md — 캘린더 탭 nested Stack + 월 그리드 화면 + fence 테스트 갱신 (wave 2)
+- [ ] 06-04-PLAN.md — 설정 화면 컴포넌트 + 문구/액션시트 단일 출처 (wave 2)
+- [ ] 06-05-PLAN.md — 과거 날짜 읽기전용 지도+시트 화면 + 탭바 숨김 (wave 3)
+- [ ] 06-06-PLAN.md — 설정 라우트 + Today 뷰 햄버거 진입점 + 포그라운드 자가진단 배선 (wave 3)
+- [ ] 06-07-PLAN.md — 플로팅 날짜 스크러버 + 시트 강제 접힘 통합 (wave 4)
+- [ ] 06-08-PLAN.md — 전체 검증 + 시뮬레이터 확인 + 창업자 승인 체크포인트 (wave 5)
+
 **UI hint**: yes
 
 ### Phase 7: Day-end Reflection
@@ -201,7 +219,8 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Phase 1~8은 numeric order로 순차 실행: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병행 진행되는 독립 트랙이며, 트랙 내부는 순차: 9 → 10 → 11(9,10에 의존) → 12(10,11에 의존)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -213,3 +232,55 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 6. Calendar Tab | 0/TBD | Not started | - |
 | 7. Day-end Reflection | 0/TBD | Not started | - |
 | 8. Export & Polish | 0/TBD | Not started | - |
+| 9. Backend Foundation | 0/TBD | Not started | - |
+| 10. Authentication (Kakao OAuth2/PKCE) | 0/TBD | Not started | - |
+| 11. Object Storage (S3-compatible) | 0/TBD | Not started | - |
+| 12. Client-Server Sync | 0/TBD | Not started | - |
+
+### Phase 9: Backend Foundation
+
+**Goal**: Spring Boot(Kotlin) 백엔드 프로젝트가 스캐폴딩되고, 서버측 DB 스키마와 마이그레이션 프레임워크가 존재한다.
+**Depends on**: Nothing (1단계 roadmap과 독립된 트랙 — Phase 6~8과 병행)
+**Requirements**: REQ-backend-scaffold, REQ-backend-db-schema
+**Success Criteria** (what must be TRUE):
+
+  1. Spring Boot(Kotlin) 프로젝트가 초기화되고 로컬/스테이징 환경에서 빌드·기동된다.
+  2. 서버측 DB에 클라이언트 `Checkin`/`DailyReflection` 스키마에 대응하는 테이블이 존재하며, 버전 관리되는 마이그레이션 프레임워크로 스키마를 변경할 수 있다.
+
+**Plans**: TBD
+
+### Phase 10: Authentication (Kakao OAuth2/PKCE)
+
+**Goal**: 사용자가 카카오 계정으로 OAuth2/PKCE 로그인해 인증 토큰을 발급받는다.
+**Depends on**: Phase 9
+**Requirements**: REQ-auth-kakao-oauth, REQ-auth-session-token
+**Success Criteria** (what must be TRUE):
+
+  1. 사용자가 카카오 로그인 화면에서 OAuth2/PKCE 플로우를 완료하면 서버가 사용자 계정을 생성/조회하고 인증 토큰을 발급한다.
+  2. 클라이언트는 발급된 토큰을 안전하게 저장하고, 만료 시 갱신하며, 이후 모든 서버 요청에 사용한다.
+
+**Plans**: TBD
+
+### Phase 11: Object Storage (S3-compatible)
+
+**Goal**: 체크인 사진이 S3 호환 오브젝트 스토리지에 업로드·조회된다.
+**Depends on**: Phase 9, Phase 10 (인증된 요청만 업로드 허용)
+**Requirements**: REQ-storage-s3-upload, REQ-storage-access-control
+**Success Criteria** (what must be TRUE):
+
+  1. 인증된 사용자가 체크인 사진을 서버 경유로 S3 호환 오브젝트 스토리지에 업로드할 수 있다.
+  2. 업로드된 사진은 소유자만 접근 가능한 방식(서명 URL 또는 동등한 접근 제어)으로 조회된다.
+
+**Plans**: TBD
+
+### Phase 12: Client-Server Sync
+
+**Goal**: 클라이언트 SQLite와 서버 DB 간 local-first 동기화가 이뤄진다.
+**Depends on**: Phase 10, Phase 11
+**Requirements**: REQ-sync-local-first, REQ-sync-conflict-resolution
+**Success Criteria** (what must be TRUE):
+
+  1. 오프라인 상태에서 작성된 체크인/회고가 클라이언트 SQLite에 즉시 반영되고, 온라인 복귀 시 서버와 자동 동기화된다.
+  2. 동일 레코드가 여러 기기에서 수정된 충돌 상황이 정의된 전략(예: last-write-wins 또는 필드 단위 병합)으로 결정론적으로 해소된다.
+
+**Plans**: TBD
