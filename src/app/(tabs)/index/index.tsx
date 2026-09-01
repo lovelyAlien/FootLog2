@@ -659,13 +659,24 @@ export default function Index() {
     });
   }, []);
 
+  // 나침반 배지 탭과 손 팬(handlePanDrag) 둘 다 "회전만 리셋"하는 로직을 공유한다.
+  // hasCenteredOnceRef는 여기서 건드리지 않는다 — 배지 탭은 follow 자체를 해제하지
+  // 않는다는 계약이다(docs/designs/recenter-compass-badge.md 설계안 참고).
+  const resetHeadingToNorth = useCallback(() => {
+    headingSubscriptionRef.current?.remove();
+    headingSubscriptionRef.current = null;
+    orientationModeRef.current = 'north';
+    setOrientationMode('north');
+    mapRef.current?.animateCamera({ heading: 0, pitch: 0 });
+  }, []);
+
   // 사용자가 지도를 손가락으로 직접 움직이면 재센터 버튼의 "팔로우" 상태를 즉시
   // 해제한다(구글맵과 동일 동작). 이게 없으면 예: 재센터 탭(north) → 지도를 다른
   // 곳으로 수동 드래그 → 재센터 버튼을 다시 탭했을 때, 앱이 "사용자가 방금 시선을
   // 옮겼다"는 사실을 모른 채 이전 토글 상태만 보고 곧장 나침반 모드로 건너뛰어
   // 버렸다(hasCenteredOnceRef가 세션 내내 리셋되지 않는 문제). 다음 탭이 다시
   // "북쪽 고정 재센터"부터 시작하도록 hasCenteredOnceRef를 리셋하고, 나침반
-  // 구독이 살아있었다면 정리한 뒤 지도 방향도 북쪽으로 되돌린다.
+  // 모드였다면 resetHeadingToNorth로 구독 정리 + 방향도 북쪽으로 되돌린다.
   const handlePanDrag = useCallback(() => {
     // 재센터 탭이 걸어둔 백그라운드 GPS 보정(resolveInstantPosition의 onRefine)이
     // 아직 안 끝난 상태에서 사용자가 지도를 다시 손으로 옮기면, 그 보정 결과가
@@ -675,13 +686,9 @@ export default function Index() {
     if (!hasCenteredOnceRef.current) return;
 
     hasCenteredOnceRef.current = false;
-    headingSubscriptionRef.current?.remove();
-    headingSubscriptionRef.current = null;
 
     if (orientationModeRef.current !== 'north') {
-      orientationModeRef.current = 'north';
-      setOrientationMode('north');
-      mapRef.current?.animateCamera({ heading: 0, pitch: 0 });
+      resetHeadingToNorth();
     }
   }, []);
 

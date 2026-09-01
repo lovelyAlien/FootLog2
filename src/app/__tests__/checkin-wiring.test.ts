@@ -336,17 +336,27 @@ describe('src/app/(tabs)/index.tsx 재센터 버튼 수동 팬 리셋 배선 계
     expect(block).toMatch(/hasCenteredOnceRef\.current = false/);
   });
 
-  it('Test 49: handlePanDrag가 나침반 구독을 정리하고(remove) orientationMode를 north로 되돌린다', () => {
+  it('Test 49 (2026-09-01 갱신 — resetHeadingToNorth로 추출): handlePanDrag가 orientationMode가 north가 아닐 때 resetHeadingToNorth를 호출한다', () => {
     const match = codeOnly.match(/const handlePanDrag = useCallback\([\s\S]*?\n  \}, \[\]\);/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
-    expect(block).toMatch(/headingSubscriptionRef\.current\?\.remove\(\)/);
-    expect(block).toMatch(/headingSubscriptionRef\.current = null/);
-    expect(block).toMatch(/setOrientationMode\('north'\)/);
+    expect(block).toMatch(/if \(orientationModeRef\.current !== 'north'\) \{\s*resetHeadingToNorth\(\);\s*\}/);
+    expect(block).not.toMatch(/headingSubscriptionRef\.current\?\.remove\(\)/);
   });
 
   it('Test 50: handlePanDrag의 useCallback deps 배열은 []로 고정된다 (배선 시점 리렌더 방지, 기존 패턴과 동일)', () => {
     expect(codeOnly).toMatch(/const handlePanDrag = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/);
+  });
+
+  it('Test 78: resetHeadingToNorth가 나침반 구독 해제 + north 상태 전환 + animateCamera를 모두 수행한다 (나침반 배지와 handlePanDrag가 공유하는 리셋 로직)', () => {
+    const match = codeOnly.match(/const resetHeadingToNorth = useCallback\([\s\S]*?\n  \}, \[\]\);/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/headingSubscriptionRef\.current\?\.remove\(\)/);
+    expect(block).toMatch(/headingSubscriptionRef\.current = null/);
+    expect(block).toMatch(/orientationModeRef\.current = 'north'/);
+    expect(block).toMatch(/setOrientationMode\('north'\)/);
+    expect(block).toMatch(/animateCamera\(\{ heading: 0, pitch: 0 \}\)/);
   });
 });
 
