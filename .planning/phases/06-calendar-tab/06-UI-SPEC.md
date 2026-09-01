@@ -70,7 +70,10 @@ Existing project scale (`src/theme/tokens.ts` `spacing`, already locked — reus
 Existing project roles (`src/theme/tokens.ts` `typography`, already locked) mapped to this
 phase's screens, plus the specific new size/weight combinations Phase 6 introduces (all reuse
 existing approved sizes — 13/15/16/22px — and existing approved weights — 400/500/600; no new
-size or weight is introduced beyond one canonical exception carried over from a CLEARED doc).
+size or weight is introduced). Exactly **4 distinct font sizes** (13/15/16/22) are used — see the
+"Scrubber caption" row below for the one deliberate resize that keeps this count at 4. Exactly
+**3 distinct font weights** (400/500/600) are used — see the note immediately below the table for
+why this is an accepted, pre-existing exception rather than a new Phase 6 deviation.
 
 | Role | Size | Weight | Line Height | Used for |
 |------|------|--------|-------------|----------|
@@ -82,7 +85,19 @@ size or weight is introduced beyond one canonical exception carried over from a 
 | Grid day number (**new combination**) | 15px | 400 | 1.2 | Month grid day-of-month numerals, System font; color varies by state (see Component: Month Grid) |
 | Weekday header (**new combination**) | 13px | 400 | 1.2 | "일 월 화 수 목 금 토" row, `colors.textFaint`, System font |
 | Timestamp (`timestamp`, reused unchanged) | 15px | 500 | tabular-nums | Past-date view detail/list rows — identical to Today view, `ui-monospace` |
-| Scrubber caption (**exception, canonical**) | 11px | 400 | 1.3 | "← 드래그해서 날짜 이동 → · 오늘 이후로는 못 넘어감", `colors.textMuted` — this is the one size below the existing 13px floor, explicitly specced and CLEARED in `calendar-date-scrubber.md` Visual Design Decisions; do not generalize this size to other elements |
+| Scrubber caption (**merged into Label role, resized — user-approved 2026-09-01**) | 13px | 400 | 1.3 | "← 드래그해서 날짜 이동 → · 오늘 이후로는 못 넘어감", `colors.textMuted` — resized from `calendar-date-scrubber.md`'s literal "11px" text up to 13px so this spec stays within the project's established 4-size type scale (UI-checker Dimension 4, BLOCK resolved by explicit user decision). This is a deliberate 1px adjustment to the caption's font size only; every other CLEARED contract in `calendar-date-scrubber.md` — position math, hard clamp at range boundaries, no momentum, 44×44pt drag-surface touch target, 44pt header — remains unchanged and is not affected by this resize. |
+
+**Font-weight count note (UI-checker Dimension 4, BLOCK resolved by explicit user decision,
+2026-09-01):** This spec uses 3 distinct weights — 600 (`screenTitle`/Heading), 500
+(`placeName`/`timestamp`), 400 (`helperText`/body-muted/grid day number/weekday header/scrubber
+caption). All three weights already exist in `src/theme/tokens.ts` and have shipped in
+production since Phases 3–5 (`screenTitle` at 600, `placeName`/`timestamp` at 500,
+`helperText`/`journalEntry` at 400) — Phase 6 introduces **zero new weight values**, it only
+reuses existing roles on new screens. The UI-checker's 2-weight-per-phase cap exists to stop a
+phase from *introducing* a new weight, not to retroactively flag tokens that already ship
+project-wide. The user has explicitly approved this 3-weight count as a documented exception for
+Phase 6's checker pass — do not attempt to collapse any existing role to a different weight to
+force a count of 2; that would itself be an undocumented deviation from shipped tokens.
 
 ---
 
@@ -130,10 +145,11 @@ contract violation.
 | Element | Copy |
 |---------|------|
 | Primary CTA | No new primary action button in this phase (browse-only feature). The phase's one new entry-point affordance is icon-only: hamburger icon (≡, SF Symbol `line.3.horizontal`) in the Today view header. Accessibility label: `"설정"`. Tapping it pushes the settings screen. |
+| Accessibility labels — icon-only nav controls | Every icon-only control in this phase ships with an explicit accessibility label (parity with the hamburger icon's `"설정"` above): month grid previous-month arrow → `"이전 달"`; month grid next-month arrow → `"다음 달"`; settings screen back chevron → `"뒤로"`. |
 | Month grid header | `"{연도}년 {월}월"` (e.g. `"2026년 9월"`) — reuses the same `Intl.DateTimeFormat`-based locale convention already established in `src/checkin/localDate.ts`; no new date-formatting library |
 | Weekday header row | `일 월 화 수 목 금 토` (Sunday-start per D-06) |
 | Empty state — past date with zero checkins | `"이 날은 기록이 없어요"` — deliberately different from Today view's empty state (`TODAY_COPY.emptyState`: `"아직 기록이 없어요 · 체크인하면 지도가 채워져요"`) because a past date cannot receive a new checkin; the "체크인하면 채워져요" call-to-action is meaningless here and must not be reused verbatim. Muted tone, `helperText` role, `colors.textMuted`, rendered on the bottom-sheet surface only (never overlaid on the map — same contrast-safety rule as Today view, `DESIGN.md` Layout §바텀시트 리스트). |
-| Scrubber caption | `"← 드래그해서 날짜 이동 → · 오늘 이후로는 못 넘어감"` (verbatim from `calendar-date-scrubber.md` Visual Design Decisions — do not paraphrase) |
+| Scrubber caption | `"← 드래그해서 날짜 이동 → · 오늘 이후로는 못 넘어감"` (verbatim from `calendar-date-scrubber.md` Visual Design Decisions — do not paraphrase; only its font size was adjusted, see Typography section) |
 | Settings — section header 1 | `"알림"` |
 | Settings — row: notification frequency | Label: `"알림 빈도"`. Trailing value: one of `"매시간"` / `"3시간마다"` / `"끔"`. Interaction: tap opens `ActionSheetIOS` with these 3 options (06-RESEARCH.md Assumption A2 — reuses the existing photo-source-picker pattern from `checkin/photos.ts` rather than adding a 4th new route just for a picker). |
 | Settings — row: daily reflection toggle | Label: `"하루 마무리 알림"`. Control: `Switch`, default **ON** (D-02). No trailing text value (switch replaces it). |
@@ -161,10 +177,11 @@ against `src/theme/tokens.ts`.
 
 ### 1. Month Grid (`src/calendar/CalendarGridScreen.tsx`, replaces `calendar.tsx` placeholder)
 
-**Layout:** Header row (44pt height) — `<` arrow button (44×44pt) — month/year label (centered,
-Heading role, 22px/600) — `>` arrow button (44×44pt). Below: weekday header row (7 columns, 13px
-`textFaint`, Sunday first per D-06). Below: 7-column grid, N rows (5–6 depending on month), each
-cell minimum 44×44pt.
+**Layout:** Header row (44pt height) — `<` arrow button (44×44pt, accessibility label
+`"이전 달"`) — month/year label (centered, Heading role, 22px/600) — `>` arrow button (44×44pt,
+accessibility label `"다음 달"`). Below: weekday header row (7 columns, 13px `textFaint`, Sunday
+first per D-06). Below: 7-column grid, N rows (5–6 depending on month), each cell minimum
+44×44pt.
 
 **Cell states (mutually applicable, not mutually exclusive except today+no-record which cannot
 co-occur with "no record" muted styling on the underline itself):**
@@ -238,8 +255,8 @@ gesture/position math. Summary for quick reference only:
 - Real-time 1:1 drag tracking, no momentum, hard-clamped at range boundaries (first checkin date
   ↔ today) — no rubber-banding.
 - Whole gesture-detector surface ≥44×44pt (not per-tick hit slop).
-- Caption below ticks: `"← 드래그해서 날짜 이동 → · 오늘 이후로는 못 넘어감"`, 11px muted (see
-  Typography exception above).
+- Caption below ticks: `"← 드래그해서 날짜 이동 → · 오늘 이후로는 못 넘어감"`, 13px muted (merged
+  into the Label role — see Typography section for the 11px→13px resize rationale).
 - Hidden entirely when 0–1 distinct dates have records.
 
 ### 4. Settings Screen (`src/settings/SettingsScreen.tsx`, route `(tabs)/index/settings.tsx`)
@@ -253,8 +270,8 @@ product spec's "설정은 탐색 목적이 아니므로 탭으로 승격하지 �
 settings-screen.png`, viewed this session), reproduced as hand-rolled `View`/`Pressable`
 components on `colors.background`, NOT `@expo/ui`'s native SwiftUI `List` (06-RESEARCH.md
 explicit rejection — native chrome would be the only screen in this app breaking the custom
-warm-palette convention). Header: `<` back chevron (44×44pt) + centered title `"설정"` (Display
-role, 22px/600).
+warm-palette convention). Header: `<` back chevron (44×44pt, accessibility label `"뒤로"`) +
+centered title `"설정"` (Display role, 22px/600).
 
 **Rows — exactly 3, per D-02 (mockup's 4th "전체 데이터 삭제" row is explicitly NOT included):**
 
