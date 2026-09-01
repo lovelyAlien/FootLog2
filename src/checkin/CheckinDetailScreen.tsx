@@ -51,9 +51,10 @@ import { colors, radius, spacing, typography } from '../theme/tokens';
 import type { MigratableDb } from '../db/migrations';
 import type { CheckinRow } from '../db/schema';
 
-// 사진 제거 배지 터치 영역 확장 — 시각 크기는 작게 유지하되(05-UI-SPEC.md
-// §Spacing Scale) 터치 영역은 44×44pt를 채운다(05-06-PLAN.md Task 2).
-const PHOTO_DELETE_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
+// 작은 아이콘 버튼 터치 영역 확장 — 시각 크기는 작게 유지하되(05-UI-SPEC.md
+// §Spacing Scale) 터치 영역은 44×44pt를 채운다(05-06-PLAN.md Task 2, 사진 제거
+// 배지). 2026-09-01부터 커스텀 헤더 뒤로가기 버튼도 같은 값을 공유한다.
+const SMALL_ICON_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
 export type CheckinDetailScreenProps = {
   db: MigratableDb;
@@ -75,8 +76,8 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
   const isMountedRef = useRef(true);
 
   // 05-04-PLAN.md Task 1 — 메모 편집 상태(D-01: 자동저장 아님, 명시적 flush만).
-  // noteRef/photoPathRef는 최신 값을 리스너(Task 2의 AppState 구독, Task 3의
-  // beforeRemove 구독)가 재구독 없이 읽게 하는 ref 미러 관용구
+  // noteRef/photoPathRef는 최신 값을 리스너(Task 2의 AppState 구독, 커스텀 헤더
+  // 뒤로가기 버튼의 handleBackPress)가 재구독 없이 읽게 하는 ref 미러 관용구
   // ((tabs)/index/index.tsx의 stateRef와 동일한 이유) — flushNoteAndPhoto를
   // [db, checkinId]에만 의존하는 안정적 useCallback으로 유지하기 위함이다.
   const [note, setNote] = useState('');
@@ -327,44 +328,71 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
     return () => subscription.remove();
   }, [flushNoteAndPhoto]);
 
-  // beforeRemove — 인앱 이탈(뒤로가기/스와이프백) 미저장 경고(D-01). 헤더 뒤로가기
-  // 버튼과 엣지 스와이프백 둘 다 React Navigation의 동일한 POP 액션 디스패치
-  // 파이프라인에 물려 있어 우회 경로 없이 똑같이 이 리스너를 거친다
-  // (05-RESEARCH.md Pattern 4가 expo-router/build/react-navigation/core/
-  // useOnPreventRemove.js 소스로 직접 검증). usePreventRemove(내부 구현, 공개 API
-  // 아님) 대신 useNavigation()의 공개 addListener API만 쓴다.
+  // 2026-09-01 재설계 — 인앱 이탈(뒤로가기) 미저장 경고(D-01)를 커스텀 헤더 버튼으로
+  // 구현한다. 이전에는 `navigation.addListener('beforeRemove', ...) + e.preventDefault()`를
+  // 썼는데, 실기기에서 편집 중 헤더 뒤로가기를 눌러도 "removed natively but didn't
+  // get removed from JS state" 콘솔 에러가 재현됐다(gestureEnabled:false로 막은
+  // 스와이프 경로와 달리 헤더 버튼은 그대로 남아 있었기 때문). 원인은 beforeRemove의
+  // `e.preventDefault()`가 JS 내비게이션 상태만 멈출 뿐, native-stack에게 "네이티브
+  // 쪽에서도 이 화면 제거를 보류해라"라고 알리는 `preventNativeDismiss`는 설정하지
+  // 않는다는 것이다 — 그건 expo-router 내부의 반응형 `usePreventRemove`/
+  // `PreventRemoveContext` 등록을 통해서만 native-stack의 `preventedRoutes` 맵에
+  // 반영된다(NativeStackView.native.js의 `isRemovePrevented` 배선 확인). 그 훅은
+  // 공개 API가 아니라 딥임포트가 필요해 05-04가 의도적으로 피했던 바로 그 대상이다
+  // (05-RESEARCH.md Pattern 4). native-stack의 헤더 뒤로가기 버튼은 네이티브 UIKit
+  // 크롬이라, 탭하면 JS가 preventDefault를 부르기도 전에 네이티브가 화면을 먼저
+  // 제거해버릴 수 있다.
+  //
+  // 해결책은 헤더 자체를 JS Pressable로 바꾸는 것이다(headerLeft). 뒤로가기가 항상
+  // JS 함수 호출(handleBackPress)로 시작되므로 네이티브가 먼저 화면을 제거할 기회가
+  // 아예 없다 — beforeRemove/preventDefault 없이 순수 JS 분기(dirty면 Alert, 아니면
+  // 곧장 goBack)만으로 D-01을 만족한다. gestureEnabled:false(스와이프 경로, 위
+  // handleChangeNote 참고)와 합쳐 이 화면의 네이티브 트리거 두 가지(제스처+헤더
+  // 버튼) 모두 JS가 먼저 결정권을 갖게 된다.
   //
   // 세 버튼 모두 iOS 기본(강조 없는) 스타일이다 — 경고성 강조 스타일을 절대 쓰지
   // 않는다. iOS는 그 강조 스타일 버튼을 자동으로 빨간 텍스트로 렌더하는데, DESIGN.md는
   // UI 전역에서 빨강 계열 시맨틱 색상을 금지한다(Phase 4가 발견한 "탭바 기본 파란
   // 틴트"와 같은 종류의 놓치기 쉬운 플랫폼 기본값 함정) — 버튼 순서와 문구로만 옵션을
   // 구분한다.
-  //
-  // 막았던 pop 액션 객체를 나중에 그대로 navigation.dispatch에 넘기면 원래 막았던
-  // 화면 전환이 재실행된다 — React Navigation의 표준 "preventing going back" 관용구다.
-  useEffect(() => {
-    const sub = navigation.addListener('beforeRemove', (e) => {
-      if (!isDirtyRef.current) return;
-      e.preventDefault();
-      Alert.alert(CHECKIN_DETAIL_COPY.unsavedTitle, undefined, [
-        { text: CHECKIN_DETAIL_COPY.keepEditing, style: 'default' },
-        {
-          text: CHECKIN_DETAIL_COPY.discardAndLeave,
-          style: 'default',
-          onPress: () => navigation.dispatch(e.data.action),
+  const handleBackPress = useCallback(() => {
+    if (!isDirtyRef.current) {
+      navigation.goBack();
+      return;
+    }
+    Alert.alert(CHECKIN_DETAIL_COPY.unsavedTitle, undefined, [
+      { text: CHECKIN_DETAIL_COPY.keepEditing, style: 'default' },
+      {
+        text: CHECKIN_DETAIL_COPY.discardAndLeave,
+        style: 'default',
+        onPress: () => navigation.goBack(),
+      },
+      {
+        text: CHECKIN_DETAIL_COPY.saveAndLeave,
+        style: 'default',
+        onPress: () => {
+          flushNoteAndPhoto();
+          navigation.goBack();
         },
-        {
-          text: CHECKIN_DETAIL_COPY.saveAndLeave,
-          style: 'default',
-          onPress: () => {
-            flushNoteAndPhoto();
-            navigation.dispatch(e.data.action);
-          },
-        },
-      ]);
-    });
-    return sub;
+      },
+    ]);
   }, [navigation, flushNoteAndPhoto]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <Pressable
+          onPress={handleBackPress}
+          accessibilityRole="button"
+          accessibilityLabel={CHECKIN_DETAIL_COPY.goBack}
+          hitSlop={SMALL_ICON_HIT_SLOP}
+          style={styles.headerBackButton}
+        >
+          <SymbolView name="chevron.left" tintColor={colors.textPrimary} />
+        </Pressable>
+      ),
+    });
+  }, [navigation, handleBackPress]);
 
   // 로드 전(state 초기값) + 존재하지 않는 id(getCheckinById가 null 반환) 둘 다 같은
   // 빈 렌더로 처리한다 — 이 화면은 "이미 존재하는 체크인 1건"에 대한 화면이라 빈
@@ -473,7 +501,7 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
               onPress={handleDeletePhoto}
               accessibilityRole="button"
               accessibilityLabel={CHECKIN_DETAIL_COPY.deletePhoto}
-              hitSlop={PHOTO_DELETE_HIT_SLOP}
+              hitSlop={SMALL_ICON_HIT_SLOP}
               style={styles.photoDeleteBadge}
             >
               <View style={[StyleSheet.absoluteFill, styles.photoDeleteBadgeBackground]} />
@@ -584,6 +612,15 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  // 커스텀 헤더 뒤로가기 버튼(2026-09-01) — 네이티브 헤더 크롬을 대체하는 JS
+  // Pressable이라 이 화면의 다른 프레젠테이셔널 컴포넌트와 달리 여기서만
+  // 헤더 내부 배치를 갖는다(headerLeft가 요구하는 위치, 화면 본문 레이아웃과 무관).
+  headerBackButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     paddingHorizontal: spacing.lg,

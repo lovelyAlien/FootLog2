@@ -155,4 +155,6 @@ export const CHECKIN_DETAIL_COPY = {
   // 아님" 원칙은 그대로 유지 — 이 버튼도 명시적 트리거 중 하나일 뿐이다).
   editNote: '편집',
   saveNote: '저장',
+  // 커스텀 헤더 뒤로가기 버튼(아이콘 전용)의 VoiceOver 라벨 — deletePhoto와 같은 패턴.
+  goBack: '뒤로',
 } as const;
