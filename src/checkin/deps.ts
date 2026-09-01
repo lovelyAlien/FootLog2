@@ -1,14 +1,23 @@
 // src/checkin/deps.ts
 // 계약: 이 파일이 src/checkin/ 안에서 'expo-location'/'expo-image-picker'/
-// 'expo-file-system'/'expo-crypto'를 런타임 import 하는 유일한 파일이다. 다른 체크인
-// 모듈은 절대 이 패키지들을 직접 import 하지 않는다 — 이후 Plan(위치 캡처, 사진,
-// 리포지토리, 화면)이 지켜야 할 규칙이며, config.ts는 타입 전용 import만 허용된다.
+// 'expo-file-system'/'expo-crypto'/'expo-image-manipulator'를 런타임 import 하는
+// 유일한 파일이다. 다른 체크인 모듈은 절대 이 패키지들을 직접 import 하지 않는다 —
+// 이후 Plan(위치 캡처, 사진, 리포지토리, 화면)이 지켜야 할 규칙이며, config.ts는
+// 타입 전용 import만 허용된다.
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
 import { File, Paths } from 'expo-file-system';
-import type { LocationDeps, ImagePickerDeps, CryptoDeps, PhotoStorageDeps } from './config';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import type {
+  LocationDeps,
+  ImagePickerDeps,
+  CryptoDeps,
+  PhotoStorageDeps,
+  ResizeDeps,
+} from './config';
 import { LOCATION_ACCURACY_BALANCED } from './config';
+import { resolveResizeTarget } from './photoResize';
 
 // 리뷰 발견 — index.tsx의 resolveInstantPosition(재센터/초기 진입)과 location.ts의
 // captureWithTimeout(체크인 캡처)이 서로 조율 없이 각자 독립적으로
@@ -64,6 +73,27 @@ export const defaultPhotoStorageDeps: PhotoStorageDeps = {
     const destinationFile = new File(Paths.document, fileName);
     await sourceFile.copy(destinationFile);
     return destinationFile.uri;
+  },
+};
+
+// 구 버전의 단일 호출형 리사이즈 함수(deprecated, 04-RESEARCH.md Pitfall 2)는 쓰지 않는다
+// — 새 컨텍스트 기반 API(`manipulate().resize().renderAsync().saveAsync()`)만 사용한다.
+// 절차: 1) 원본 치수를 얻기 위해 액션 없이 한 번 렌더한다(ImageRef가 width/height를
+// 노출). 2) resolveResizeTarget(순수 함수, photoResize.ts)로 방향에 따라 어느 치수를
+// 제약할지 판단한다. 3) null이면 리사이징 없이 원본 uri를 그대로 반환한다(이미 충분히
+// 작음). 4) null이 아니면 그 인자로 다시 리사이즈 → 렌더 → JPEG 저장한 결과 uri를
+// 반환한다. saveAsync()의 기본 출력 위치는 cacheDirectory이므로, 이 결과는 반드시
+// 호출자(photos.ts)가 copyIntoDocumentDirectory에 한 번 더 통과시켜야 한다.
+export const defaultResizeDeps: ResizeDeps = {
+  async resizeToMaxDimension(uri, maxDimensionPx) {
+    const original = await ImageManipulator.manipulate(uri).renderAsync();
+    const target = resolveResizeTarget(original.width, original.height, maxDimensionPx);
+    if (target === null) {
+      return uri;
+    }
+    const resized = await ImageManipulator.manipulate(uri).resize(target).renderAsync();
+    const saved = await resized.saveAsync({ format: SaveFormat.JPEG });
+    return saved.uri;
   },
 };
 

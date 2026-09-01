@@ -1,0 +1,53 @@
+/* FootLog sketch theme — 1:1 전사 from src/theme/tokens.ts + DESIGN.md.
+   여기서 새 값을 발명하지 않는다. 값이 바뀌면 tokens.ts를 먼저 갱신. */
+:root {
+  /* Colors (src/theme/tokens.ts colors) */
+  --color-bg: #F4F1EA;         /* colors.background — 웜 오프화이트 */
+  --color-surface: #FBFAF6;    /* colors.surface — 카드/바텀시트 */
+  --color-surface-soft: #ECE8DF; /* colors.surfaceSoft — 구분 영역 */
+  --color-text: #2F302C;       /* colors.textPrimary — 웜 니어블랙 */
+  --color-text-muted: #79786F; /* colors.textMuted */
+  --color-text-faint: #A7A49A; /* colors.textFaint */
+  --color-accent: #7C8660;     /* colors.accent — 정확히 6개 승인 용도만 */
+  --color-accent-soft: #D8DDC9;/* colors.accentSoft */
+  --color-line: #DDD8CD;       /* colors.line — 구분선 */
+  --color-map-land: #E9E4D8;   /* colors.mapLand */
+  --color-map-road: #D2CDC1;   /* colors.mapRoad */
+  --color-map-water: #DDE3DF;  /* colors.mapWater */
+
+  /* Typography (src/theme/tokens.ts typography) */
+  --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Menlo", monospace; /* timestamp */
+  --font-journal: "Newsreader", Georgia, serif; /* journalEntry — 이탤릭으로만 사용 */
+
+  --text-screen-title: 22px; /* typography.screenTitle */
+  --text-place-name: 16px;   /* typography.placeName — 이 phase 미사용(D-01) */
+  --text-timestamp: 15px;    /* typography.timestamp */
+  --text-journal: 15px;      /* typography.journalEntry */
+  --text-helper: 13px;       /* typography.helperText */
+
+  /* Spacing (src/theme/tokens.ts spacing) */
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Shapes (src/theme/tokens.ts radius) */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Motion (src/theme/tokens.ts motion) */
+  --motion-sheet-snap: 220ms;
+  --motion-pin-drop: 160ms;
+  --motion-crossfade: 180ms;
+
+  /* Shadows (not in tokens.ts — sketch-only approximation for elevation, kept minimal per DESIGN.md restraint) */
+  --shadow-sm: 0 1px 3px rgba(47,48,44,0.08);
+  --shadow-md: 0 -2px 12px rgba(47,48,44,0.10);
+}

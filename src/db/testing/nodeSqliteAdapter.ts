@@ -55,6 +55,10 @@ export function createTestDb(path: string = ':memory:'): {
         lastInsertRowId: Number(result.lastInsertRowid),
       };
     },
+    getAllAsync: async <T>(sql: string, ...params: unknown[]): Promise<T[]> => {
+      const rows = raw.prepare(sql).all(...(resolveBindArgs(params) as never[]));
+      return rows as T[];
+    },
   };
 
   return {

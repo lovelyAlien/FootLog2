@@ -52,3 +52,58 @@ describe('nodeSqliteAdapter', () => {
     }
   });
 });
+
+describe('getAllAsync', () => {
+  it('결과가 없으면 빈 배열을 반환한다(null 아님)', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await db.execAsync('CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)');
+      const rows = await db.getAllAsync<{ id: number; v: string }>('SELECT * FROM t');
+      expect(rows).toEqual([]);
+    } finally {
+      close();
+    }
+  });
+
+  it('여러 row를 SQL이 지정한 순서 그대로 배열로 반환한다', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await db.execAsync('CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)');
+      await db.runAsync('INSERT INTO t (id, v) VALUES (?, ?)', 1, 'a');
+      await db.runAsync('INSERT INTO t (id, v) VALUES (?, ?)', 2, 'b');
+      await db.runAsync('INSERT INTO t (id, v) VALUES (?, ?)', 3, 'c');
+      const rows = await db.getAllAsync<{ id: number; v: string }>(
+        'SELECT * FROM t ORDER BY id ASC'
+      );
+      expect(rows).toEqual([
+        { id: 1, v: 'a' },
+        { id: 2, v: 'b' },
+        { id: 3, v: 'c' },
+      ]);
+    } finally {
+      close();
+    }
+  });
+
+  it('배열 형태와 가변인자 형태의 바인드 파라미터 둘 다에서 동일하게 동작한다', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await db.execAsync('CREATE TABLE t (id INTEGER PRIMARY KEY, a TEXT, b TEXT)');
+      await db.runAsync('INSERT INTO t (id, a, b) VALUES (?, ?, ?)', 1, 'x', 'y');
+
+      const viaVarargs = await db.getAllAsync<{ a: string; b: string }>(
+        'SELECT a, b FROM t WHERE id = ?',
+        1
+      );
+      const viaArray = await db.getAllAsync<{ a: string; b: string }>(
+        'SELECT a, b FROM t WHERE id = ?',
+        [1]
+      );
+
+      expect(viaVarargs).toEqual([{ a: 'x', b: 'y' }]);
+      expect(viaArray).toEqual([{ a: 'x', b: 'y' }]);
+    } finally {
+      close();
+    }
+  });
+});

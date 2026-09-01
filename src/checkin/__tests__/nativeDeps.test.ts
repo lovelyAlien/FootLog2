@@ -23,19 +23,25 @@ function readPackageJson(): any {
   return JSON.parse(raw);
 }
 
-const EXPO_STAR_PACKAGES = ['expo-location', 'expo-image-picker', 'expo-file-system', 'expo-crypto'];
+const EXPO_STAR_PACKAGES = [
+  'expo-location',
+  'expo-image-picker',
+  'expo-file-system',
+  'expo-crypto',
+  'expo-image-manipulator',
+];
 const ALL_NATIVE_PACKAGES = [...EXPO_STAR_PACKAGES, 'react-native-maps'];
 
-describe('package.json 네이티브 모듈 5종 설치 회귀 가드', () => {
+describe('package.json 네이티브 모듈 6종 설치 회귀 가드', () => {
   const packageJson = readPackageJson();
 
-  it('Test 1: 5개 패키지 전부 dependencies에 존재한다', () => {
+  it('Test 1: 6개 패키지 전부 dependencies에 존재한다', () => {
     for (const pkg of ALL_NATIVE_PACKAGES) {
       expect(packageJson.dependencies[pkg]).toBeDefined();
     }
   });
 
-  it('Test 2: expo-* 4종의 버전 문자열이 ~57.로 시작한다(SDK 57 호환 범위 관례)', () => {
+  it('Test 2: expo-* 5종의 버전 문자열이 ~57.로 시작한다(SDK 57 호환 범위 관례)', () => {
     for (const pkg of EXPO_STAR_PACKAGES) {
       expect(packageJson.dependencies[pkg]).toMatch(/^~57\./);
     }
@@ -59,7 +65,7 @@ function collectSourceFiles(dir: string): string[] {
 }
 
 describe('src/checkin/ 네이티브 패키지 런타임 import 격리 회귀 가드', () => {
-  it('Test 3: expo-location/expo-image-picker/expo-file-system/expo-crypto를 런타임(import type이 아닌) import하는 파일이 deps.ts 하나뿐이다', () => {
+  it('Test 3: expo-location/expo-image-picker/expo-file-system/expo-crypto/expo-image-manipulator를 런타임(import type이 아닌) import하는 파일이 deps.ts 하나뿐이다', () => {
     const allFiles = collectSourceFiles(CHECKIN_DIR);
     const offenders: string[] = [];
 

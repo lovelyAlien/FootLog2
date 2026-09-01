@@ -33,10 +33,10 @@
 
 ### Today view
 
-- [ ] **REQ-today-view** (M11, PD-T6): 오늘 탭에 지도 + 3단 스냅 바텀시트(CLOSED/DRAGGING/OPEN, 220ms)가 표시되어 오늘의 실제 체크인들을 시간순으로 나열하며, 시트 상태와 무관하게 플로팅 체크인 버튼에 항상 접근 가능하다. "오늘 돌아보기" 행은 아직 포함하지 않음(REQ-reflection-today-entry에서 추가).
-- [ ] **REQ-photo-resize** (M12, PD-T7): 사진은 최대 1600px로 리사이징되어 `documentDirectory`(절대 `cacheDirectory` 아님) 하위에 저장되며, 실패 시 인라인 실패 문구를 표시한다. 카메라 vs 라이브러리 출처는 이후 EXIF 태깅을 위해 구분된다.
-- [ ] **REQ-onboarding-empty-state** (M13, PD-T9): 알림 priming 화면이 온보딩 전체를 대신하며, 위치 권한은 사전이 아니라 첫 체크인 탭 시점에 맥락적으로 요청된다.
-- [ ] **REQ-trajectory-line** (M14, PD-T14): 지도 위에서 오늘의 체크인들을 시간순으로 잇는 얇고 채도 낮은 선을 그리며, 거리/시간 라벨은 표시하지 않는다.
+- [x] **REQ-today-view** (M11, PD-T6): 오늘 탭에 지도 + 3단 스냅 바텀시트(CLOSED/DRAGGING/OPEN, 220ms)가 표시되어 오늘의 실제 체크인들을 시간순으로 나열하며, 시트 상태와 무관하게 플로팅 체크인 버튼에 항상 접근 가능하다. "오늘 돌아보기" 행은 아직 포함하지 않음(REQ-reflection-today-entry에서 추가).
+- [x] **REQ-photo-resize** (M12, PD-T7): 사진은 최대 1600px로 리사이징되어 `documentDirectory`(절대 `cacheDirectory` 아님) 하위에 저장되며, 실패 시 인라인 실패 문구를 표시한다. 카메라 vs 라이브러리 출처는 이후 EXIF 태깅을 위해 구분된다.
+- [x] **REQ-onboarding-empty-state** (M13, PD-T9): 알림 priming 화면이 온보딩 전체를 대신하며, 위치 권한은 사전이 아니라 첫 체크인 탭 시점에 맥락적으로 요청된다.
+- [x] **REQ-trajectory-line** (M14, PD-T14): 지도 위에서 오늘의 체크인들을 시간순으로 잇는 얇고 채도 낮은 선을 그리며, 거리/시간 라벨은 표시하지 않는다.
 
 ### Check-in detail & edit
 
@@ -120,10 +120,10 @@
 | REQ-checkin-write-failure-ui | Phase 3 | Complete |
 | REQ-checkin-confirm-pin | Phase 3 | Complete |
 | REQ-location-denied-flow | Phase 3 | Complete |
-| REQ-today-view | Phase 4 | Pending |
-| REQ-photo-resize | Phase 4 | Pending |
-| REQ-onboarding-empty-state | Phase 4 | Pending |
-| REQ-trajectory-line | Phase 4 | Pending |
+| REQ-today-view | Phase 4 | Complete |
+| REQ-photo-resize | Phase 4 | Complete |
+| REQ-onboarding-empty-state | Phase 4 | Complete |
+| REQ-trajectory-line | Phase 4 | Complete |
 | REQ-checkin-detail-base | Phase 5 | Pending |
 | REQ-checkin-detail-layout | Phase 5 | Pending |
 | REQ-checkin-detail-flush | Phase 5 | Pending |

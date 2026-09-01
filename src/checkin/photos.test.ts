@@ -17,6 +17,8 @@ import {
 } from './photos';
 import { createFakeImagePicker } from './testing/fakeImagePicker';
 import { createFakePhotoStorage } from './testing/fakePhotoStorage';
+import { createFakeImageResizer } from './testing/fakeImageResizer';
+import { MAX_PHOTO_DIMENSION_PX } from './config';
 
 describe('PHOTO_ACTION_SHEET_OPTIONS / PHOTO_ACTION_SHEET_CANCEL_INDEX (03-UI-SPEC.md §Copywriting Contract)', () => {
   it('옵션이 정확히 [사진 촬영, 앨범에서 선택, 취소] 순서다', () => {
@@ -93,18 +95,19 @@ describe('pickAndCopyPhoto', () => {
     const picker = createFakeImagePicker();
     const storage = createFakePhotoStorage();
     const crypto = createFakeCrypto();
+    const resize = createFakeImageResizer();
     picker.__setPermission(source, 'undetermined');
     picker.__setNextResult({
       canceled: false,
       assets: [{ uri: 'file:///original/IMG_0001.HEIC', fileName: 'IMG_0001.HEIC' }],
     });
-    return { picker, storage, crypto };
+    return { picker, storage, crypto, resize };
   }
 
   it("pickAndCopyPhoto('camera', deps)가 성공하면 { uri, source: 'camera', fileName }을 반환하고 fileName이 'camera-'로 시작한다", async () => {
-    const { picker, storage, crypto } = setupSuccess('camera');
+    const { picker, storage, crypto, resize } = setupSuccess('camera');
 
-    const result = await pickAndCopyPhoto('camera', { picker, storage, crypto });
+    const result = await pickAndCopyPhoto('camera', { picker, storage, crypto, resize });
 
     expect(result).not.toBeNull();
     expect(result && 'error' in result).toBe(false);
@@ -114,9 +117,9 @@ describe('pickAndCopyPhoto', () => {
   });
 
   it("pickAndCopyPhoto('library', deps)가 성공하면 반환 객체의 source가 'library'이고 fileName이 'library-'로 시작한다", async () => {
-    const { picker, storage, crypto } = setupSuccess('library');
+    const { picker, storage, crypto, resize } = setupSuccess('library');
 
-    const result = await pickAndCopyPhoto('library', { picker, storage, crypto });
+    const result = await pickAndCopyPhoto('library', { picker, storage, crypto, resize });
 
     const picked = result as { uri: string; source: string; fileName: string };
     expect(picked.source).toBe('library');
@@ -138,35 +141,71 @@ describe('pickAndCopyPhoto', () => {
   it("권한이 거부되면 { error: 'permission_denied' }를 반환하고 picker launch 함수가 호출되지 않는다", async () => {
     const picker = createFakeImagePicker();
     const storage = createFakePhotoStorage();
+    const resize = createFakeImageResizer();
     picker.__setPermission('camera', 'denied');
     picker.__setNextResult({
       canceled: false,
       assets: [{ uri: 'file:///original/IMG_0001.HEIC', fileName: 'IMG_0001.HEIC' }],
     });
 
-    const result = await pickAndCopyPhoto('camera', { picker, storage });
+    const result = await pickAndCopyPhoto('camera', { picker, storage, resize });
 
     expect(result).toEqual({ error: 'permission_denied' });
     expect(picker.__lastLaunched()).toBeNull();
+    expect(resize.__calls()).toHaveLength(0);
   });
 
   it("copyIntoDocumentDirectory가 throw하면 { error: 'copy_failed' }를 반환하고 예외를 밖으로 던지지 않는다", async () => {
-    const { picker, storage, crypto } = setupSuccess('camera');
+    const { picker, storage, crypto, resize } = setupSuccess('camera');
     storage.__setShouldThrow(true);
 
-    const result = await pickAndCopyPhoto('camera', { picker, storage, crypto });
+    const result = await pickAndCopyPhoto('camera', { picker, storage, crypto, resize });
 
     expect(result).toEqual({ error: 'copy_failed' });
   });
 
   it('copyIntoDocumentDirectory에 전달된 fileName 인자가 picker 원본 uri의 파일명과 무관한 UUID 기반 이름이다', async () => {
-    const { picker, storage, crypto } = setupSuccess('camera');
+    const { picker, storage, crypto, resize } = setupSuccess('camera');
 
-    await pickAndCopyPhoto('camera', { picker, storage, crypto });
+    await pickAndCopyPhoto('camera', { picker, storage, crypto, resize });
 
     const copies = storage.__copies();
     expect(copies).toHaveLength(1);
     expect(copies[0].fileName).not.toBe('IMG_0001.HEIC');
     expect(copies[0].fileName).toMatch(/^camera-fake-uuid-\d+\.jpg$/);
+  });
+
+  it('copy가 리사이즈 결과 uri를 받는다(픽커 원본 uri가 아니다)', async () => {
+    const { picker, storage, crypto, resize } = setupSuccess('camera');
+
+    await pickAndCopyPhoto('camera', { picker, storage, crypto, resize });
+
+    const copies = storage.__copies();
+    const resizeCalls = resize.__calls();
+    expect(copies).toHaveLength(1);
+    expect(resizeCalls).toHaveLength(1);
+    expect(copies[0].source).not.toBe('file:///original/IMG_0001.HEIC');
+    expect(copies[0].source).toBe(`file:///fake-cache/resized-1.jpg`);
+  });
+
+  it('resize가 MAX_PHOTO_DIMENSION_PX(1600)를 두 번째 인자로 받는다', async () => {
+    const { picker, storage, crypto, resize } = setupSuccess('camera');
+
+    await pickAndCopyPhoto('camera', { picker, storage, crypto, resize });
+
+    const resizeCalls = resize.__calls();
+    expect(resizeCalls).toHaveLength(1);
+    expect(resizeCalls[0].uri).toBe('file:///original/IMG_0001.HEIC');
+    expect(resizeCalls[0].maxDimensionPx).toBe(MAX_PHOTO_DIMENSION_PX);
+  });
+
+  it("resize가 throw하면 { error: 'resize_failed' }를 반환하고 copyIntoDocumentDirectory가 호출되지 않는다", async () => {
+    const { picker, storage, crypto, resize } = setupSuccess('camera');
+    resize.__setShouldThrow(true);
+
+    const result = await pickAndCopyPhoto('camera', { picker, storage, crypto, resize });
+
+    expect(result).toEqual({ error: 'resize_failed' });
+    expect(storage.__copies()).toHaveLength(0);
   });
 });

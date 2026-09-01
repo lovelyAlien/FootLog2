@@ -1,13 +1,12 @@
-// src/app/index.tsx
-// Phase 3(체크인 코어 루프, 03-09-PLAN.md) — Phase 1의 부팅 확인 플레이스홀더를
-// 대체하는 최소 지도 화면(03-CONTEXT.md D-06). 원래 Phase 4(오늘 뷰)가 이 자리를
-// 채울 예정이었지만, 오늘 뷰가 아직 없어 체크인 버튼과 확인 핀 플로우를 얹을 화면이
-// 필요해 Phase 3가 먼저 이 자리를 쓴다. Phase 4는 이 지도 위에 바텀시트와 리스트를
-// 씌우면 되므로 지도 렌더링, GPS 캡처, 확인 핀 드래그 로직을 그대로 재사용한다.
+// src/app/(tabs)/index.tsx
+// Phase 3(체크인 코어 루프, 03-09-PLAN.md)에서 최소 지도 화면(03-CONTEXT.md D-06)으로
+// 시작했고, Phase 4가 이 화면을 `(tabs)` 그룹의 오늘 탭으로 승격했다(04-03-PLAN.md
+// Task 2, D-06) — 지도 렌더링, GPS 캡처, 확인 핀 드래그 로직은 이 이동으로 바뀌지
+// 않고 그대로 재사용된다.
 //
-// 배너 스택(NotificationDeniedBanner 위, LocationDeniedBanner 아래)의 현재 위치
-// (지도 상단, 세이프에어리어 아래)도 최종 위치가 아니다 — Phase 4가 오늘 뷰를 만들
-// 때 두 배너 모두 탭바 위로 이관한다.
+// 배너 스택(NotificationDeniedBanner 위, LocationDeniedBanner 아래)의 위치(지도
+// 상단, 세이프에어리어 아래)는 04-UI-SPEC.md가 확정한 최종 위치다 — 탭바 위로
+// 이관하지 않고 그대로 유지한다.
 //
 // 지도 스타일 토큰 결정(03-09-PLAN.md 지도 스타일 토큰 결정 항목): colors.mapLand,
 // colors.mapRoad, colors.mapWater는 이 화면에서 쓰지 않는다. react-native-maps의
@@ -18,7 +17,7 @@
 // 03-09: 체크인 탭 → 권한 요청 → 위치 캡처 → 확인 핀 드롭 → 드래프트 upsert.
 // 03-10 Task 1: "확인"/"다시 시도" → commitCheckin 배선 + 미저장 이탈 안내.
 // 사진/메모 배선(03-10 Task 2)과 드래프트 복구(03-10 Task 3)는 아래 각 절 참고.
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -33,47 +32,56 @@ import {
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Redirect } from 'expo-router';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import type { MarkerDragStartEndEvent, Region } from 'react-native-maps';
+// reanimated default export는 반드시 `Reanimated`로 바인딩한다 — `Animated`로 쓰면
+// 위 react-native의 `Animated`(크로스페이드용, Plan 03-12 회귀 가드 대상)를 가려
+// checkin-wiring Test 46이 깨지고 native driver 크로스페이드가 무너진다
+// (04-06-PLAN.md Task 2). react-native-gesture-handler는 이 화면에서 직접 import하지
+// 않는다 — 시트 제스처는 @gorhom/bottom-sheet 내부가 처리한다(checkin-wiring gesture-handler 미사용 회귀 가드).
+import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, motion, radius, spacing, typography } from '../theme/tokens';
-import { fetchNotificationPermission, shouldShowPriming } from '../notifications/permissions';
-import type { PermissionSnapshot } from '../notifications/permissions';
-import { NotificationDeniedBanner } from '../components/NotificationDeniedBanner';
-import { LocationDeniedBanner } from '../components/LocationDeniedBanner';
-import { CheckinActionCard } from '../components/CheckinActionCard';
+import { colors, motion, radius, spacing, typography } from '../../theme/tokens';
+import { fetchNotificationPermission, shouldShowPriming } from '../../notifications/permissions';
+import type { PermissionSnapshot } from '../../notifications/permissions';
+import { NotificationDeniedBanner } from '../../components/NotificationDeniedBanner';
+import { LocationDeniedBanner } from '../../components/LocationDeniedBanner';
+import { CheckinActionCard } from '../../components/CheckinActionCard';
+import { TodayBottomSheet } from '../../today/TodayBottomSheet';
 import {
   checkinReducer,
   initialCheckinState,
   canEditNoteAndPhoto,
   CHECKIN_COPY,
-} from '../checkin/checkinFlow';
-import { fetchLocationPermission, requestLocationPermission } from '../checkin/permissions';
-import { resolveCheckinLocation } from '../checkin/location';
-import type { FallbackSources, ResolvedLocation } from '../checkin/location';
-import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../checkin/draftRepo';
+} from '../../checkin/checkinFlow';
+import { fetchLocationPermission, requestLocationPermission } from '../../checkin/permissions';
+import { resolveCheckinLocation } from '../../checkin/location';
+import type { FallbackSources, ResolvedLocation } from '../../checkin/location';
+import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../../checkin/draftRepo';
 import {
   commitCheckin,
   getLatestCheckinCoordinate,
+  getTodayCheckins,
   updateCheckinNoteAndPhoto,
-} from '../checkin/checkinRepo';
-import type { NewCheckinParams } from '../checkin/checkinRepo';
-import { defaultCryptoDeps, defaultLocationDeps } from '../checkin/deps';
+} from '../../checkin/checkinRepo';
+import type { NewCheckinParams } from '../../checkin/checkinRepo';
+import { defaultCryptoDeps, defaultLocationDeps } from '../../checkin/deps';
 import {
   CAPTURE_TIMEOUT_MS,
   LAST_KNOWN_MAX_AGE_MS,
   LOCATION_ACCURACY_BALANCED,
-} from '../checkin/config';
+} from '../../checkin/config';
 import {
   PHOTO_ACTION_SHEET_CANCEL_INDEX,
   PHOTO_ACTION_SHEET_OPTIONS,
   PHOTO_SOURCE_BY_ACTION_SHEET_INDEX,
   pickAndCopyPhoto,
-} from '../checkin/photos';
-import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../checkin/localDate';
-import type { LocationSource } from '../db/schema';
-import type { CheckinState } from '../checkin/checkinFlow';
+} from '../../checkin/photos';
+import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../../checkin/localDate';
+import type { CheckinRow, LocationSource } from '../../db/schema';
+import type { CheckinState } from '../../checkin/checkinFlow';
 import { SymbolView } from 'expo-symbols';
+import { buildTrajectoryCoordinates } from '../../today/trajectory';
 
 // 확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 — GPS 좌표 근방을 자연스럽게 보여줄
 // 정도의 값이며, 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
@@ -91,6 +99,9 @@ const RECENTER_ANIMATION_MS = 500;
 
 // 확인 핀 히트 영역 확장값 — 24px 원을 최소 터치 타겟 크기까지 넓힌다.
 const PIN_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
+
+// 이동 궤적선 두께 — 04-UI-SPEC.md §이동 궤적선 확정값(accentSoft, 2px, 실선).
+const TRAJECTORY_STROKE_WIDTH = 2;
 
 // 재센터 버튼과 앱 최초 진입(내 위치 기준 확대 시작) 둘 다가 공유하는 위치 조회
 // 순서 — 구글맵처럼 즉시 반응하도록 신선한 OS 캐시를 먼저 쓰고, 없을 때만 새
@@ -174,6 +185,13 @@ export default function Index() {
   // 자체는 아래 orientationModeRef가 동기적으로 담당한다(handleRecenterPress의
   // useCallback deps를 []로 유지하기 위해 isSaveInFlightRef와 동일한 ref+state 짝 패턴 사용).
   const [orientationMode, setOrientationMode] = useState<'north' | 'compass'>('north');
+  // 오늘 저장된 체크인 — 지도 핀·궤적선·(04-06의) 바텀시트 리스트가 공유하는 유일한
+  // 오늘 데이터(04-CONTEXT.md D-11). 별도의 두 번째 조회를 만들지 않는다.
+  const [todayCheckins, setTodayCheckins] = useState<CheckinRow[]>([]);
+  // 오늘 탭 콘텐츠 영역(탭바 제외) 높이 — 루트 View의 onLayout으로 측정한다. 시트
+  // 스냅 지점(TodayBottomSheet)과 플로팅 버튼 오프셋 계산(floatingButtonStyle)이
+  // 공유하는 공통 좌표계 기준이다(04-06-PLAN.md Task 2, D-05).
+  const [containerHeight, setContainerHeight] = useState(0);
 
   const mapRef = useRef<MapView>(null);
   const lastMapCoordinateRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -350,8 +368,63 @@ export default function Index() {
     };
   }, [db]);
 
+  // 오늘 체크인 목록 로더(04-05-PLAN.md) — 지도 핀·궤적선·(04-06) 바텀시트 리스트가
+  // 공유하는 단일 조회. 날짜 키를 화면 상태에 캐시하지 않고 호출 시점마다 새로
+  // 계산한다 — 자정을 넘겨 앱을 계속 켜둔 경우에도 다음 로드가 새 날짜를 보게
+  // 하기 위함이다. 실패해도 기존 체크인 플로우는 그대로 동작해야 하므로 throw하지
+  // 않고 콘솔 로그만 남긴다(프로미스 미삼킴 규약).
+  const reloadTodayCheckins = useCallback(() => {
+    getTodayCheckins(db, resolveLocalDateKey(new Date()))
+      .then((rows) => {
+        if (isMountedRef.current) {
+          setTodayCheckins(rows);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load today's check-ins", error);
+      });
+  }, [db]);
+
+  // 마운트 시 1회 로드 — 드래프트 복구 effect(위)와 별도로 둔다. 그 effect의 본문을
+  // 건드리면 checkin-wiring 테스트(드래프트 복구 정규식 앵커 의존 케이스들)가 깨진다.
+  useEffect(() => {
+    reloadTodayCheckins();
+  }, [reloadTodayCheckins]);
+
+  // 궤적선 좌표 — getTodayCheckins가 이미 timestamp_utc 오름차순으로 정렬해 반환하므로
+  // 여기서 다시 정렬하지 않는다(D-11 단일 쿼리 계약).
+  const trajectoryCoordinates = useMemo(
+    () => buildTrajectoryCoordinates(todayCheckins),
+    [todayCheckins]
+  );
+
   const isCapturing = state.phase === 'CAPTURING';
   const showActionCard = state.phase !== 'IDLE' && !isCapturing;
+
+  // 시트 상단 y좌표(컨테이너 좌표계) — TodayBottomSheet가 계속 써 넣고, 아래
+  // floatingButtonStyle이 읽는다(D-05, 부모 소유 SharedValue 계약).
+  const sheetPosition = useSharedValue(0);
+
+  // 루트 View 레이아웃 측정 — 같은 값이 다시 들어오면 리렌더를 건너뛴다.
+  const handleContainerLayout = useCallback(
+    (event: { nativeEvent: { layout: { height: number } } }) => {
+      const nextHeight = event.nativeEvent.layout.height;
+      setContainerHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+    },
+    []
+  );
+
+  // 플로팅 체크인/재센터 버튼의 화면 하단 오프셋 — 시트 상단(animatedPosition)을
+  // 실시간(워크릿)으로 추적한다. onChange(index) 같은 이산 콜백에 의존하지 않는
+  // 이유: DRAGGING 상태에서 손가락 위치를 그대로 따라가야 한다(04-UI-SPEC.md).
+  // containerHeight가 아직 0(레이아웃 측정 전)이면 sheetPosition도 0이라 음수
+  // bottom이 나올 수 있으므로, 그 동안은 Phase 3 정적 오프셋으로 폴백한다.
+  const floatingButtonStyle = useAnimatedStyle(() => {
+    if (containerHeight <= 0) {
+      return { bottom: insets.bottom + spacing.xl };
+    }
+    return { bottom: containerHeight - sheetPosition.value + spacing.lg };
+  }, [containerHeight, insets.bottom]);
 
   // 체크인 버튼과 로딩 인디케이터 사이 전환에 크로스페이드를 적용한다
   // (motion.saveStateCrossfadeMs, 03-UI-SPEC.md 체크인 알약버튼 절).
@@ -739,6 +812,8 @@ export default function Index() {
           // 확정됐으므로 더 이상 재사용할 id가 아니다.
           pendingCheckinIdRef.current = null;
           dispatch({ type: 'SAVE_SUCCEEDED', id: result.id });
+          // 방금 저장한 체크인이 즉시 핀으로 나타나게 한다(04-05-PLAN.md).
+          reloadTodayCheckins();
         } else {
           dispatch({ type: 'SAVE_FAILED' });
         }
@@ -751,7 +826,7 @@ export default function Index() {
           dispatch({ type: 'SAVE_FAILED' });
         }
       });
-  }, [db, state.phase, state.pin]);
+  }, [db, state.phase, state.pin, reloadTodayCheckins]);
 
   // 메모/사진을 현재 checkinId row에 flush한다 — TextInput 블러 시점과 앱 백그라운드
   // 전환 시점 두 곳에서 호출된다(디바운스 자동저장은 Phase 7 REQ-reflection-autosave
@@ -785,6 +860,11 @@ export default function Index() {
     if (stateRef.current.phase !== 'SAVED') return;
     flushNoteAndPhoto();
     dispatch({ type: 'DISMISS' });
+    // 메모/사진 flush 결과를 리스트 미리보기에 반영한다(04-05-PLAN.md). reloadTodayCheckins는
+    // 안정적인 db에만 의존하는 참조 안정 콜백이라 deps 배열에 추가하지 않아도 최신
+    // 함수를 참조한다 — checkin-wiring Test 42의 deps 배열 계약([flushNoteAndPhoto])을
+    // 그대로 유지한다.
+    reloadTodayCheckins();
   }, [flushNoteAndPhoto]);
 
   // 미저장 이탈 안내 + 메모/사진 백그라운드 flush를 한 구독으로 처리한다. 이 리스너는
@@ -797,6 +877,9 @@ export default function Index() {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active') {
         unsavedExitAlertShownRef.current = false;
+        // 백그라운드에 있던 사이 날짜가 바뀌었거나 시간이 흐른 경우를 흡수한다
+        // (04-05-PLAN.md).
+        reloadTodayCheckins();
         return;
       }
       const current = stateRef.current;
@@ -811,7 +894,7 @@ export default function Index() {
       }
     });
     return () => subscription.remove();
-  }, [flushNoteAndPhoto]);
+  }, [flushNoteAndPhoto, reloadTodayCheckins]);
 
   // 사진 액션시트 — photos.ts의 옵션/취소 인덱스/출처 매핑 상수를 그대로 소비한다
   // (문자열/인덱스를 화면에 하드코딩하지 않는다). ActionSheetIOS는 OS 네이티브
@@ -873,7 +956,7 @@ export default function Index() {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} onLayout={handleContainerLayout}>
       {/* StyleSheet.absoluteFillObject는 이 RN 버전에 존재하지 않는다(타입 정의 기준
           absoluteFill만 export됨) — 동일한 절대위치 전체채움 스타일 객체인
           absoluteFill을 대신 쓴다. */}
@@ -886,6 +969,26 @@ export default function Index() {
         onMapReady={handleMapReady}
         onPress={handleFinishCheckin}
       >
+        {trajectoryCoordinates.length >= 2 && (
+          <Polyline
+            coordinates={trajectoryCoordinates}
+            strokeColor={colors.accentSoft}
+            strokeWidth={TRAJECTORY_STROKE_WIDTH}
+          />
+        )}
+
+        {todayCheckins.map((checkin) => (
+          <Marker
+            key={checkin.id}
+            coordinate={{ latitude: checkin.lat, longitude: checkin.lng }}
+            anchor={{ x: 0.5, y: 1 }}
+          >
+            <View style={styles.pinWrapper}>
+              <View style={[styles.pinDrop, styles.pinSaved]} />
+            </View>
+          </Marker>
+        ))}
+
         {state.pin && showActionCard && (
           <Marker
             draggable={state.phase === 'CONFIRM'}
@@ -926,7 +1029,17 @@ export default function Index() {
         </KeyboardAvoidingView>
       ) : (
         <>
-          <View style={[styles.checkinButtonContainer, { bottom: insets.bottom + spacing.xl }]}>
+          {/* D-04 마운트 게이트 — showActionCard가 true인 동안(위 분기) 이 시트는
+              opacity/display/enabled로 숨겨지는 게 아니라 트리에서 완전히 사라진다
+              (CheckinActionCard.tsx의 "비활성화가 아니라 미마운트" 계약과 동일하게).
+              containerHeight <= 0(레이아웃 측정 전)이면 TodayBottomSheet 자신이 null을
+              반환한다(04-04-PLAN.md 계약). */}
+          <TodayBottomSheet
+            checkins={todayCheckins}
+            containerHeight={containerHeight}
+            animatedPosition={sheetPosition}
+          />
+          <Reanimated.View style={[styles.checkinButtonContainer, floatingButtonStyle]}>
             <Pressable
               onPress={handleCheckinPress}
               disabled={isCapturing}
@@ -944,12 +1057,9 @@ export default function Index() {
                 )}
               </Animated.View>
             </Pressable>
-          </View>
-          <View
-            style={[
-              styles.recenterButtonContainer,
-              { bottom: insets.bottom + spacing.xl, right: spacing.lg },
-            ]}
+          </Reanimated.View>
+          <Reanimated.View
+            style={[styles.recenterButtonContainer, floatingButtonStyle, { right: spacing.lg }]}
           >
             <Pressable
               onPress={handleRecenterPress}
@@ -962,7 +1072,7 @@ export default function Index() {
                 tintColor={colors.textMuted}
               />
             </Pressable>
-          </View>
+          </Reanimated.View>
         </>
       )}
     </View>
@@ -1047,6 +1157,11 @@ const styles = StyleSheet.create({
   },
   pinConfident: {
     backgroundColor: colors.accent,
+  },
+  // 저장된 체크인 핀(D-10) — 원본 location_source에 따른 3단계 시각 구분을 저장
+  // 후에는 유지하지 않는다(04-UI-SPEC.md §저장된 체크인 핀). 테두리 없음.
+  pinSaved: {
+    backgroundColor: colors.accentSoft,
   },
   pinFallback: {
     backgroundColor: colors.accentSoft,
