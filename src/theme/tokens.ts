@@ -22,6 +22,10 @@ export const colors = {
   mapLand: '#E9E4D8', // 지도 전용
   mapRoad: '#D2CDC1', // 지도 전용
   mapWater: '#DDE3DF', // 지도 전용
+  mapControlButtonBackground: '#FFFFFF', // 재센터 버튼 배경 — 애플 지도 스타일 예외(2026-09-01, DESIGN.md Color 섹션 참고)
+  mapControlIcon: '#007AFF', // 재센터 버튼 아이콘(시스템 블루) — 위와 동일 예외
+  mapControlBadgeBackground: '#2C2C2C', // 나침반 배지 배경(짙은 단색) — 위와 동일 예외
+  mapControlBadgeNeedle: '#FF3B30', // 나침반 배지 빨간 삼각형/N 텍스트 — 위와 동일 예외
 } as const;
 
 export const typography = {
