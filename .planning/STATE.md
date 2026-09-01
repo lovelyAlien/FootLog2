@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 5 UI-SPEC approved
-last_updated: "2026-08-31T16:19:06.843Z"
+status: ready_to_plan
+stopped_at: Phase 05 complete (7/7) — ready to discuss Phase 6
+last_updated: 2026-09-01T01:58:14.810Z
 last_activity: 2026-08-31 -- Phase 05 planning complete
 progress:
   total_phases: 8
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 39
-  completed_plans: 32
+  completed_plans: 39
   percent: 50
 ---
 
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-25)
 
 **Core value:** 체크인을 남기는 행위가 실제 매일의 사용을 버텨낼 만큼 마찰이 적어야 합니다 — 이 습관이 형성되지 않으면 앱의 다른 어떤 부분도 의미가 없습니다.
-**Current focus:** Phase 04 — today-view
+**Current focus:** Phase 6 — calendar tab
 
 ## Current Position
 
-Phase: 04 — COMPLETE
-Plan: 1 of 7
-Status: Ready to execute
-Last activity: 2026-08-31 -- Phase 05 planning complete
+Phase: 6
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-01
 
-Progress: [█░░░░░░░] 13% (1/8 phases)
+Progress: [█████░░░] 63% (5/8 phases)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 11
+- Total plans completed: 18
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -45,6 +45,7 @@ Progress: [█░░░░░░░] 13% (1/8 phases)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 03 | 11 | - | - |
+| 05 | 7 | - | - |
 
 **Recent Trend:**
 
