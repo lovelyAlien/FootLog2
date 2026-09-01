@@ -13,3 +13,9 @@ Deleting a Check-in from a list view is not immediate: it enters a short undo wi
 ## Delayed Delete
 
 The pattern used for swipe-to-delete on a Check-in: the row is hidden from the list immediately, but the underlying database row and its photo file are not removed until a short countdown (surfaced to the user as an undo snackbar) elapses without the user reversing the action. Committing early — via leaving the screen, starting a new action, or the countdown expiring — finalizes the deletion; reversing it during the window fully restores the row to the list with no trace of the pending deletion.
+
+## Wiring test
+
+A regression-guard test that verifies a screen or component's structural wiring — which functions call which, which props are passed, which dependencies or design tokens are referenced — by pattern-matching against the unparsed source text of the file under test, rather than rendering the component or executing its logic. Wiring tests exist to catch a specific class of regression: a refactor that silently drops a call, swaps in the wrong dependency, or reintroduces a previously-fixed bug pattern, without needing a full render environment.
+
+A wiring test's matched pattern encodes an invariant, not just a snapshot of current code. Loosening or bypassing that pattern to make an unrelated change pass is treated as weakening the guard, not fixing it — the correct response to a collision is to extend the underlying mechanism the guard checks against (e.g. register a new value in its source-of-truth registry) or to narrowly update the one stale literal the guard compares against, never to widen what the guard tolerates.
