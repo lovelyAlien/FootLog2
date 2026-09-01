@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Phase 4 UI-SPEC 승인 완료
-last_updated: "2026-08-31T07:47:52.299Z"
-last_activity: 2026-08-31 -- Phase 04 marked complete
+status: ready_to_plan
+stopped_at: Phase 05 complete (7/7) — ready to discuss Phase 6
+last_updated: 2026-09-01T01:58:14.810Z
+last_activity: 2026-08-31 -- Phase 05 planning complete
 progress:
   total_phases: 8
-  completed_phases: 4
-  total_plans: 32
-  completed_plans: 32
+  completed_phases: 5
+  total_plans: 39
+  completed_plans: 39
   percent: 50
 ---
 
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-25)
 
 **Core value:** 체크인을 남기는 행위가 실제 매일의 사용을 버텨낼 만큼 마찰이 적어야 합니다 — 이 습관이 형성되지 않으면 앱의 다른 어떤 부분도 의미가 없습니다.
-**Current focus:** Phase 04 — today-view
+**Current focus:** Phase 6 — calendar tab
 
 ## Current Position
 
-Phase: 04 — COMPLETE
-Plan: 1 of 7
-Status: Phase 04 complete
-Last activity: 2026-08-31 -- Phase 04 marked complete
+Phase: 6
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-01
 
-Progress: [█░░░░░░░] 13% (1/8 phases)
+Progress: [█████░░░] 63% (5/8 phases)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 11
+- Total plans completed: 18
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -45,6 +45,7 @@ Progress: [█░░░░░░░] 13% (1/8 phases)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 03 | 11 | - | - |
+| 05 | 7 | - | - |
 
 **Recent Trend:**
 
@@ -86,6 +87,8 @@ Progress: [█░░░░░░░] 13% (1/8 phases)
 ### Blockers/Concerns
 
 - [Phase 2, plan-phase]: 결정 커버리지 게이트(check.decision-coverage-plan)가 02-CONTEXT.md의 D-01~D-07 전부를 "커버 안 됨"으로 보고했으나, PLAN.md 8개 본문(목적/테스트/헤더 주석)에 D-01~D-07이 구체적으로 인용됨을 수동 확인 — 게이트가 must_haves/truths 필드만 매칭하고 본문 인용은 못 잡는 도구 한계로 판단. 사용자 승인으로 경고 무시하고 진행(override). verify-phase에서 재확인 권장.
+- [Phase 5, plan-phase]: 동일한 결정 커버리지 게이트 도구 한계 재발 — 05-CONTEXT.md의 D-01(메모 저장 방식)/D-02(딥링크 백그라운드 flush)가 "커버 안 됨"으로 보고됐으나, 05-04-PLAN.md 본문(objective/tasks/threat_model/acceptance_criteria/done)에 D-01/D-02가 8곳 이상 구체적으로 인용됨을 수동 확인. Phase 2와 동일 사유로 override하고 진행. verify-phase에서 재확인 권장.
+- [Phase 5, plan-phase]: 계획 중 gsd-plan-checker가 블로커로 지적 — 05-UI-SPEC.md(작성 8/31 17:30)가 스와이프 삭제 어포던스 색상으로 `colors.accent`를 지정했는데, 같은 날 18:10 DESIGN.md 갱신이 accent 승인 용도를 캘린더 탭 전용 2개로 좁히고 체크인 관련 색상을 전부 Pin(테라코타)으로 이전한 것과 재검증 없이 충돌. accent 신규 승인 / Pin 전환 / accentSoft 3가지 목업을 창업자에게 제시했고 Pin(`#B85C38`)을 명시적으로 선택 — REQUIREMENTS.md/DESIGN.md/05-UI-SPEC.md/05-RESEARCH.md/05-PATTERNS.md/영향받은 PLAN.md 4개(05-03/05-05/05-06/05-07) 전부 갱신 완료, 재검증 통과. DESIGN.md Decisions Log 2026-09-01 항목 참고.
 - REQ-reflection-base(Phase 7)는 번호가 매겨진 원본 태스크 ID가 없음 — 스펙이 day-end-reflection-map.md에 빌드 태스크가 아니라 산문(Premises/Visual Design Decisions/Data Model)으로만 존재함. 원본 체크리스트 자체가 가장 과소 명세됐을 가능성이 높은 항목으로 플래그함 — Phase 7 계획 시 더 면밀히 검토할 것.
 - TODOS.md에 사용자가 정리해야 할 오래된 항목 2개가 있음(비차단): 이미 footlog-product-design.md의 Success Criteria에서 해결된 "kill condition 부재" P1 항목(Key Decisions 참고), 그리고 현재의 정성적 kill condition이 아니라 이미 폐기된 정량적 게이트를 여전히 인용하는 2단계 "depends on" 문구.
 
@@ -102,6 +105,6 @@ Ingest에서 확인되어 이어받은 항목들.
 
 ## Session Continuity
 
-Last session: 2026-08-30T07:01:34.207Z
-Stopped at: Phase 4 UI-SPEC 승인 완료
-Resume file: .planning/phases/04-today-view/04-UI-SPEC.md
+Last session: 2026-08-31T08:33:43.185Z
+Stopped at: Phase 5 UI-SPEC approved
+Resume file: .planning/phases/05-check-in-detail-edit/05-UI-SPEC.md

@@ -10,7 +10,7 @@ import path from 'path';
 import { stripComments } from '../../test-utils/stripComments';
 
 const APP_DIR = path.join(__dirname, '..');
-const TODAY_SCREEN_PATH = path.join('(tabs)', 'index.tsx');
+const TODAY_SCREEN_PATH = path.join('(tabs)', 'index', 'index.tsx');
 
 function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(APP_DIR, relativePath), 'utf-8');
@@ -63,9 +63,12 @@ describe('src/app/(tabs)/index.tsx 체크인 배선 계약 (Plan 03-09)', () => 
     expect(codeOnly).not.toMatch(/react-native-gesture-handler/);
   });
 
-  it('Test 10: colors.accent와 colors.accentSoft가 핀 스타일 정의에 등장한다', () => {
-    expect(codeOnly).toMatch(/\bcolors\.accent\b/);
-    expect(codeOnly).toMatch(/\bcolors\.accentSoft\b/);
+  it('Test 10 (2026-08-31 갱신): colors.pin과 colors.pinSoft가 핀 스타일 정의에 등장한다 (accent는 UI 크롬 전용으로 분리됨)', () => {
+    expect(codeOnly).toMatch(/\bcolors\.pin\b/);
+    expect(codeOnly).toMatch(/\bcolors\.pinSoft\b/);
+    // 핀 스타일이 accent/accentSoft로 되돌아가는 회귀를 막는다.
+    expect(codeOnly).not.toMatch(/pinConfident:\s*\{[^}]*colors\.accent\b/s);
+    expect(codeOnly).not.toMatch(/pinSaved:\s*\{[^}]*colors\.accentSoft\b/s);
   });
 
   it('Test 11: hitSlop이 등장한다 (핀 드래그 히트 영역 44×44pt 확장)', () => {
@@ -196,11 +199,15 @@ describe('src/app/(tabs)/index.tsx 내 위치 재센터링 버튼 배선 계약'
     expect(block).toMatch(/animateToRegion/);
   });
 
-  it('Test 31: 재센터링 버튼은 accent 컬러를 쓰지 않는다 (DESIGN.md 6개 승인 용도 밖 — 중립색 사용)', () => {
+  it('Test 31 (2026-08-31 갱신): 재센터링 버튼은 accent 컬러를 쓰지 않는다 (colors.pin으로 대체 — DESIGN.md 체크인 정체성 색 통일)', () => {
     const match = codeOnly.match(/recenterButton:\s*\{[\s\S]*?\n  \},/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
     expect(block).not.toMatch(/colors\.accent\b/);
+    // 아이콘 tintColor는 recenterButton 스타일 블록이 아니라 <SymbolView> JSX prop이라
+    // 별도로 확인한다 — textMuted(회색)에서 colors.pin(테라코타)으로 전환됐다.
+    expect(codeOnly).toMatch(/tintColor=\{colors\.pin\}/);
+    expect(codeOnly).not.toMatch(/tintColor=\{colors\.textMuted\}/);
   });
 
   it('Test 32: expo-location을 직접 import하지 않고 checkin/deps의 defaultLocationDeps를 통해서만 접근한다', () => {
@@ -234,12 +241,13 @@ describe('src/app/(tabs)/index.tsx 나침반 모드 토글 배선 계약 (재센
     expect(indexSource).toMatch(/location\.north\.line\.fill/);
   });
 
-  it('Test 37: 재센터링 버튼 아이콘은 모드와 무관하게 colors.textMuted를 쓰고 accent는 쓰지 않는다', () => {
+  it('Test 37 (2026-08-31 갱신): 재센터링 버튼 아이콘은 모드와 무관하게 colors.pin을 쓰고 accent/textMuted는 쓰지 않는다', () => {
     const match = codeOnly.match(/<SymbolView[\s\S]*?\/>/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
-    expect(block).toMatch(/colors\.textMuted/);
+    expect(block).toMatch(/colors\.pin\b/);
     expect(block).not.toMatch(/colors\.accent\b/);
+    expect(block).not.toMatch(/colors\.textMuted\b/);
   });
 
   it('Test 38: handleRecenterPress는 여전히 permission → resolveInstantPosition → animateToRegion 순서를 유지한 뒤 모드를 전환한다 (deps 배열은 [] 유지)', () => {
@@ -362,7 +370,13 @@ describe('src/app/(tabs)/index.tsx 지도 준비 대기 배선 계약 (콜드 �
     // 리뷰 발견(2026-08-30) 이후: onRefine(백그라운드 GPS 보정) 두 곳도 이제
     // waitForMapReady 게이트를 거치므로 4개에서 6개로 늘었다 — 이전에는 이 두 곳이
     // 게이트를 우회해 콜드 부팅 중 조용히 no-op될 수 있었다.
-    const animateToRegionCalls = codeOnly.match(/await waitForMapReady\(\);\s*\n\s*(if \([^\n]*\) return;\s*\n\s*)?mapRef\.current\?\.animateToRegion\(/g) ?? [];
+    // 2026-08-31 — handleRecenterPress의 메인 호출 지점 하나가 waitForMapReady와
+    // animateToRegion 사이에 `const recenterAnimationMs = resolveRecenterAnimationMs();`를
+    // 끼워 넣으므로(극단적 줌아웃 가드), 그 한 줄도 선택적으로 허용한다.
+    const animateToRegionCalls =
+      codeOnly.match(
+        /await waitForMapReady\(\);\s*\n\s*(const recenterAnimationMs = resolveRecenterAnimationMs\(\);\s*\n\s*)?(if \([^\n]*\) return;\s*\n\s*)?mapRef\.current\?\.animateToRegion\(/g
+      ) ?? [];
     expect(animateToRegionCalls.length).toBe(6);
   });
 
@@ -451,21 +465,61 @@ describe('src/app/(tabs)/index.tsx resolveInstantPosition 배선 계약 (구글�
     expect(block).toMatch(/longitudeDelta: MAP_REGION_DELTA/);
   });
 
-  it('Test 67 (회귀 가드 — animateToRegion과 animateCamera가 거의 동시에 호출되면 iOS가 위치 이동 애니메이션을 중간에 취소하고 각도만 반영하던 네이티브 경합 문제): handleRecenterPress가 animateToRegion에 RECENTER_ANIMATION_MS를 명시하고, 그만큼 await한 뒤에야 이어지는 animateCamera(heading/pitch)를 호출한다', () => {
+  it('Test 67 (회귀 가드 — animateToRegion과 animateCamera가 거의 동시에 호출되면 iOS가 위치 이동 애니메이션을 중간에 취소하고 각도만 반영하던 네이티브 경합 문제): handleRecenterPress가 animateToRegion에 recenterAnimationMs를 명시하고, 그만큼 await한 뒤에야 이어지는 animateCamera(heading/pitch)를 호출한다', () => {
     const recenterMatch = codeOnly.match(/const handleRecenterPress = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/);
     expect(recenterMatch).not.toBeNull();
     const block = recenterMatch ? recenterMatch[0] : '';
-    expect(codeOnly).toMatch(/const RECENTER_ANIMATION_MS = 500;/);
-    expect(block).toMatch(/animateToRegion\(\s*\{[\s\S]*?\},\s*\n\s*RECENTER_ANIMATION_MS\s*\n\s*\);/);
-    expect(block).toMatch(/await new Promise\(\(resolve\) => setTimeout\(resolve, RECENTER_ANIMATION_MS\)\);/);
+    // 2026-08-31 — 극단적 줌아웃 회귀 가드(EXTREME_ZOOM_OUT_RATIO)로 duration이
+    // resolveRecenterAnimationMs()가 반환하는 동적 값(recenterAnimationMs)으로
+    // 바뀌었다. RECENTER_ANIMATION_MS 상수 자체는 그 함수의 "평소" 분기 값으로 여전히
+    // 존재한다.
+    // 2026-08-31 — 방향 전환 딜레이가 다른 모션 토큰(≤220ms)보다 유난히 길다는
+    // 지적에 500ms에서 250ms로 단축(구조는 그대로, 숫자만 변경).
+    expect(codeOnly).toMatch(/const RECENTER_ANIMATION_MS = 250;/);
+    expect(codeOnly).toMatch(/return RECENTER_ANIMATION_MS;/);
+    expect(block).toMatch(/const recenterAnimationMs = resolveRecenterAnimationMs\(\);/);
+    expect(block).toMatch(/animateToRegion\(\s*\{[\s\S]*?\},\s*\n\s*recenterAnimationMs\s*\n\s*\);/);
+    expect(block).toMatch(/await new Promise\(\(resolve\) => setTimeout\(resolve, recenterAnimationMs\)\);/);
     // await 지점이 animateToRegion 호출보다 뒤에, nextMode 결정(따라서 이어지는
     // animateCamera 호출들)보다는 앞에 와야 한다.
     const animateToRegionIndex = block.indexOf('animateToRegion(');
-    const awaitTimeoutIndex = block.indexOf('await new Promise((resolve) => setTimeout(resolve, RECENTER_ANIMATION_MS));');
+    const awaitTimeoutIndex = block.indexOf('await new Promise((resolve) => setTimeout(resolve, recenterAnimationMs));');
     const nextModeIndex = block.indexOf("const nextMode: 'north' | 'compass'");
     expect(animateToRegionIndex).toBeGreaterThan(-1);
     expect(awaitTimeoutIndex).toBeGreaterThan(animateToRegionIndex);
     expect(nextModeIndex).toBeGreaterThan(awaitTimeoutIndex);
+  });
+
+  it('Test 69 (회귀 가드 — 지도를 많이 줌아웃한 상태에서 재센터를 누르면 목표 줌까지 여러 번 눌러야 도달하던 문제, 2026-08-31): 현재 위도 델타가 목표의 EXTREME_ZOOM_OUT_RATIO배를 넘으면 애니메이션 없이 즉시 이동한다', () => {
+    expect(codeOnly).toMatch(/const EXTREME_ZOOM_OUT_RATIO = 10;/);
+    const resolveMatch = codeOnly.match(
+      /const resolveRecenterAnimationMs = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/
+    );
+    expect(resolveMatch).not.toBeNull();
+    const block = resolveMatch ? resolveMatch[0] : '';
+    expect(block).toMatch(/currentDelta > MAP_REGION_DELTA \* EXTREME_ZOOM_OUT_RATIO/);
+    expect(block).toMatch(/return 0;/);
+    // onRegionChangeComplete가 현재 델타를 기록해야 이 판정이 가능하다.
+    const regionChangeMatch = codeOnly.match(
+      /const handleRegionChangeComplete = useCallback\(\(region: Region\) => \{[\s\S]*?\n  \}, \[\]\);/
+    );
+    expect(regionChangeMatch).not.toBeNull();
+    expect(regionChangeMatch ? regionChangeMatch[0] : '').toMatch(
+      /lastLatitudeDeltaRef\.current = region\.latitudeDelta;/
+    );
+  });
+
+  it('Test 70 (회귀 가드 — 콜드 부팅 직후 지도를 한 번도 손대지 않은 채 누른 첫 재센터 탭도 여러 번 눌러야 했던 문제, 2026-08-31): currentDelta가 null(onRegionChangeComplete 미수신)이어도 즉시 이동으로 처리한다', () => {
+    const resolveMatch = codeOnly.match(
+      /const resolveRecenterAnimationMs = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/
+    );
+    expect(resolveMatch).not.toBeNull();
+    const block = resolveMatch ? resolveMatch[0] : '';
+    // null도 "즉시 이동" 분기로 떨어져야 한다 — "안전하게 평소 애니메이션"으로
+    // 처리했던 이전 판정(currentDelta != null && ...)이 실기기에서 콜드 부팅 첫 탭에
+    // 그대로 버그를 재현시켜, null도 즉시 이동으로 바꿨다.
+    expect(block).toMatch(/currentDelta == null \|\| currentDelta > MAP_REGION_DELTA \* EXTREME_ZOOM_OUT_RATIO/);
+    expect(block).not.toMatch(/currentDelta != null &&/);
   });
 });
 
@@ -491,5 +545,59 @@ describe('src/app/(tabs)/index.tsx 최초 진입 시 내 위치 기준 확대 �
   it('Test 66: 이 경로는 requestLocationPermission(프롬프트를 띄울 수 있는 호출)을 쓰지 않는다 — 권한 요청은 여전히 "체크인" 첫 탭이 소유한다', () => {
     expect(draftEffectBlock).not.toMatch(/requestLocationPermission/);
     expect(draftEffectBlock).toMatch(/fetchLocationPermission/);
+  });
+});
+
+describe('src/app/(tabs)/index.tsx 행 탭/지연 삭제 배선 계약 (2026-09-01 추가, 05-05-PLAN.md Task 3)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 71: 행 탭이 router.push({ pathname: \'/[id]\', ... })로 상세화면에 진입한다', () => {
+    expect(codeOnly).toMatch(/router\.push\(\{/);
+    expect(codeOnly).toMatch(/pathname:\s*'\/\[id\]'/);
+  });
+
+  it('Test 72: createPendingDeleteController가 등장하고, cleanup에 dispose()가 등장한다', () => {
+    expect(codeOnly).toMatch(/createPendingDeleteController/);
+    expect(codeOnly).toMatch(/pendingDeleteController\.dispose\(\)/);
+  });
+
+  // T-05-13 회귀 가드 — dispose()를 clearTimeout으로 되돌리면 언마운트 시 삭제가
+  // "취소"로 바뀌어(현재는 "즉시 확정"), 사용자가 실행취소를 누르지 않았는데도
+  // 화면을 떠났다는 이유로 삭제가 조용히 취소된다 — 다음 로드에서 지워졌어야 할
+  // 행이 부활한다. 파일 전체가 아니라 지연 삭제 컨트롤러의 cleanup effect 블록만
+  // 좁혀서 검사한다 — 이 파일에는 resolveInstantPosition의 GPS-vs-타임아웃 레이스가
+  // 쓰는, 이 기능과 무관한 기존 clearTimeout(timer!) 호출이 이미 존재하기 때문이다.
+  it('Test 73 (T-05-13 회귀 가드): 지연 삭제 컨트롤러의 cleanup effect는 clearTimeout이 아니라 dispose()로 정리한다', () => {
+    const match = codeOnly.match(
+      /useEffect\(\(\) => \{\s*return \(\) => \{\s*pendingDeleteController\.dispose\(\);[\s\S]*?\n  \}, \[pendingDeleteController\]\);/
+    );
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).not.toMatch(/clearTimeout/);
+  });
+
+  it('Test 74: deleteCheckin 호출이 runWithSingleRetry로 감싸져 있다', () => {
+    expect(codeOnly).toMatch(/runWithSingleRetry\(\(\)\s*=>\s*deleteCheckin\(/);
+  });
+
+  // Pitfall 5와 동일 계열의 순서 계약 — DB 삭제 성공 후에만 파일을 정리한다.
+  it('Test 75: deleteFile이 등장하고, 그 호출이 deleteCheckin 호출보다 뒤 인덱스에 있다', () => {
+    const deleteCheckinIndex = codeOnly.indexOf('deleteCheckin(');
+    const deleteFileIndex = codeOnly.indexOf('deleteFile(');
+    expect(deleteCheckinIndex).toBeGreaterThan(-1);
+    expect(deleteFileIndex).toBeGreaterThan(-1);
+    expect(deleteFileIndex).toBeGreaterThan(deleteCheckinIndex);
+  });
+
+  it('Test 76: hiddenIds 필터(filteredTodayCheckins)가 TodayBottomSheet에 넘기는 배열과 지도 핀/궤적선 배열 양쪽 모두에 적용된다', () => {
+    expect(codeOnly).toMatch(/const filteredTodayCheckins = useMemo\(/);
+    expect(codeOnly).toMatch(/checkins=\{filteredTodayCheckins\}/);
+    expect(codeOnly).toMatch(/\{filteredTodayCheckins\.map\(/);
+    expect(codeOnly).toMatch(/buildTrajectoryCoordinates\(filteredTodayCheckins\)/);
+  });
+
+  it('Test 77: UNDO_WINDOW_MS 단일 출처 — 4000 리터럴이 이 파일에 등장하지 않는다', () => {
+    expect(codeOnly).not.toMatch(/\b4000\b/);
   });
 });

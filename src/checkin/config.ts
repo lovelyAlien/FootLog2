@@ -36,8 +36,12 @@ export type CryptoDeps = Pick<typeof Crypto, 'randomUUID'>;
 // 테스트 더블이 불필요하게 복잡해진다(03-RESEARCH.md Pitfall 2). 대신 프로덕션이 실제로
 // 필요로 하는 동작(사진 원본을 documentDirectory로 복사) 하나만 함수 포트로 좁힌다.
 // 반환값은 복사된 목적지 파일의 uri 문자열.
+// deleteFile(05-02-PLAN.md Task 3, 05-RESEARCH.md Pitfall 4)도 같은 근거로 이 포트에
+// 포함된다 — 사진 삭제/교체(D-03/D-04) 시 화면이 expo-file-system을 직접 import하지
+// 않도록 좁힌 함수 포트로만 노출한다.
 export type PhotoStorageDeps = {
   copyIntoDocumentDirectory(sourceUri: string, fileName: string): Promise<string>;
+  deleteFile(uri: string): Promise<void>;
 };
 
 // expo-image-manipulator SDK 57 새 API는 체이닝 컨텍스트 객체
@@ -69,3 +73,10 @@ export const MAX_PHOTO_DIMENSION_PX = 1600;
 // 검증 경로가 없음). 03-RESEARCH.md Standard Stack 기준 expo-location@~57.0.14의
 // LocationAccuracy.Balanced = 3.
 export const LOCATION_ACCURACY_BALANCED = 3 as const;
+
+// 05-03-PLAN.md Task 2 — 지도 region의 위/경도 델타(줌 레벨 근사치). 원래
+// (tabs)/index/index.tsx(오늘 뷰)의 확인 핀 카메라 이동에서만 쓰던 지역 상수였는데,
+// CheckinDetailScreen.tsx의 잠긴 정적 지도 미리보기도 동일 델타가 필요해졌다 — 값을
+// 두 곳에 중복 선언하지 않는다는 이 저장소의 규약에 따라 여기로 옮겨 양쪽이 같은
+// 상수를 import한다. 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
+export const MAP_REGION_DELTA = 0.01;

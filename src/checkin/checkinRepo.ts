@@ -143,3 +143,30 @@ export async function updateCheckinNoteAndPhoto(
     id
   );
 }
+
+// 05-02-PLAN.md Task 1 — 상세화면(05-03-PLAN.md)이 id로 체크인 1건을 조회할 때 쓴다.
+// getLatestCheckinCoordinate와 동일하게 `row ?? null` 관용구로 undefined를 null로
+// 정규화한다(존재하지 않는 id는 null, 예외 아님).
+export async function getCheckinById(
+  db: MigratableDb,
+  id: string
+): Promise<CheckinRow | null> {
+  const row = await db.getFirstAsync<CheckinRow>(
+    'SELECT * FROM checkins WHERE id = ?',
+    id
+  );
+  return row ?? null;
+}
+
+// 05-02-PLAN.md Task 1 — 스와이프 삭제(05-RESEARCH.md Pattern 7 지연 삭제)의 4초 타이머
+// 만료 시점에 실제 DB row를 제거하는 데 쓴다. 의도적으로 photo_path 파일 정리를 하지
+// 않는다 — 이 함수는 checkins row만 책임진다. 첨부 사진 파일 정리는 호출자(오늘 화면의
+// 지연 삭제 커밋 경로, 05-05-PLAN.md)가 PhotoStorageDeps.deleteFile로 별도 수행해야
+// 한다(05-RESEARCH.md Assumption A3 / Open Question #2에 대한 이 phase의 확정 답 —
+// repo 레이어에 파일 I/O를 밀어 넣지 않는다). 트랜잭션으로 감싸지 않는다: 단일 문장이라
+// commitCheckin의 BEGIN/COMMIT 패턴이 필요 없다. 존재하지 않는 id로 호출해도
+// `DELETE ... WHERE id = ?`는 매칭 row가 없으면 그냥 0행 영향으로 끝나 throw하지
+// 않는다(멱등).
+export async function deleteCheckin(db: MigratableDb, id: string): Promise<void> {
+  await db.runAsync('DELETE FROM checkins WHERE id = ?', id);
+}

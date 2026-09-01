@@ -26,7 +26,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] **Phase 2: Notification Infrastructure** - 앱이 체크인/회고 리마인더를 신뢰성 있게 스케줄링하고 스스로 복구하며, 확정된 권한 프롬프트 문구와 거부 상태 UI 패턴을 갖춘다. (completed 2026-08-27)
 - [x] **Phase 3: Check-in Core Loop** - 사용자가 자유형 체크인(위치 + 선택적 사진/메모)을 GPS·저장 실패를 포함해 안정적으로 남길 수 있다. (completed 2026-08-27)
 - [x] **Phase 4: Today View** - 사용자가 오늘의 체크인들을 지도에서 보여주는 홈 화면과, 새 체크인을 위한 마찰 낮은 진입점을 갖는다. (completed 2026-08-31)
-- [ ] **Phase 5: Check-in Detail & Edit** - 사용자가 기록된 개별 체크인을 조회·수정·삭제할 수 있다.
+- [x] **Phase 5: Check-in Detail & Edit** - 사용자가 기록된 개별 체크인을 조회·수정·삭제할 수 있다. (completed 2026-08-31)
 - [ ] **Phase 6: Calendar Tab** - 사용자가 월 그리드와 빠른 날짜별 스크러버로 과거 날짜를 훑어볼 수 있다.
 - [ ] **Phase 7: Day-end Reflection** - 사용자가 하루 루프의 핵심 요소인 짧은 하루 마무리 회고를 완료할 수 있다.
 - [ ] **Phase 8: Export & Polish** - 사용자가 데이터를 로컬로 내보낼 수 있고, 앱이 이름/접근성 기준을 충족한다.
@@ -138,9 +138,18 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
   1. 완료된 체크인 행을 탭하면 시간(모노스페이스) → 정적 지도 미리보기 → "지도 앱에서 열기" → 사진 → 메모 순서로 상세화면이 열린다.
   2. 사용자는 상세화면에서 언제든 메모/사진을 수정할 수 있으며, 저장되지 않은 메모 수정 내용은 앱이 백그라운드로 전환될 때 강제로 flush된다.
   3. "지도 앱에서 열기"는 저장되지 않은 수정 내용을 잃지 않고 지도 앱에서 위치를 연다.
-  4. 사용자는 메모/사진 유무와 무관하게 체크인을 스와이프 삭제할 수 있으며(빨강이 아닌 올리브그린 어포던스), 4초 스낵바로 되돌릴 수 있다.
+  4. 사용자는 메모/사진 유무와 무관하게 체크인을 스와이프 삭제할 수 있으며(빨강이 아닌 Pin 테라코타 어포던스, 2026-09-01 갱신), 4초 스낵바로 되돌릴 수 있다.
 
-**Plans**: TBD
+**Plans**: 7 plans (5 waves)
+
+- [x] 05-01-PLAN.md — 라우트 폴더 재구성((tabs)/index/{_layout,index}.tsx) + 회귀 가드 5개 파일 경로 갱신 (wave 1)
+- [x] 05-02-PLAN.md — 데이터/유틸 레이어: getCheckinById·deleteCheckin·formatLocalMonthDay·PhotoStorageDeps.deleteFile (wave 1)
+- [x] 05-03-PLAN.md — 상세화면 [id] 라우트 + 조회 + 시각/정적지도/사진 고정 레이아웃 (wave 2)
+- [x] 05-04-PLAN.md — 메모 편집·저장 + beforeRemove 미저장 경고 + AppState flush + Maps 딥링크 (wave 3)
+- [x] 05-05-PLAN.md — 리스트 행 탭 진입 + 스와이프 삭제 + 4초 지연 삭제/undo 스낵바 (wave 3)
+- [x] 05-06-PLAN.md — 상세화면 사진 교체/삭제(D-03/D-04) + 파일 삭제 순서 원자성 (wave 4)
+- [x] 05-07-PLAN.md — 전체 게이트 + 시뮬레이터 제스처 경합/시각 검증 + 사용자 확인 (wave 5)
+
 **UI hint**: yes
 
 ### Phase 6: Calendar Tab
@@ -200,7 +209,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Notification Infrastructure | 8/8 | Complete   | 2026-08-27 |
 | 3. Check-in Core Loop | 12/12 | Complete   | 2026-08-28 |
 | 4. Today View | 7/7 | Complete   | 2026-08-31 |
-| 5. Check-in Detail & Edit | 0/TBD | Not started | - |
+| 5. Check-in Detail & Edit | 7/7 | Complete   | 2026-08-31 |
 | 6. Calendar Tab | 0/TBD | Not started | - |
 | 7. Day-end Reflection | 0/TBD | Not started | - |
 | 8. Export & Polish | 0/TBD | Not started | - |

@@ -13,7 +13,7 @@ import path from 'path';
 import { stripComments } from '../../test-utils/stripComments';
 
 const APP_DIR = path.join(__dirname, '..');
-const TODAY_SCREEN_PATH = path.join('(tabs)', 'index.tsx');
+const TODAY_SCREEN_PATH = path.join('(tabs)', 'index', 'index.tsx');
 
 function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(APP_DIR, relativePath), 'utf-8');
@@ -32,9 +32,16 @@ describe('src/app/(tabs)/index.tsx 단일 쿼리 계약 (04-CONTEXT.md D-11)', (
     expect(codeOnly).not.toMatch(/\bINSERT \b|\bSELECT \b|\bUPDATE \b|\bDELETE \b/);
   });
 
-  it('reloadTodayCheckins() 호출이 정확히 4회 등장한다', () => {
+  // 05-05-PLAN.md Task 3 — 지연 삭제 커밋 성공 시 목록을 새로 읽는 5번째 호출이
+  // 추가됐다(commitPendingDelete). 04-05가 확정한 04(체크인 저장 성공/AppState
+  // active 복귀/마운트 1회/드래프트 무관 로더 정의 등)에 이 신규 호출 1개가 더해진
+  // 것이며, "단일 쿼리 함수를 여러 지점에서 재사용한다"는 D-11 원칙 자체는 그대로다.
+  //
+  // 05-REVIEW.md CR-01 — useFocusEffect가 6번째 호출로 추가됐다(상세화면에서 편집 후
+  // 뒤로 돌아왔을 때 갱신되는 유일한 경로 — AppState는 인앱 네비게이션에 반응하지 않는다).
+  it('reloadTodayCheckins() 호출이 정확히 6회 등장한다 (2026-09-01: CR-01 — 상세화면 복귀 시 재조회 경로 추가)', () => {
     const occurrences = codeOnly.match(/reloadTodayCheckins\(\)/g) ?? [];
-    expect(occurrences.length).toBe(4);
+    expect(occurrences.length).toBe(6);
   });
 
   it('commitCheckin 성공 분기(result.ok 블록) 안에 reloadTodayCheckins가 존재한다', () => {
@@ -52,14 +59,27 @@ describe('src/app/(tabs)/index.tsx 단일 쿼리 계약 (04-CONTEXT.md D-11)', (
     const block = match ? match[0] : '';
     expect(block).toMatch(/reloadTodayCheckins\(\)/);
   });
+
+  it('useFocusEffect 안에 reloadTodayCheckins가 존재한다 (05-REVIEW.md CR-01 — 상세화면 편집 후 인앱 복귀 시 갱신)', () => {
+    const match = codeOnly.match(
+      /useFocusEffect\(\s*useCallback\(\(\) => \{[\s\S]*?\n\s*\}, \[reloadTodayCheckins\]\)\s*\);/
+    );
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/reloadTodayCheckins\(\)/);
+  });
+
+  it('expo-router에서 useFocusEffect를 import한다 (CR-01)', () => {
+    expect(codeOnly).toMatch(/import\s*\{[^}]*useFocusEffect[^}]*\}\s*from\s*'expo-router'/);
+  });
 });
 
 describe('src/app/(tabs)/index.tsx 저장된 핀 계약 (04-CONTEXT.md D-10)', () => {
-  it('styles.pinSaved 정의가 존재하고 colors.accentSoft를 쓴다', () => {
+  it('styles.pinSaved 정의가 존재하고 colors.pinSoft를 쓴다 (2026-08-31: accentSoft에서 전환)', () => {
     const match = codeOnly.match(/pinSaved:\s*\{[^}]*\},/s);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
-    expect(block).toMatch(/colors\.accentSoft/);
+    expect(block).toMatch(/colors\.pinSoft\b/);
   });
 
   it('pinSaved 스타일 블록에 borderWidth/borderColor가 없다 (저장 후 3단계 시각 구분 미유지)', () => {
@@ -70,16 +90,21 @@ describe('src/app/(tabs)/index.tsx 저장된 핀 계약 (04-CONTEXT.md D-10)', (
     expect(block).not.toMatch(/borderColor/);
   });
 
-  it('저장된 핀 마커에 draggable/onDragEnd가 붙지 않는다', () => {
-    const match = codeOnly.match(/\{todayCheckins\.map\([\s\S]*?\n\s*\)\)\}/);
+  // 05-05-PLAN.md Task 3 — 지도 핀 map 소스가 todayCheckins에서 filteredTodayCheckins로
+  // 바뀌었다(지연 삭제 대기 중인 항목을 지도에서도 함께 숨기기 위함, D-11 단일 쿼리
+  // 원칙 자체는 변경 없음 — todayCheckins를 걸러낸 파생 배열일 뿐 별도 쿼리가 아니다).
+  // 아래 두 단언의 정규식 앵커만 변수명에 맞춰 갱신한다 — 검증하는 계약(draggable/
+  // onDragEnd/pinStyleForSource 미등장)은 그대로다.
+  it('저장된 핀 마커에 draggable/onDragEnd가 붙지 않는다 (2026-09-01: map 소스가 filteredTodayCheckins로 변경)', () => {
+    const match = codeOnly.match(/\{filteredTodayCheckins\.map\([\s\S]*?\n\s*\)\)\}/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
     expect(block).not.toMatch(/draggable/);
     expect(block).not.toMatch(/onDragEnd/);
   });
 
-  it('pinStyleForSource가 todayCheckins.map 블록 안에서 호출되지 않는다', () => {
-    const match = codeOnly.match(/\{todayCheckins\.map\([\s\S]*?\n\s*\)\)\}/);
+  it('pinStyleForSource가 filteredTodayCheckins.map 블록 안에서 호출되지 않는다', () => {
+    const match = codeOnly.match(/\{filteredTodayCheckins\.map\([\s\S]*?\n\s*\)\)\}/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
     expect(block).not.toMatch(/pinStyleForSource/);
@@ -93,7 +118,7 @@ describe('src/app/(tabs)/index.tsx 궤적선 계약 (REQ-trajectory-line)', () =
     const match = codeOnly.match(/<Polyline[\s\S]*?\/>/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
-    expect(block).toMatch(/strokeColor=\{colors\.accentSoft\}/);
+    expect(block).toMatch(/strokeColor=\{colors\.pinSoft\}/);
     expect(block).toMatch(/strokeWidth=\{TRAJECTORY_STROKE_WIDTH\}/);
   });
 
@@ -124,15 +149,21 @@ describe('src/app/(tabs)/index.tsx 궤적선 계약 (REQ-trajectory-line)', () =
 });
 
 describe('src/app/(tabs)/index.tsx accent 예산 계약', () => {
-  it('colors.accent(단어 경계)가 5회 이하로 유지된다 (foundation-wiring Test 6과 동일 상한)', () => {
+  it('colors.accent(단어 경계)가 전혀 등장하지 않는다 (2026-08-31: 체크인 버튼/지도 마커/재센터 아이콘 모두 colors.pin으로 이전, foundation-wiring Test 6과 동일)', () => {
     const occurrences = codeOnly.match(/\bcolors\.accent\b/g) ?? [];
-    expect(occurrences.length).toBeLessThanOrEqual(5);
+    expect(occurrences.length).toBe(0);
   });
 });
 
-describe('src/app/(tabs)/index.tsx 스코프 경계 계약 (D-03, Phase 5/7 미선점)', () => {
-  it('상세화면 진입 식별자가 등장하지 않는다 (Phase 5 REQ-checkin-detail-base 소관)', () => {
-    expect(codeOnly).not.toMatch(/router\.push/);
+// Test 반전 근거(2026-09-01) — 04-CONTEXT.md D-03은 Phase 4가 이 화면에 "상세화면
+// 진입 식별자가 아직 없다"고 명시적으로 남겨둔 스코프 경계였다. 05-05-PLAN.md
+// Task 3이 REQ-checkin-detail-base(행 탭 → 상세화면)를 이 파일에 배선하면서 그
+// 경계를 의도한 대로 반전시킨다 — 아래 단언은 회귀가 아니라 Phase 4→5 전환의 계획된
+// 결과다. Phase 7(회고) 스코프 경계는 이 phase와 무관하므로 그대로 유지한다.
+describe('src/app/(tabs)/index.tsx 스코프 경계 계약 (D-03 반전 — Phase 5 REQ-checkin-detail-base 배선, Phase 7 미선점)', () => {
+  it('상세화면 진입 배선이 존재한다: router.push와 pathname: \'/[id]\' (2026-09-01: D-03 반전, useRouter/<Link>는 여전히 쓰지 않는다)', () => {
+    expect(codeOnly).toMatch(/router\.push/);
+    expect(codeOnly).toMatch(/pathname:\s*'\/\[id\]'/);
     expect(codeOnly).not.toMatch(/useRouter/);
     expect(codeOnly).not.toMatch(/<Link\b/);
   });

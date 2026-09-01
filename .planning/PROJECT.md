@@ -28,8 +28,8 @@ FootLog는 iOS 전용, 완전 로컬 위치 체크인 저널입니다. 하루 �
 - [ ] Foundation: Expo/EAS Dev Client 스캐폴드, 디자인 토큰 export, SQLite 마이그레이션 프레임워크 (3개 요구사항)
 - [ ] Notification infrastructure: 반복 트리거 스케줄링 + 자가진단 레지스트리, 권한 프롬프트 문구, 거부 상태 처리 (3개 요구사항)
 - [x] Check-in core loop: 위치 캡처 → 즉시 저장, 저장 실패 복구, 드래그 가능한 확인 핀, 위치 권한 거부 폴백 (4개 요구사항) — Phase 3 빌드 완료(2026-08-27), 시장/사용 가치 검증은 트라이얼 이후 별도(Validated 섹션 참고)
-- [ ] Today view: 지도+바텀시트, 사진 리사이징/저장, 맥락적 온보딩, 이동 궤적선 (4개 요구사항)
-- [ ] Check-in detail & edit: 상세화면, 고정 레이아웃 순서, 백그라운드 전환 시 강제저장, 지도 앱 딥링크, 스와이프 삭제 (5개 요구사항)
+- [x] Today view: 지도+바텀시트, 사진 리사이징/저장, 맥락적 온보딩, 이동 궤적선 (4개 요구사항) — Phase 4 빌드 완료(2026-08-31), 시장/사용 가치 검증은 트라이얼 이후 별도(Validated 섹션 참고)
+- [x] Check-in detail & edit: 상세화면, 고정 레이아웃 순서, 백그라운드 전환 시 강제저장, 지도 앱 딥링크, 스와이프 삭제 (5개 요구사항) — Phase 5 빌드 완료(2026-09-01), 시장/사용 가치 검증은 트라이얼 이후 별도(Validated 섹션 참고)
 - [ ] Calendar tab: 월 그리드, 과거 날짜 읽기전용 뷰, 플로팅 날짜 스크러버 (3개 요구사항)
 - [ ] Day-end reflection: 회고 모달, 자동저장, 알림, 과거 날짜 회고 편집 (7개 요구사항)
 - [ ] Export & polish: 로컬 JSON+사진 내보내기, EXIF 지오태깅(카메라 한정), 앱 이름, 접근성 기본 적용 (5개 요구사항)
@@ -84,4 +84,4 @@ FootLog는 iOS 전용, 완전 로컬 위치 체크인 저널입니다. 하루 �
 | 진행률/완료 수치를 UI에 절대 노출하지 않음(CRITICAL, 문서 전반) | AI 생성 목업에서 반복적으로 재도입되었다가 반복적으로 거부됨 — 하드 룰로 확정 | ✓ Good |
 
 ---
-*Last updated: 2026-08-27 after Phase 3 (check-in-core-loop) completion*
+*Last updated: 2026-09-01 after Phase 5 (check-in-detail-edit) completion*

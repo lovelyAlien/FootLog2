@@ -11,8 +11,10 @@
 // 지도 스타일 토큰 결정(03-09-PLAN.md 지도 스타일 토큰 결정 항목): colors.mapLand,
 // colors.mapRoad, colors.mapWater는 이 화면에서 쓰지 않는다. react-native-maps의
 // customMapStyle prop은 구글 지도 provider 전용이고 이 phase는 API 키가 필요 없는
-// 애플 지도 기본 provider를 쓴다(provider 미지정). accent 예산은 체크인 버튼과
-// 지도 위 확인 핀(DESIGN.md 승인 6개 용도 중 "체크인 버튼"과 "지도 마크")에만 쓴다.
+// 애플 지도 기본 provider를 쓴다(provider 미지정). accent(올리브)는 체크인 버튼 등
+// UI 크롬에만 쓴다 — 지도 위 확인 핀/저장된 핀/궤적선은 2026-08-31부터
+// colors.pin/pinSoft(테라코타, DESIGN.md 참고)를 쓴다. 이건 accent의 "1개, 절대 안
+// 늘림" 원칙을 깨는 게 아니라 지도 마커 전용 별도 범주(구글맵/애플맵 관례 차용)다.
 //
 // 03-09: 체크인 탭 → 권한 요청 → 위치 캡처 → 확인 핀 드롭 → 드래프트 upsert.
 // 03-10 Task 1: "확인"/"다시 시도" → commitCheckin 배선 + 미저장 이탈 안내.
@@ -31,7 +33,7 @@ import {
   View,
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
-import { Redirect } from 'expo-router';
+import { Redirect, router, useFocusEffect } from 'expo-router';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import type { MarkerDragStartEndEvent, Region } from 'react-native-maps';
 // reanimated default export는 반드시 `Reanimated`로 바인딩한다 — `Animated`로 쓰면
@@ -41,66 +43,88 @@ import type { MarkerDragStartEndEvent, Region } from 'react-native-maps';
 // 않는다 — 시트 제스처는 @gorhom/bottom-sheet 내부가 처리한다(checkin-wiring gesture-handler 미사용 회귀 가드).
 import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, motion, radius, spacing, typography } from '../../theme/tokens';
-import { fetchNotificationPermission, shouldShowPriming } from '../../notifications/permissions';
-import type { PermissionSnapshot } from '../../notifications/permissions';
-import { NotificationDeniedBanner } from '../../components/NotificationDeniedBanner';
-import { LocationDeniedBanner } from '../../components/LocationDeniedBanner';
-import { CheckinActionCard } from '../../components/CheckinActionCard';
-import { TodayBottomSheet } from '../../today/TodayBottomSheet';
+import { colors, motion, radius, spacing, typography } from '../../../theme/tokens';
+import { fetchNotificationPermission, shouldShowPriming } from '../../../notifications/permissions';
+import type { PermissionSnapshot } from '../../../notifications/permissions';
+import { NotificationDeniedBanner } from '../../../components/NotificationDeniedBanner';
+import { LocationDeniedBanner } from '../../../components/LocationDeniedBanner';
+import { CheckinActionCard } from '../../../components/CheckinActionCard';
+import { TodayBottomSheet } from '../../../today/TodayBottomSheet';
 import {
   checkinReducer,
   initialCheckinState,
   canEditNoteAndPhoto,
   CHECKIN_COPY,
-} from '../../checkin/checkinFlow';
-import { fetchLocationPermission, requestLocationPermission } from '../../checkin/permissions';
-import { resolveCheckinLocation } from '../../checkin/location';
-import type { FallbackSources, ResolvedLocation } from '../../checkin/location';
-import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../../checkin/draftRepo';
+} from '../../../checkin/checkinFlow';
+import { fetchLocationPermission, requestLocationPermission } from '../../../checkin/permissions';
+import { resolveCheckinLocation } from '../../../checkin/location';
+import type { FallbackSources, ResolvedLocation } from '../../../checkin/location';
+import { loadRecoverableDraft, upsertDraft, updateDraftCoordinate } from '../../../checkin/draftRepo';
 import {
   commitCheckin,
+  deleteCheckin,
   getLatestCheckinCoordinate,
   getTodayCheckins,
+  runWithSingleRetry,
   updateCheckinNoteAndPhoto,
-} from '../../checkin/checkinRepo';
-import type { NewCheckinParams } from '../../checkin/checkinRepo';
-import { defaultCryptoDeps, defaultLocationDeps } from '../../checkin/deps';
+} from '../../../checkin/checkinRepo';
+import type { NewCheckinParams } from '../../../checkin/checkinRepo';
+import { defaultCryptoDeps, defaultLocationDeps, defaultPhotoStorageDeps } from '../../../checkin/deps';
 import {
   CAPTURE_TIMEOUT_MS,
   LAST_KNOWN_MAX_AGE_MS,
   LOCATION_ACCURACY_BALANCED,
-} from '../../checkin/config';
+  MAP_REGION_DELTA,
+} from '../../../checkin/config';
 import {
   PHOTO_ACTION_SHEET_CANCEL_INDEX,
   PHOTO_ACTION_SHEET_OPTIONS,
   PHOTO_SOURCE_BY_ACTION_SHEET_INDEX,
   pickAndCopyPhoto,
-} from '../../checkin/photos';
-import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../../checkin/localDate';
-import type { CheckinRow, LocationSource } from '../../db/schema';
-import type { CheckinState } from '../../checkin/checkinFlow';
+} from '../../../checkin/photos';
+import { resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from '../../../checkin/localDate';
+import type { CheckinRow, LocationSource } from '../../../db/schema';
+import type { CheckinState } from '../../../checkin/checkinFlow';
 import { SymbolView } from 'expo-symbols';
-import { buildTrajectoryCoordinates } from '../../today/trajectory';
+import { buildTrajectoryCoordinates } from '../../../today/trajectory';
+import { createPendingDeleteController } from '../../../today/pendingDelete';
+import type { PendingDeleteItem } from '../../../today/pendingDelete';
+import { UndoSnackbar } from '../../../today/UndoSnackbar';
 
-// 확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 — GPS 좌표 근방을 자연스럽게 보여줄
-// 정도의 값이며, 창업자 실기기 수동 QA를 위한 근사치일 뿐 정밀 계산값이 아니다.
-const MAP_REGION_DELTA = 0.01;
+// MAP_REGION_DELTA(확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 근사치)는
+// 05-03-PLAN.md Task 2부터 src/checkin/config.ts로 옮겨졌다 — CheckinDetailScreen.tsx의
+// 잠긴 정적 지도 미리보기도 같은 값이 필요해져 두 곳에 값을 중복 선언하지 않기
+// 위해서다(이 저장소 규약). 위 checkin/config import에서 함께 가져온다.
 
 // 나침반 모드 진입 시 지도를 기울이는 각도 — 구글맵 "나침반(3D 시선 회전)" 모드의
 // 살짝 눕는 느낌을 재현한다. 45도는 애플/구글 지도 모두에서 흔히 쓰는 관용적인 값.
 const COMPASS_PITCH_DEGREES = 45;
 
 // 재센터 버튼의 animateToRegion(위치+줌) 애니메이션 길이. handleRecenterPress가
-// 이 시간만큼 기다린 뒤에야 후속 animateCamera(heading/pitch)를 보낸다 —
-// react-native-maps 기본값(500ms)과 동일하게 맞춰 iOS 네이티브 카메라 애니메이션
-// 경합을 피한다(아래 handleRecenterPress 주석 참고).
-const RECENTER_ANIMATION_MS = 500;
+// 이 시간만큼 기다린 뒤에야 후속 animateCamera(heading/pitch)를 보낸다 — 동시에
+// 부르면 iOS MKMapView가 진행 중이던 위치 애니메이션을 취소하고 각도만 반영하는
+// 네이티브 경합이 있어(아래 handleRecenterPress 주석 참고) 순차 실행이 필수다.
+// 2026-08-31 — 예전엔 react-native-maps 기본값(500ms)에 맞췄으나, 이 앱의 다른
+// 모션 토큰(motion.bottomSheetSnapMs 220ms, motion.confirmPinDropMs 160ms)보다
+// 훨씬 길어 방향 전환이 유난히 느리게 느껴진다는 지적에 250ms로 단축 — 구조(순차
+// 실행)는 그대로 두고 숫자만 줄인다.
+const RECENTER_ANIMATION_MS = 250;
+
+// 회귀 가드 — "지도를 많이 줌아웃한 상태에서 재센터를 누르면 목표 줌까지 한 번에
+// 안 가고 여러 번 눌러야 하는" 문제(2026-08-31 창업자 리포트, 실기기에서 재현 확인).
+// 원인은 iOS MKMapView의 animateToRegion이 위도 델타가 극단적으로 큰 폭(대륙/국가
+// 스케일)만큼 줄어드는 애니메이션을 요청받으면 한 호출로 목표까지 수렴하지 않고
+// 매 호출마다 그 격차의 일부만 좁힌다는 네이티브 특성이다(요청한 duration과 무관 —
+// 더 긴 duration을 줘도 같은 현상). 현재 화면 위도 델타가 목표(MAP_REGION_DELTA)의
+// 이 배수보다 크면 "극단적 줌아웃"으로 보고, 애니메이션 대신 즉시 이동(duration 0)
+// 시켜 여러 번 누를 필요 자체를 없앤다. 평소(약간 팬/줌된 정도)의 재센터는 여전히
+// 부드럽게 애니메이션된다.
+const EXTREME_ZOOM_OUT_RATIO = 10;
 
 // 확인 핀 히트 영역 확장값 — 24px 원을 최소 터치 타겟 크기까지 넓힌다.
 const PIN_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
 
-// 이동 궤적선 두께 — 04-UI-SPEC.md §이동 궤적선 확정값(accentSoft, 2px, 실선).
+// 이동 궤적선 두께 — 2px, 실선. 색상은 2026-08-31부터 colors.pinSoft(테라코타, DESIGN.md 참고).
 const TRAJECTORY_STROKE_WIDTH = 2;
 
 // 재센터 버튼과 앱 최초 진입(내 위치 기준 확대 시작) 둘 다가 공유하는 위치 조회
@@ -192,9 +216,20 @@ export default function Index() {
   // 스냅 지점(TodayBottomSheet)과 플로팅 버튼 오프셋 계산(floatingButtonStyle)이
   // 공유하는 공통 좌표계 기준이다(04-06-PLAN.md Task 2, D-05).
   const [containerHeight, setContainerHeight] = useState(0);
+  // 05-05-PLAN.md — 지연 삭제(스와이프) 대기 중인 행을 리스트/지도 핀/궤적선에서
+  // 함께 숨긴다. undo 창(4초) 동안 리스트에서만 사라지고 지도에 핀이 남아있으면
+  // 상태가 어긋나 보이므로, 아래 filteredTodayCheckins를 세 곳(시트/핀/궤적선)이
+  // 공유한다.
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  // 스낵바 표시 여부 — pendingDelete 컨트롤러의 onChange가 채운다.
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const mapRef = useRef<MapView>(null);
   const lastMapCoordinateRef = useRef<{ lat: number; lng: number } | null>(null);
+  // 현재 화면 위도 델타(줌 폭) — EXTREME_ZOOM_OUT_RATIO 판정에 쓴다. null이면 아직
+  // onRegionChangeComplete가 한 번도 안 왔다는 뜻이며, resolveRecenterAnimationMs는
+  // 이 경우도 "즉시 이동"으로 처리한다(이미 목표 근처라는 근거가 없으므로).
+  const lastLatitudeDeltaRef = useRef<number | null>(null);
   const orientationModeRef = useRef<'north' | 'compass'>('north');
   // 구글맵 실제 동작 재현 — 첫 탭은 "북쪽 고정으로 확대·이동"만 하고 나침반 모드로
   // 바로 들어가지 않는다. 이 ref가 false인 동안은 orientationModeRef가 이미 어떤
@@ -391,12 +426,132 @@ export default function Index() {
     reloadTodayCheckins();
   }, [reloadTodayCheckins]);
 
-  // 궤적선 좌표 — getTodayCheckins가 이미 timestamp_utc 오름차순으로 정렬해 반환하므로
-  // 여기서 다시 정렬하지 않는다(D-11 단일 쿼리 계약).
-  const trajectoryCoordinates = useMemo(
-    () => buildTrajectoryCoordinates(todayCheckins),
-    [todayCheckins]
+  // 05-REVIEW.md CR-01 — 상세화면([id].tsx)에서 메모/사진을 편집하고 뒤로가기로
+  // 돌아왔을 때 이 화면을 갱신하는 유일한 경로. AppState 리스너는 앱이 백그라운드로
+  // 나갔다 돌아올 때만 반응하고 인앱 네비게이션(뒤로가기)에는 반응하지 않는다 — 이
+  // 경로가 없으면 목록의 메모 미리보기가 오래된 채로 남을 뿐 아니라, 상세화면에서
+  // 사진을 교체한 직후 같은 행을 스와이프 삭제하면 캐시된 옛 photo_path로 삭제
+  // 대상을 잘못 잡아 실제 새 사진 파일이 디스크에 orphan으로 남는다(DB row는 이미
+  // 삭제됐으니 아무도 그 파일을 정리하지 않는다). 마운트 시 1회 로드와 별개로 둔다 —
+  // 위 useEffect를 지우면 마운트 최초 포커스 타이밍에 대한 드래프트 복구 순서 가정이
+  // 깨질 수 있다.
+  useFocusEffect(
+    useCallback(() => {
+      reloadTodayCheckins();
+    }, [reloadTodayCheckins])
   );
+
+  // 05-05-PLAN.md — 지연 삭제 대기 중인 항목을 리스트/지도 핀/궤적선 세 곳 모두에서
+  // 함께 숨긴다(리스트에서만 사라지면 undo 창 동안 지도 상태가 어긋나 보인다).
+  const filteredTodayCheckins = useMemo(
+    () => todayCheckins.filter((checkin) => !hiddenIds.has(checkin.id)),
+    [todayCheckins, hiddenIds]
+  );
+
+  // 궤적선 좌표 — getTodayCheckins가 이미 timestamp_utc 오름차순으로 정렬해 반환하므로
+  // 여기서 다시 정렬하지 않는다(D-11 단일 쿼리 계약). 지연 삭제 대기 중인 항목은
+  // filteredTodayCheckins가 이미 제외했다.
+  const trajectoryCoordinates = useMemo(
+    () => buildTrajectoryCoordinates(filteredTodayCheckins),
+    [filteredTodayCheckins]
+  );
+
+  // 05-05-PLAN.md Task 3 — 지연 삭제 커밋 로직(4초 타이머 만료 또는 언마운트 즉시
+  // 확정 시 pendingDelete.ts가 호출). 순서: deleteCheckin(단일 재시도) → 성공 시
+  // (a) photo_path가 있으면 파일을 non-blocking으로 정리(DB row는 이미 지워졌으므로
+  // 실패해도 고아 파일만 남길 뿐 데이터 유실이 아니다 — 05-RESEARCH.md Assumption A3),
+  // (b) reloadTodayCheckins로 목록을 새로 읽는다. 실패(2회 다)면 별도 재시도 UI를
+  // 띄우지 않고 hiddenIds에서 제거해 다음 reload에서 행이 자연스럽게 다시 나타나게
+  // 한다 — 스낵바가 이미 사라진 뒤 새 오류 UI를 띄우는 게 더 혼란스럽고, 이 실패
+  // UX는 요구사항 어디에도 정의돼 있지 않다(05-RESEARCH.md Open Question #1 권장안).
+  const commitPendingDelete = useCallback(
+    (item: PendingDeleteItem) => {
+      const unhide = () => {
+        setHiddenIds((prev) => {
+          if (!prev.has(item.id)) return prev;
+          const next = new Set(prev);
+          next.delete(item.id);
+          return next;
+        });
+      };
+      runWithSingleRetry(() => deleteCheckin(db, item.id))
+        .then((result) => {
+          if (!result.ok) {
+            console.error('Failed to commit swipe delete after retry', item.id);
+            unhide();
+            return;
+          }
+          if (item.photoPath) {
+            defaultPhotoStorageDeps.deleteFile(item.photoPath).catch((error) => {
+              console.error('Failed to delete photo file for swiped-away checkin', error);
+            });
+          }
+          reloadTodayCheckins();
+          unhide();
+        })
+        .catch((error) => {
+          console.error('Unexpected error while committing swipe delete', error);
+          unhide();
+        });
+    },
+    [db, reloadTodayCheckins]
+  );
+
+  // commitPendingDelete가 항상 최신 db/reloadTodayCheckins를 참조하도록 ref로
+  // 미러링한다 — 아래 컨트롤러는 마운트 시 1회만 생성되므로, 클로저가 최초 렌더의
+  // 오래된 콜백을 붙잡지 않게 한다(이 파일의 stateRef와 동일한 관용구).
+  const commitPendingDeleteRef = useRef(commitPendingDelete);
+  useEffect(() => {
+    commitPendingDeleteRef.current = commitPendingDelete;
+  }, [commitPendingDelete]);
+
+  // 지연 삭제 컨트롤러 — 마운트 시 1회만 생성한다(buttonContentOpacity와 동일한
+  // useState 지연 초기화 관용구).
+  const pendingDeleteController = useState(() =>
+    createPendingDeleteController({
+      onCommit: (item) => commitPendingDeleteRef.current(item),
+      onChange: (id) => setPendingId(id),
+    })
+  )[0];
+
+  // 언마운트 시 대기 중인 삭제를 취소가 아니라 즉시 확정한다 — 타이머만 정리하는
+  // 방식으로 바꾸지 말 것. 사용자가 "실행취소"를 누르지 않았는데도 화면을 떠났다는
+  // 이유로 삭제가 조용히 취소되면, 다음 로드에서 지워졌어야 할 행이 부활한다
+  // (pendingDelete.ts 헤더 주석과 동일 계약, T-05-13 — checkin-wiring.test.ts가
+  // dispose() cleanup 계약을 별도로 회귀 가드한다).
+  useEffect(() => {
+    return () => {
+      pendingDeleteController.dispose();
+    };
+  }, [pendingDeleteController]);
+
+  // 리스트 행 스와이프 삭제 확정(임계값 초과) — 즉시 리스트에서 숨기고 지연 삭제
+  // 컨트롤러에 위임한다. 확인 다이얼로그 없음(iOS 네이티브 스와이프 삭제 관례).
+  const handleDeleteRequest = useCallback(
+    (checkin: CheckinRow) => {
+      setHiddenIds((prev) => new Set(prev).add(checkin.id));
+      pendingDeleteController.request({ id: checkin.id, photoPath: checkin.photo_path });
+    },
+    [pendingDeleteController]
+  );
+
+  // 스낵바 "실행취소" — 숨김 해제 후 컨트롤러에 취소를 위임한다.
+  const handleUndoDelete = useCallback(() => {
+    setHiddenIds((prev) => {
+      if (pendingId === null || !prev.has(pendingId)) return prev;
+      const next = new Set(prev);
+      next.delete(pendingId);
+      return next;
+    });
+    pendingDeleteController.undo();
+  }, [pendingDeleteController, pendingId]);
+
+  // 행 탭 → 상세화면 진입(D-03 반전, 05-CONTEXT.md/05-UI-SPEC.md). pathname+params
+  // 객체 형태를 쓴다 — expo-router가 동적 세그먼트를 직접 인코딩해 id에 특수문자가
+  // 있어도 경로가 깨지지 않는다(T-05-15).
+  const handleRowPress = useCallback((id: string) => {
+    router.push({ pathname: '/[id]', params: { id } });
+  }, []);
 
   const isCapturing = state.phase === 'CAPTURING';
   const showActionCard = state.phase !== 'IDLE' && !isCapturing;
@@ -459,6 +614,25 @@ export default function Index() {
 
   const handleRegionChangeComplete = useCallback((region: Region) => {
     lastMapCoordinateRef.current = { lat: region.latitude, lng: region.longitude };
+    lastLatitudeDeltaRef.current = region.latitudeDelta;
+  }, []);
+
+  // EXTREME_ZOOM_OUT_RATIO 참고 — 현재 화면이 목표 줌보다 훨씬 넓게 잡혀 있으면
+  // animateToRegion이 한 번에 수렴하지 못하므로 즉시 이동(duration 0)시킨다.
+  //
+  // 리뷰 발견 — currentDelta가 null(onRegionChangeComplete가 아직 한 번도 안 옴)일 때
+  // "평소 애니메이션"으로 처리했더니, 콜드 부팅 직후 첫 재센터 탭이 바로 이 조건에
+  // 걸려 정작 고치려던 "여러 번 눌러야 수렴" 버그를 그대로 재현했다(실기기 재현 확인
+  // — 세션 중 지도를 한 번도 손으로 팬/줌하지 않은 채 첫 탭을 누른 경우). null은
+  // "이미 목표 근처"라는 근거가 전혀 없는 상태이므로, 반대로 안전한 기본값은
+  // "즉시 이동"이다 — 최악의 경우도 이미 목표에 가까운데 애니메이션 없이 스냅되는
+  // 정도의 사소한 모션 손실일 뿐, 기능적 버그(여러 번 눌러야 함)는 아니다.
+  const resolveRecenterAnimationMs = useCallback(() => {
+    const currentDelta = lastLatitudeDeltaRef.current;
+    if (currentDelta == null || currentDelta > MAP_REGION_DELTA * EXTREME_ZOOM_OUT_RATIO) {
+      return 0;
+    }
+    return RECENTER_ANIMATION_MS;
   }, []);
 
   // 콜드 부팅 직후 첫 상호작용 버그 가드 — 네이티브 MapView(iOS MKMapView)가
@@ -555,7 +729,7 @@ export default function Index() {
                 latitudeDelta: MAP_REGION_DELTA,
                 longitudeDelta: MAP_REGION_DELTA,
               },
-              RECENTER_ANIMATION_MS
+              resolveRecenterAnimationMs()
             );
           })().catch((error) => {
             console.error('Failed to apply refined recenter position', error);
@@ -570,6 +744,7 @@ export default function Index() {
         if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
 
         await waitForMapReady();
+        const recenterAnimationMs = resolveRecenterAnimationMs();
         if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
         mapRef.current?.animateToRegion(
           {
@@ -578,7 +753,7 @@ export default function Index() {
             latitudeDelta: MAP_REGION_DELTA,
             longitudeDelta: MAP_REGION_DELTA,
           },
-          RECENTER_ANIMATION_MS
+          recenterAnimationMs
         );
         // 위치 이동 애니메이션이 끝나기 전에 아래에서 곧바로 animateCamera(heading/pitch)를
         // 호출하면, iOS MKMapView가 진행 중이던 region 애니메이션을 그 순간의 중간값에서
@@ -587,14 +762,15 @@ export default function Index() {
         // 애니메이션이 같은 네이티브 카메라 상태를 동시에 건드리며 경합). animateToRegion에
         // 준 duration만큼 기다린 뒤에야 다음 카메라 명령을 보낸다.
         //
-        // 리뷰 발견(altitude) — 이 고정 지연은 react-native-maps의 기본 애니메이션
-        // 길이를 그대로 가정한 타이밍 추측이다. onRegionChangeComplete를 실제 완료
-        // 신호로 쓰는 대안을 검토했으나, 이 콜백은 이 호출이 아닌 다른 region 변화
-        // (동시 사용자 팬 등)에도 반응하므로 잘못된 시점에 조기 완료로 오인해 바로 이
+        // 리뷰 발견(altitude) — 이 지연은 react-native-maps의 기본 애니메이션 길이를
+        // 그대로 가정한 타이밍 추측이다(resolveRecenterAnimationMs가 반환한 값을 그대로
+        // 씀 — 극단적 줌아웃이면 0, 아니면 RECENTER_ANIMATION_MS). onRegionChangeComplete를
+        // 실제 완료 신호로 쓰는 대안을 검토했으나, 이 콜백은 이 호출이 아닌 다른 region
+        // 변화(동시 사용자 팬 등)에도 반응하므로 잘못된 시점에 조기 완료로 오인해 바로 이
         // 지점이 고치려던 애니메이션 경합을 재도입할 위험이 있다 — 이번 라운드에서는
         // 그 위험을 감수하지 않고 고정 지연을 유지한다. Reduce Motion/저전력 모드로
         // 실제 네이티브 애니메이션 길이가 달라지면 이 가정이 깨질 수 있음을 남겨둔다.
-        await new Promise((resolve) => setTimeout(resolve, RECENTER_ANIMATION_MS));
+        await new Promise((resolve) => setTimeout(resolve, recenterAnimationMs));
         if (!isMountedRef.current || recenterRequestIdRef.current !== requestId) return;
 
         const nextMode: 'north' | 'compass' = !hasCenteredOnceRef.current
@@ -972,12 +1148,12 @@ export default function Index() {
         {trajectoryCoordinates.length >= 2 && (
           <Polyline
             coordinates={trajectoryCoordinates}
-            strokeColor={colors.accentSoft}
+            strokeColor={colors.pinSoft}
             strokeWidth={TRAJECTORY_STROKE_WIDTH}
           />
         )}
 
-        {todayCheckins.map((checkin) => (
+        {filteredTodayCheckins.map((checkin) => (
           <Marker
             key={checkin.id}
             coordinate={{ latitude: checkin.lat, longitude: checkin.lng }}
@@ -1035,9 +1211,11 @@ export default function Index() {
               containerHeight <= 0(레이아웃 측정 전)이면 TodayBottomSheet 자신이 null을
               반환한다(04-04-PLAN.md 계약). */}
           <TodayBottomSheet
-            checkins={todayCheckins}
+            checkins={filteredTodayCheckins}
             containerHeight={containerHeight}
             animatedPosition={sheetPosition}
+            onRowPress={handleRowPress}
+            onDeleteRequest={handleDeleteRequest}
           />
           <Reanimated.View style={[styles.checkinButtonContainer, floatingButtonStyle]}>
             <Pressable
@@ -1049,7 +1227,7 @@ export default function Index() {
             >
               <Animated.View style={{ opacity: buttonContentOpacity }}>
                 {isCapturing ? (
-                  <ActivityIndicator color={colors.accent} />
+                  <ActivityIndicator color={colors.pin} />
                 ) : (
                   <Text style={[typography.placeName, styles.checkinButtonLabel]}>
                     {CHECKIN_COPY.checkinCta}
@@ -1069,12 +1247,21 @@ export default function Index() {
             >
               <SymbolView
                 name={orientationMode === 'compass' ? 'location.north.line.fill' : 'location.fill'}
-                tintColor={colors.textMuted}
+                tintColor={colors.pin}
               />
             </Pressable>
           </Reanimated.View>
         </>
       )}
+
+      {/* 05-05-PLAN.md — 스낵바 배치(absolute, 화면 하단)는 부모인 이 화면이 소유한다
+          (UndoSnackbar 컴포넌트 계약). 이 화면 자체가 탭바를 제외한 콘텐츠 영역이라
+          별도 insets.bottom 보정 없이도 탭바를 가리지 않는다. showActionCard 분기와
+          무관하게 항상 렌더한다 — 스와이프 삭제 대기 중에 새 체크인을 시작해도 undo
+          창(4초)이 유지돼야 한다. */}
+      <View style={styles.undoSnackbarContainer} pointerEvents="box-none">
+        <UndoSnackbar visible={pendingId !== null} onUndo={handleUndoDelete} />
+      </View>
     </View>
   );
 }
@@ -1101,12 +1288,12 @@ const styles = StyleSheet.create({
     minWidth: 44,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.full,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.pin,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkinButtonCapturing: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.pinSoft,
   },
   checkinButtonLabel: {
     color: colors.surface,
@@ -1129,6 +1316,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  // 05-05-PLAN.md — undo 스낵바 배치. 화면 하단(탭바는 이 View 바깥이라 이미 제외됨).
+  // pointerEvents="box-none"로 스낵바가 안 보일 때(visible=false, null 렌더)
+  // 이 컨테이너가 하단 지도 탭 제스처를 가로채지 않게 한다.
+  undoSnackbarContainer: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: spacing.lg,
   },
   // 구글맵 스타일 물방울(teardrop) 핀 — SVG 없이 순수 View/StyleSheet로 구현한다
   // (react-native-gesture-handler를 안 쓰는 것과 같은 이유로 불필요한 의존성 추가를
@@ -1156,21 +1352,21 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-45deg' }],
   },
   pinConfident: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.pin,
   },
   // 저장된 체크인 핀(D-10) — 원본 location_source에 따른 3단계 시각 구분을 저장
   // 후에는 유지하지 않는다(04-UI-SPEC.md §저장된 체크인 핀). 테두리 없음.
   pinSaved: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.pinSoft,
   },
   pinFallback: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.pinSoft,
     borderWidth: 2,
-    borderColor: colors.accent,
+    borderColor: colors.pin,
   },
   pinDragged: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.pin,
     borderWidth: 2,
-    borderColor: colors.accentSoft,
+    borderColor: colors.pinSoft,
   },
 });

@@ -6,7 +6,13 @@
 // resolveLocalDateKey 테스트는 반드시 timeZone 인자를 명시적으로 넘겨
 // CI/로컬 머신 타임존에 의존하지 않게 한다.
 
-import { formatLocalTime, resolveLocalDateKey, resolveTimeZone, toIsoTimestamp } from './localDate';
+import {
+  formatLocalMonthDay,
+  formatLocalTime,
+  resolveLocalDateKey,
+  resolveTimeZone,
+  toIsoTimestamp,
+} from './localDate';
 
 describe('resolveLocalDateKey', () => {
   it('UTC 정오를 Asia/Seoul로 변환하면 같은 날짜(YYYY-MM-DD)를 반환한다', () => {
@@ -41,6 +47,27 @@ describe('toIsoTimestamp', () => {
     expect(toIsoTimestamp(new Date('2026-08-27T12:00:00Z'))).toBe(
       '2026-08-27T12:00:00.000Z'
     );
+  });
+});
+
+describe('formatLocalMonthDay', () => {
+  it("2026-08-31T12:00:00Z를 Asia/Seoul로 변환하면 '8월 31일'을 반환한다", () => {
+    expect(formatLocalMonthDay('2026-08-31T12:00:00Z', 'Asia/Seoul')).toBe('8월 31일');
+  });
+
+  it("자정 경계: UTC 16시(2026-08-31T16:00:00Z)를 Asia/Seoul로 변환하면 '9월 1일'을 반환한다", () => {
+    expect(formatLocalMonthDay('2026-08-31T16:00:00Z', 'Asia/Seoul')).toBe('9월 1일');
+  });
+
+  it('같은 ISO 값을 America/New_York으로 포맷하면 서울 결과와 다른 날짜를 낸다', () => {
+    const seoul = formatLocalMonthDay('2026-08-31T16:00:00Z', 'Asia/Seoul');
+    const newYork = formatLocalMonthDay('2026-08-31T16:00:00Z', 'America/New_York');
+    expect(newYork).not.toBe(seoul);
+  });
+
+  it('반환 문자열에 연도가 포함되지 않는다', () => {
+    const result = formatLocalMonthDay('2026-08-31T12:00:00Z', 'Asia/Seoul');
+    expect(result).not.toContain('2026');
   });
 });
 
