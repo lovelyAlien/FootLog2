@@ -36,9 +36,12 @@ describe('src/app/(tabs)/index.tsx 단일 쿼리 계약 (04-CONTEXT.md D-11)', (
   // 추가됐다(commitPendingDelete). 04-05가 확정한 04(체크인 저장 성공/AppState
   // active 복귀/마운트 1회/드래프트 무관 로더 정의 등)에 이 신규 호출 1개가 더해진
   // 것이며, "단일 쿼리 함수를 여러 지점에서 재사용한다"는 D-11 원칙 자체는 그대로다.
-  it('reloadTodayCheckins() 호출이 정확히 5회 등장한다 (2026-09-01: 지연 삭제 커밋 성공 경로 추가)', () => {
+  //
+  // 05-REVIEW.md CR-01 — useFocusEffect가 6번째 호출로 추가됐다(상세화면에서 편집 후
+  // 뒤로 돌아왔을 때 갱신되는 유일한 경로 — AppState는 인앱 네비게이션에 반응하지 않는다).
+  it('reloadTodayCheckins() 호출이 정확히 6회 등장한다 (2026-09-01: CR-01 — 상세화면 복귀 시 재조회 경로 추가)', () => {
     const occurrences = codeOnly.match(/reloadTodayCheckins\(\)/g) ?? [];
-    expect(occurrences.length).toBe(5);
+    expect(occurrences.length).toBe(6);
   });
 
   it('commitCheckin 성공 분기(result.ok 블록) 안에 reloadTodayCheckins가 존재한다', () => {
@@ -55,6 +58,19 @@ describe('src/app/(tabs)/index.tsx 단일 쿼리 계약 (04-CONTEXT.md D-11)', (
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
     expect(block).toMatch(/reloadTodayCheckins\(\)/);
+  });
+
+  it('useFocusEffect 안에 reloadTodayCheckins가 존재한다 (05-REVIEW.md CR-01 — 상세화면 편집 후 인앱 복귀 시 갱신)', () => {
+    const match = codeOnly.match(
+      /useFocusEffect\(\s*useCallback\(\(\) => \{[\s\S]*?\n\s*\}, \[reloadTodayCheckins\]\)\s*\);/
+    );
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/reloadTodayCheckins\(\)/);
+  });
+
+  it('expo-router에서 useFocusEffect를 import한다 (CR-01)', () => {
+    expect(codeOnly).toMatch(/import\s*\{[^}]*useFocusEffect[^}]*\}\s*from\s*'expo-router'/);
   });
 });
 
