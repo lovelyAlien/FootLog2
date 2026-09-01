@@ -150,4 +150,9 @@ export const CHECKIN_DETAIL_COPY = {
   changePhoto: '사진 변경',
   // 아이콘 전용 배지의 VoiceOver 라벨(시각 텍스트 없음, 05-06-PLAN.md Task 2, D-04).
   deletePhoto: '사진 삭제',
+  // 2026-09-01 사용자 피드백 — 메모가 항상 편집 가능한 TextInput이라 편집 중인지
+  // 아닌지 구분이 안 된다는 지적. 명시적 편집/저장 버튼을 추가한다(D-01의 "자동저장
+  // 아님" 원칙은 그대로 유지 — 이 버튼도 명시적 트리거 중 하나일 뿐이다).
+  editNote: '편집',
+  saveNote: '저장',
 } as const;

@@ -81,6 +81,14 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
   // [db, checkinId]에만 의존하는 안정적 useCallback으로 유지하기 위함이다.
   const [note, setNote] = useState('');
   const noteRef = useRef('');
+  // 2026-09-01 사용자 피드백 — 메모가 항상 편집 가능한 TextInput 하나뿐이라
+  // "지금 편집 중인지"가 시각적으로 구분되지 않았다. isEditingNote로 뷰(정적
+  // 텍스트 + 편집 버튼)/편집(TextInput + 저장 버튼) 두 모드를 나눈다. D-01의
+  // "자동저장 아님, 명시적 flush만" 원칙은 그대로다 — 저장 버튼도 이미 있던
+  // 3개의 명시적 flush 트리거(미저장 경고의 "저장하고 나가기", AppState 백그라운드
+  // 전환, 지도 앱 열기 선행 flush)에 사용자가 직접 누르는 4번째 트리거를 추가할
+  // 뿐, blur나 타이머 기반 암묵적 저장을 들여오지 않는다.
+  const [isEditingNote, setIsEditingNote] = useState(false);
   // photoPathRef — flushNoteAndPhoto가 checkin state를 deps에 담지 않도록 최신
   // photo_path를 ref로 미러링해둔다. 05-06-PLAN.md부터는 사진 교체/삭제 핸들러도
   // 이 ref를 읽고 쓴다(성공 후에만 갱신 — 아래 handlePickPhoto 참고).
@@ -156,6 +164,23 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
   // 매트릭스, D-01). Phase 3 캡처 시점의 "blur 즉시 커밋"(CheckinActionCard의 블러
   // 콜백)과 의도적으로 다른 모델이며, 이 화면의 핵심 결정이라 "일관성" 명목으로 blur
   // 저장을 되돌리기 가장 쉬운 지점이다 — 되돌리지 말 것.
+
+  const handleEditNotePress = useCallback(() => {
+    setIsEditingNote(true);
+  }, []);
+
+  // 저장 버튼 — flushNoteAndPhoto를 호출한 뒤 실제로 저장이 성공했을 때만(isDirtyRef가
+  // false로 내려갔을 때만) 뷰 모드로 되돌아간다. 실패(saveFailed=true, isDirtyRef 유지)
+  // 하면 편집 모드에 그대로 머문다 — 사용자가 방금 쓴 메모가 편집 화면에서 눈앞에서
+  // 사라지는 일이 없고, 기존 저장 실패 카드("다시 시도")가 같은 flushNoteAndPhoto를
+  // 다시 불러 재시도할 수 있다.
+  const handleSaveNotePress = useCallback(async () => {
+    await flushNoteAndPhoto();
+    if (!isMountedRef.current) return;
+    if (!isDirtyRef.current) {
+      setIsEditingNote(false);
+    }
+  }, [flushNoteAndPhoto]);
 
   // 05-06-PLAN.md Task 1 — 사진 슬롯 탭 시 교체/추가(D-03). (tabs)/index/index.tsx의
   // 사진 액션시트 관용구를 그대로 적응한다: photos.ts가 소유한 옵션/취소 인덱스/출처
@@ -351,7 +376,16 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      // 2026-09-01 사용자 피드백 — 메모 TextInput에 포커스가 가면 키보드가 입력 중인
+      // 텍스트를 가려서 뭘 쓰고 있는지 안 보였다. iOS 네이티브 UIScrollView의 자동
+      // 키보드 인셋 조정을 그대로 위임한다 — 포커스된 입력을 키보드 위로 자동
+      // 스크롤해준다(수동 KeyboardAvoidingView + 헤더 높이 계산보다 이 화면처럼
+      // "맨 아래 TextInput 하나"인 단순한 구조에 더 안정적이다).
+      automaticallyAdjustKeyboardInsets
+    >
       <Text style={[timestampStyle, styles.time]}>{formatLocalTime(checkin.timestamp_utc)}</Text>
 
       {/* 정적 지도 미리보기 — 스크롤/줌/회전/틸트/탭 모두 비활성. 터치 이벤트 자체를
@@ -451,19 +485,59 @@ export function CheckinDetailScreen({ db, checkinId }: CheckinDetailScreenProps)
         </Text>
       )}
 
-      {/* 5. 메모(레이아웃 마지막 슬롯) — journalEntry 타이포 토큰은 이 TextInput
+      {/* 5. 메모(레이아웃 마지막 슬롯) — journalEntry 타이포 토큰은 노트 텍스트/입력
           하나에만 적용한다(Phase 3/4 계승 원칙, 버튼/헤더/안내 문구에는 절대 쓰지
-          않는다). 자동저장 없음 — dirty 상태만 로컬로 추적하고, 저장은 아래 세 지점
-          (인앱 이탈 경고의 "저장하고 나가기", AppState background flush, 지도 앱 열기
-          선행 flush)에서만 명시적으로 실행된다(D-01). */}
-      <TextInput
-        multiline
-        value={note}
-        onChangeText={handleChangeNote}
-        placeholder={CHECKIN_COPY.notePlaceholder}
-        placeholderTextColor={colors.textFaint}
-        style={[typography.journalEntry, styles.noteInput]}
-      />
+          않는다). 자동저장 없음 — dirty 상태만 로컬로 추적하고, 저장은 저장 버튼과
+          기존 세 지점(인앱 이탈 경고의 "저장하고 나가기", AppState background flush,
+          지도 앱 열기 선행 flush)에서만 명시적으로 실행된다(D-01).
+          2026-09-01 사용자 피드백 — 뷰(정적 텍스트 + 편집 버튼)/편집(TextInput + 저장
+          버튼) 두 모드로 나눈다. 이전에는 화면을 열면 곧바로 편집 가능한 TextInput
+          하나만 있어 "지금 편집 중인지"가 구분되지 않았다. */}
+      {isEditingNote ? (
+        <View style={styles.noteEditingContainer}>
+          <TextInput
+            multiline
+            autoFocus
+            value={note}
+            onChangeText={handleChangeNote}
+            placeholder={CHECKIN_COPY.notePlaceholder}
+            placeholderTextColor={colors.textFaint}
+            style={[typography.journalEntry, styles.noteInput]}
+          />
+          <Pressable
+            onPress={handleSaveNotePress}
+            accessibilityRole="button"
+            accessibilityLabel={CHECKIN_DETAIL_COPY.saveNote}
+            style={styles.noteSaveButton}
+          >
+            <Text style={[typography.placeName, styles.noteSaveButtonLabel]}>
+              {CHECKIN_DETAIL_COPY.saveNote}
+            </Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.noteViewContainer}>
+          <Text
+            style={[
+              typography.journalEntry,
+              styles.noteViewText,
+              !note && styles.noteViewPlaceholder,
+            ]}
+          >
+            {note || CHECKIN_COPY.notePlaceholder}
+          </Text>
+          <Pressable
+            onPress={handleEditNotePress}
+            accessibilityRole="button"
+            accessibilityLabel={CHECKIN_DETAIL_COPY.editNote}
+            style={styles.noteEditButton}
+          >
+            <Text style={[typography.placeName, styles.noteEditButtonLabel]}>
+              {CHECKIN_DETAIL_COPY.editNote}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* 수정 저장 실패 UI — CheckinActionCard.tsx의 SAVE_FAILED 분기와 시각적으로
           동일한 구성을 복제한다(import해 재사용하지 않는다). CheckinActionCard는
@@ -598,6 +672,47 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     borderRadius: radius.md,
     padding: spacing.md,
+  },
+  // 2026-09-01 사용자 피드백 대응 — 편집 모드 래퍼. noteInput 자체가 marginTop을
+  // 이미 갖고 있어 이 View에는 별도 margin이 필요 없다.
+  noteEditingContainer: {},
+  noteSaveButton: {
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.full,
+    backgroundColor: colors.textPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noteSaveButtonLabel: {
+    color: colors.surface,
+  },
+  // 뷰 모드 — noteInput과 동일한 박스(minHeight/배경/모서리/패딩)를 정적 Text로
+  // 복제해 편집↔뷰 전환 시 레이아웃이 튀지 않게 한다.
+  noteViewContainer: {
+    marginTop: spacing.lg,
+  },
+  noteViewText: {
+    minHeight: 96,
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  noteViewPlaceholder: {
+    color: colors.textFaint,
+  },
+  noteEditButton: {
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    marginTop: spacing.xs,
+    justifyContent: 'center',
+  },
+  noteEditButtonLabel: {
+    color: colors.textMuted,
   },
   // 저장 실패 카드 — CheckinActionCard.tsx SAVE_FAILED 분기의 시각 구성을 복제:
   // screenTitle 헤드라인 → spacing.xs 간격 → helperText 보조문구 → spacing.md 간격 →
