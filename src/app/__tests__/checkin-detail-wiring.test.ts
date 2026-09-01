@@ -134,16 +134,45 @@ describe('D-05: 상세화면에 체크인 삭제 진입점이 없다', () => {
 
 // 05-04-PLAN.md Task 3 — 이하 4개 describe는 05-04-PLAN.md가 신규로 추가하는 회귀
 // 가드다(미저장 경고/AppState flush/Maps 딥링크/자동저장 미채택).
-describe('미저장 경고 (D-01)', () => {
-  it('Test 14: addListener("beforeRemove"가 등장하고 isDirtyRef 조기 반환 가드가 존재한다', () => {
-    expect(detailScreenCodeOnly).toMatch(/addListener\('beforeRemove'/);
-    expect(detailScreenCodeOnly).toMatch(/if\s*\(!isDirtyRef\.current\)\s*return;/);
+describe('미저장 경고 (D-01, 2026-09-01 재설계 — 커스텀 헤더 뒤로가기 버튼)', () => {
+  // 2026-09-01 사용자 피드백 — 편집 중 헤더 뒤로가기를 눌러도 gestureEnabled:false
+  // 도입 이전과 같은 "removed natively but didn't get removed from JS state" 콘솔
+  // 에러가 재현됐다. 원인: `navigation.addListener('beforeRemove', ...) + e.preventDefault()`는
+  // JS 내비게이션 상태만 막을 뿐, native-stack이 실제로 네이티브 쪽에 "이 화면 제거를
+  // 보류해라"라고 알리는 `preventNativeDismiss`는 expo-router 내부의 반응형
+  // `usePreventRemove`/`PreventRemoveContext` 등록을 통해서만 설정된다(공개 API가
+  // 아니라 딥임포트가 필요해 05-04가 의도적으로 피했던 바로 그 훅). native-stack의
+  // 헤더 뒤로가기 버튼은 네이티브 UIKit 크롬이라, 탭하면 JS의 beforeRemove가
+  // preventDefault를 부르기 전에 네이티브가 먼저 화면을 제거해버려 위 경고가 뜬다
+  // (node_modules/expo-router/build/react-navigation/native-stack/views/
+  // NativeStackView.native.js의 isRemovePrevented/preventedRoutes 배선 확인).
+  //
+  // 해결: 헤더 자체를 JS Pressable로 교체한다(headerLeft). 이러면 뒤로가기가 항상
+  // JS 함수 호출(handleBackPress)로 시작되고, 네이티브가 먼저 화면을 제거할 기회가
+  // 없다 — beforeRemove/preventDefault 없이도 순수 JS 분기(dirty면 Alert, 아니면
+  // 곧장 goBack)만으로 D-01을 만족한다. gestureEnabled:false(스와이프 경로)와 합쳐
+  // 이 화면의 두 네이티브 트리거(제스처+헤더 버튼) 모두 JS가 먼저 결정하게 된다.
+  it('Test 14: addListener(\'beforeRemove\'가 더 이상 등장하지 않는다(커스텀 헤더 버튼으로 대체)', () => {
+    expect(detailScreenCodeOnly).not.toMatch(/addListener\('beforeRemove'/);
   });
 
-  it('Test 15: e.preventDefault()가 등장하고 e.data.action이 정확히 2회(저장 안 함 + 저장 후 나가기) 등장한다', () => {
-    expect(detailScreenCodeOnly).toMatch(/e\.preventDefault\(\)/);
-    const matches = detailScreenCodeOnly.match(/e\.data\.action/g) ?? [];
-    expect(matches.length).toBe(2);
+  it('Test 14b: handleBackPress가 dirty가 아니면 곧장 navigation.goBack()을 호출한다', () => {
+    const start = detailScreenCodeOnly.indexOf('handleBackPress');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const block = detailScreenCodeOnly.slice(start, start + 200);
+    expect(block).toMatch(/if\s*\(!isDirtyRef\.current\)\s*\{[\s\S]*?navigation\.goBack\(\)/);
+  });
+
+  it('Test 15: navigation.goBack()이 정확히 3회(dirty 아닐 때 + 저장 안 함 + 저장 후 나가기) 등장한다', () => {
+    const matches = detailScreenCodeOnly.match(/navigation\.goBack\(\)/g) ?? [];
+    expect(matches.length).toBe(3);
+  });
+
+  it('Test 15b: 헤더 뒤로가기가 headerLeft(JS Pressable)로 커스텀되어 handleBackPress를 호출한다', () => {
+    expect(detailScreenCodeOnly).toMatch(/headerLeft:\s*\(\)\s*=>/);
+    const start = detailScreenCodeOnly.indexOf('headerLeft:');
+    const block = detailScreenCodeOnly.slice(start, start + 300);
+    expect(block).toMatch(/onPress=\{handleBackPress\}/);
   });
 
   it('Test 16: CHECKIN_DETAIL_COPY의 3개 버튼 키(keepEditing/discardAndLeave/saveAndLeave)가 전부 등장한다', () => {
