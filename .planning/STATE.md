@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 6 context gathered
-last_updated: "2026-09-01T08:44:12.158Z"
+stopped_at: Phase 9 context gathered
+last_updated: "2026-09-01T10:11:21.431Z"
 last_activity: 2026-09-01
 progress:
-  total_phases: 8
+  total_phases: 12
   completed_phases: 5
-  total_plans: 39
+  total_plans: 45
   completed_plans: 39
-  percent: 63
+  percent: 42
 ---
 
 # Project State
@@ -73,6 +73,14 @@ Progress: [█████░░░] 63% (5/8 phases)
 - [Phase 1, Plan 02]: DESIGN.md의 "Newsreader는 Google Fonts CDN에서 로드" 문구 대신 @expo-google-fonts/newsreader 번들 방식으로 구현 - PROJECT.md 오프라인 우선 원칙(1단계 네트워크 의존성 전무)과 런타임 CDN fetch가 충돌하므로, 동일 폰트 파일을 앱 번들에 정적 포함하는 방식으로 치환(시각적 결과 동일, 로딩 메커니즘만 플랫폼에 맞게 변경 — 디자인 의도 변경 아님)
 - [Phase ?]: 01-03: migrations.ts의 DDL 실행을 템플릿 보간 조합 대신 execAsync 개별 호출로 분리 - PRAGMA user_version 보간 1회 제한 게이트 충족 — T-1-01(SQL 인젝션 선례) acceptance criteria가 ${ 출현 횟수를 정확히 1로 게이트, 동작은 RESEARCH.md 레시피와 동일
 - [Phase 1, Plan 04]: index.tsx에서 typography.timestamp의 readonly fontVariant를 캐스트 없이 StyleSheet.create 내부 얕은 복사로 mutable 배열화 - tokens.ts(01-02)의 as const readonly 계약은 그대로 유지하면서 RN TextStyle 타입 요구사항만 소비 측에서 브리징
+- [2026-09-01]: 백엔드/인증/클라우드(Phase 9~12)를 1단계 실사용 트라이얼 완료 게이트를 기다리지 않고 사용자 명시적 승인으로 착수 - `/gsd-phase`로 기존 ROADMAP.md/REQUIREMENTS.md에 Phase 9~12를 추가하는 방식을 선택(별도 마일스톤으로 전환하는 `/gsd-new-milestone`은 미완료 v1.0의 Phase 1~5 phase 디렉터리를 삭제하고 ROADMAP.md를 통째로 교체하는 절차라 데이터 손실 위험이 있어 회피). Phase 1~8(v1.0)은 그대로 진행되는 독립 트랙, Phase 9~12는 병행 트랙. PROJECT.md Key Decisions 참고.
+
+### Roadmap Evolution
+
+- Phase 9 added: Backend Foundation (Spring Boot/Kotlin 스캐폴드 + 서버측 DB 스키마)
+- Phase 10 added: Authentication — Kakao OAuth2/PKCE
+- Phase 11 added: Object Storage — S3-compatible
+- Phase 12 added: Client-Server Sync — local-first 동기화
 
 ### Pending Todos
 
@@ -99,13 +107,13 @@ Ingest에서 확인되어 이어받은 항목들.
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Product milestone | 백엔드/인증/클라우드(Spring Boot/Kotlin, 카카오 OAuth2/PKCE, S3, 동기화) — REQ-phase2-backend | Deferred, gated on Phase 1 trial | Ingest (2026-08-25) |
+| Product milestone | 백엔드/인증/클라우드(Spring Boot/Kotlin, 카카오 OAuth2/PKCE, S3, 동기화) — Phase 9~12로 분해, REQUIREMENTS.md "백엔드/인증/클라우드" 섹션 참고 | Un-deferred — 2026-09-01 사용자 명시적 승인으로 트라이얼 게이트 우회, ROADMAP.md Phase 9~12로 착수 | Ingest (2026-08-25) → Un-deferred (2026-09-01) |
 | Feature | 캘린더 드래그 멀티셀렉트 + 결과 화면 — REQ-calendar-multiselect-drag | Deferred | Ingest (2026-08-25) |
 | Feature | 주간 반복 패턴 분석, 위젯/잠금화면 체크인, Apple Watch 컴패니언 | Deferred | Ingest (2026-08-25) |
 | Design | 날씨/기온 자동 캡처 | Declined (오프라인 원칙과 충돌) | Ingest (2026-08-25) |
 
 ## Session Continuity
 
-Last session: 2026-09-01T08:44:12.147Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-calendar-tab/06-CONTEXT.md
+Last session: 2026-09-01T10:11:21.419Z
+Stopped at: Phase 9 context gathered
+Resume file: .planning/phases/09-backend-foundation/09-CONTEXT.md
