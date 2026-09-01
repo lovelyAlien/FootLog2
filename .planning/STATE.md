@@ -118,6 +118,6 @@ Ingest에서 확인되어 이어받은 항목들.
 Last session: 2026-09-02T06:08:43.710Z
 Stopped at: Phase 06 (calendar-tab) shipped — PR #5 (https://github.com/lovelyAlien/FootLog2/pull/5)
 Resume file: .planning/phases/06-calendar-tab/06-08-SUMMARY.md
-Also open: .planning/phases/09-backend-foundation/09-CONTEXT.md (병행 트랙, Phase 9 계획 대기)
+Also open: .planning/phases/09-backend-foundation/09-CONTEXT.md (병행 트랙)
 
 **Shipping note (2026-09-02):** 원본 실행 브랜치(`gsd/phase-06-calendar-tab`)가 병행 진행 중이던 Phase 9 세션의 커밋과 섞여 있어, Phase 6에 해당하는 커밋만 골라 `origin/main` 위에 `ship/phase-06-calendar-tab` 브랜치로 재구성해 PR #5로 제출함. 원본 브랜치는 그대로 보존(삭제하지 않음).
