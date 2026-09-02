@@ -78,8 +78,8 @@
 단일 백로그 버킷 `REQ-phase2-backend`를 ROADMAP.md Phase 9~12의 Success Criteria에 근거해
 원자적으로 분해한 것이다.
 
-- [ ] **REQ-backend-scaffold** (Phase 9): Spring Boot(Kotlin) 프로젝트가 초기화되고 로컬/스테이징 환경에서 빌드·기동된다.
-- [ ] **REQ-backend-db-schema** (Phase 9): 서버측 DB에 클라이언트 `Checkin`/`DailyReflection` 스키마에 대응하는 테이블이 존재하며, 버전 관리되는 마이그레이션 프레임워크로 스키마를 변경할 수 있다.
+- [x] **REQ-backend-scaffold** (Phase 9): Spring Boot(Kotlin) 프로젝트가 초기화되고 로컬/스테이징 환경에서 빌드·기동된다.
+- [x] **REQ-backend-db-schema** (Phase 9): 서버측 DB에 클라이언트 `Checkin`/`DailyReflection` 스키마에 대응하는 테이블이 존재하며, 버전 관리되는 마이그레이션 프레임워크로 스키마를 변경할 수 있다.
 - [ ] **REQ-auth-kakao-oauth** (Phase 10): 사용자가 카카오 로그인 화면에서 OAuth2/PKCE 플로우를 완료하면 서버가 사용자 계정을 생성/조회한다.
 - [ ] **REQ-auth-session-token** (Phase 10): 서버가 인증 토큰을 발급하고, 클라이언트는 발급된 토큰을 안전하게 저장·만료 시 갱신·이후 모든 서버 요청에 재사용한다.
 - [ ] **REQ-storage-s3-upload** (Phase 11): 인증된 사용자가 체크인 사진을 서버 경유로 S3 호환 오브젝트 스토리지에 업로드할 수 있다.
@@ -162,8 +162,8 @@
 | REQ-exif-disclosure | Phase 8 | Pending |
 | REQ-app-name | Phase 8 | Pending |
 | REQ-accessibility-baseline | Phase 8 | Pending |
-| REQ-backend-scaffold | Phase 9 | Pending |
-| REQ-backend-db-schema | Phase 9 | Pending |
+| REQ-backend-scaffold | Phase 9 | Complete |
+| REQ-backend-db-schema | Phase 9 | Complete |
 | REQ-auth-kakao-oauth | Phase 10 | Pending |
 | REQ-auth-session-token | Phase 10 | Pending |
 | REQ-storage-s3-upload | Phase 11 | Pending |
