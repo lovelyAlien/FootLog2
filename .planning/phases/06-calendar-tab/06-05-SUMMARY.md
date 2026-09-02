@@ -138,6 +138,14 @@ None - no external service configuration required.
 - 06-06/06-07(플로팅 날짜 스크러버 등 남은 Phase 6 plan)이 이 화면의 헤더/탭바 계약을 그대로 소비할 수 있음.
 - 블로커 없음.
 
+## Self-Check: PASSED
+
+- FOUND: `src/calendar/PastDateScreen.tsx`
+- FOUND: `src/app/(tabs)/calendar/[date]/index.tsx`
+- FOUND: `src/app/(tabs)/calendar/[date]/[id].tsx`
+- FOUND: `.planning/phases/06-calendar-tab/06-05-SUMMARY.md`
+- FOUND commits: `7cdcadb`, `1aacb33`, `c507e5c` (task commits), `29d767d` (metadata commit)
+
 ---
 *Phase: 06-calendar-tab*
 *Completed: 2026-09-02*
