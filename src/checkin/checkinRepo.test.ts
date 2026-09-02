@@ -22,6 +22,8 @@ import {
   runWithSingleRetry,
   getCheckinById,
   deleteCheckin,
+  getCheckinDateKeysInRange,
+  getCheckinHistorySummary,
   type NewCheckinParams,
 } from './checkinRepo';
 
@@ -449,6 +451,120 @@ describe('updateCheckinNoteAndPhoto', () => {
       expect(row.note).toBe('좋은 하루');
       expect(row.photo_path).toBe('file:///documents/photo.jpg');
       expect(row.updated_at).toBe('2026-08-27T02:00:00.000Z');
+    } finally {
+      close();
+    }
+  });
+});
+
+// 06-02-PLAN.md Task 1 — 캘린더 탭이 쓰는 월 범위 기록 유무 조회 + 전체 기록 요약.
+describe('getCheckinDateKeysInRange', () => {
+  it('범위 내 체크인이 있는 날짜의 고유 local_date_key만 오름차순으로 반환한다(같은 날 3건이면 1개)', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      await commitCheckin(
+        db,
+        validParams({ id: 'c1', localDateKey: '2026-09-05' })
+      );
+      await commitCheckin(
+        db,
+        validParams({ id: 'c2', localDateKey: '2026-09-05' })
+      );
+      await commitCheckin(
+        db,
+        validParams({ id: 'c3', localDateKey: '2026-09-05' })
+      );
+      await commitCheckin(
+        db,
+        validParams({ id: 'c4', localDateKey: '2026-09-01' })
+      );
+
+      const result = await getCheckinDateKeysInRange(db, '2026-09-01', '2026-09-30');
+
+      expect(result).toEqual(['2026-09-01', '2026-09-05']);
+    } finally {
+      close();
+    }
+  });
+
+  it('범위 밖 날짜(2026-08-31, 2026-10-01)의 체크인은 결과에 포함되지 않는다', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      await commitCheckin(
+        db,
+        validParams({ id: 'before', localDateKey: '2026-08-31' })
+      );
+      await commitCheckin(
+        db,
+        validParams({ id: 'inside', localDateKey: '2026-09-15' })
+      );
+      await commitCheckin(
+        db,
+        validParams({ id: 'after', localDateKey: '2026-10-01' })
+      );
+
+      const result = await getCheckinDateKeysInRange(db, '2026-09-01', '2026-09-30');
+
+      expect(result).toEqual(['2026-09-15']);
+    } finally {
+      close();
+    }
+  });
+
+  it('해당 범위에 체크인이 하나도 없으면 빈 배열을 반환한다(throw 아님)', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      const result = await getCheckinDateKeysInRange(db, '2026-09-01', '2026-09-30');
+
+      expect(result).toEqual([]);
+    } finally {
+      close();
+    }
+  });
+});
+
+describe('getCheckinHistorySummary', () => {
+  it('체크인이 전혀 없으면 { earliestDateKey: null, distinctDateCount: 0 }을 반환한다', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      const result = await getCheckinHistorySummary(db);
+
+      expect(result).toEqual({ earliestDateKey: null, distinctDateCount: 0 });
+    } finally {
+      close();
+    }
+  });
+
+  it('서로 다른 3일에 체크인이 있고 그중 하루에 2건이면 { earliestDateKey: 가장 이른 날짜, distinctDateCount: 3 }을 반환한다', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      await commitCheckin(
+        db,
+        validParams({ id: 'c1', localDateKey: '2026-09-10' })
+      );
+      await commitCheckin(
+        db,
+        validParams({ id: 'c2', localDateKey: '2026-09-05' })
+      );
+      await commitCheckin(
+        db,
+        validParams({ id: 'c3', localDateKey: '2026-09-05' })
+      );
+      await commitCheckin(
+        db,
+        validParams({ id: 'c4', localDateKey: '2026-09-20' })
+      );
+
+      const result = await getCheckinHistorySummary(db);
+
+      expect(result).toEqual({ earliestDateKey: '2026-09-05', distinctDateCount: 3 });
     } finally {
       close();
     }
