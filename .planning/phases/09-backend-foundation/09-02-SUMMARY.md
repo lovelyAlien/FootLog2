@@ -131,3 +131,14 @@ None — 이번 플랜은 로컬에서 Docker Desktop(이미 실행 중, 09-01�
 ---
 *Phase: 09-backend-foundation*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+- FOUND: backend/src/test/kotlin/com/footlog/backend/FlywayMigrationTest.kt
+- FOUND: backend/src/main/resources/db/migration/V1__create_users_table.sql
+- FOUND: backend/src/main/resources/db/migration/V2__create_checkins_table.sql
+- FOUND: backend/src/main/resources/db/migration/V3__create_daily_reflections_table.sql
+- FOUND: .planning/phases/09-backend-foundation/09-02-SUMMARY.md
+- FOUND commit: 97881e5 (Task 1, test/RED)
+- FOUND commit: 57ec18b (Task 2, feat/GREEN)
+- FOUND commit: ea83a66 (SUMMARY)
