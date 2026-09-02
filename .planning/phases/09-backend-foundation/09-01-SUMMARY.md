@@ -108,6 +108,10 @@ None (Rule 1-4 기준) - 계획에 정의된 acceptance criteria/verify를 모�
 
 None - 이번 phase 스코프(로컬/스테이징 프로파일 존재 확인)에는 외부 서비스 설정이 필요하지 않다. 실제 스테이징 배포(PaaS 계정 프로비저닝)는 RESEARCH.md Open Question 1에 따라 이후 플랜/단계에서 확정된다.
 
+## Blockers/Concerns for Orchestrator
+
+- `gsd-sdk query requirements.mark-complete REQ-backend-scaffold` 결과 `not_found` — `.planning/REQUIREMENTS.md`에 아직 `REQ-phase2-backend` 단일 백로그 버킷만 존재하고, 09-CONTEXT.md/09-01-PLAN.md가 전제하는 8개 원자적 요구사항(`REQ-backend-scaffold`, `REQ-backend-db-schema` 등)으로의 분해가 실제 REQUIREMENTS.md에는 반영되어 있지 않다. 이 플랜 실행 범위 밖의 구조적 문서 갱신이라 직접 수정하지 않았다 — 오케스트레이터가 웨이브 완료 후 REQUIREMENTS.md를 8개 항목으로 분해하고 `REQ-backend-scaffold`를 완료 처리해야 한다.
+
 ## Next Phase Readiness
 
 - 09-02(Flyway 마이그레이션)가 올라설 `backend/` Gradle 프로젝트와 `db/migration/` 디렉터리를 받아들일 준비가 된 `build.gradle.kts`가 존재한다.
