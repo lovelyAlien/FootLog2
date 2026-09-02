@@ -156,3 +156,16 @@ None — 이번 플랜은 로컬 Docker Desktop(이미 실행 중)만으로 전�
 ---
 *Phase: 09-backend-foundation*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+- FOUND: backend/src/test/kotlin/com/footlog/backend/EntityPersistenceTest.kt
+- FOUND: backend/src/main/kotlin/com/footlog/backend/user/User.kt
+- FOUND: backend/src/main/kotlin/com/footlog/backend/user/UserRepository.kt
+- FOUND: backend/src/main/kotlin/com/footlog/backend/checkin/Checkin.kt
+- FOUND: backend/src/main/kotlin/com/footlog/backend/checkin/CheckinRepository.kt
+- FOUND: backend/src/main/kotlin/com/footlog/backend/dailyreflection/DailyReflection.kt
+- FOUND: backend/src/main/kotlin/com/footlog/backend/dailyreflection/DailyReflectionRepository.kt
+- FOUND commit: cc3cb72 (Task 1, test/RED)
+- FOUND commit: 21994fd (Task 2, feat/GREEN)
+- FOUND commit: b00e514 (SUMMARY)
