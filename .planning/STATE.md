@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: Phase 09(backend, 병행 트랙) complete (6/6) — ready to discuss Phase 10; Phase 06(calendar-tab, v1.0 트랙) complete — ready to plan Phase 07
-last_updated: 2026-09-02T09:27:52.336Z
-last_activity: 2026-09-02 -- Phase 09 (backend-foundation) 완료
+stopped_at: "Phase 09(backend, 병행 트랙) shipped — PR #6 (https://github.com/lovelyAlien/FootLog2/pull/6); Phase 06(calendar-tab, v1.0 트랙) shipped — PR #5"
+last_updated: "2026-09-02T09:49:20.960Z"
+last_activity: 2026-09-02
 progress:
   total_phases: 12
   completed_phases: 6
@@ -28,14 +28,14 @@ See: .planning/PROJECT.md (updated 2026-08-25)
 **v1.0 트랙 (Phase 1~8, 순차):**
 Phase: 06 (calendar-tab) — COMPLETE
 Plan: 8 of 8
-Status: Phase 06 완료, Phase 07 계획 대기
+Status: Phase 06 완료 및 shipped(PR #5), Phase 07 계획 대기
 Last activity: 2026-09-02 -- Phase 06 (calendar-tab) 완료 — 시뮬레이터 확인 + 창업자 실기기 확인 통과
 
 **2단계 백엔드 트랙 (Phase 9~12, 병행):**
 Phase: 10
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-02 -- Phase 09 (backend-foundation) 완료, 6/6 plans, 검증 통과
+Status: Ready to plan — Phase 09 shipped(PR #6)
+Last activity: 2026-09-02 -- Phase 09 (backend-foundation) 완료, 6/6 plans, 검증 통과, PR #6로 shipped
 
 Progress: [██████░░] 75% (6/8 v1.0 phases; Phase 9-12는 병행 트랙)
 
@@ -123,9 +123,11 @@ Ingest에서 확인되어 이어받은 항목들.
 
 ## Session Continuity
 
-Last session: 2026-09-02T06:08:43.710Z
-Stopped at: Phase 06 (calendar-tab) shipped — PR #5 (https://github.com/lovelyAlien/FootLog2/pull/5)
-Resume file: .planning/phases/06-calendar-tab/06-08-SUMMARY.md
-Also open: .planning/phases/09-backend-foundation/09-CONTEXT.md (병행 트랙, Phase 9 계획 대기)
+Last session: 2026-09-02T09:49:20.960Z
+Stopped at: Phase 09 (backend-foundation) shipped — PR #6 (https://github.com/lovelyAlien/FootLog2/pull/6)
+Resume file: .planning/phases/09-backend-foundation/09-VERIFICATION.md
+Also open: .planning/phases/06-calendar-tab/06-08-SUMMARY.md (v1.0 트랙, Phase 07 계획 대기)
 
-**Shipping note (2026-09-02):** 원본 실행 브랜치(`gsd/phase-06-calendar-tab`)가 병행 진행 중이던 Phase 9 세션의 커밋과 섞여 있어, Phase 6에 해당하는 커밋만 골라 `origin/main` 위에 `ship/phase-06-calendar-tab` 브랜치로 재구성해 PR #5로 제출함. 원본 브랜치는 그대로 보존(삭제하지 않음).
+**Shipping note (2026-09-02, Phase 6):** 원본 실행 브랜치(`gsd/phase-06-calendar-tab`)가 병행 진행 중이던 Phase 9 세션의 커밋과 섞여 있어, Phase 6에 해당하는 커밋만 골라 `origin/main` 위에 `ship/phase-06-calendar-tab` 브랜치로 재구성해 PR #5로 제출함. 원본 브랜치는 그대로 보존(삭제하지 않음).
+
+**Shipping note (2026-09-02, Phase 9):** 같은 이유로 `gsd/phase-09-backend-foundation`(gsd/phase-06-calendar-tab 위에서 분기, Phase 6 원시 이력 포함)도 그대로 PR을 열면 안 됐음. `origin/main`(PR #5 머지 후 시점) 위에 새 브랜치 `gsd/phase-09-backend-foundation-pr`를 만들어 backend/, .github/workflows/backend-ci.yml, .planning/phases/09-backend-foundation/**만 통째로 가져오고, 공유 문서(PROJECT.md/REQUIREMENTS.md/ROADMAP.md/STATE.md)는 Phase 9가 추가한 내용만 뽑아 origin/main의 현재 버전 위에 재적용해 PR #6으로 제출함. 원본 브랜치(`gsd/phase-09-backend-foundation`)도 보존.
