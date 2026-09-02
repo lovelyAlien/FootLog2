@@ -119,9 +119,22 @@ describe('src/ 전체 하드코딩 hex 컬러 회귀 가드', () => {
 
       const source = fs.readFileSync(filePath, 'utf-8');
       const codeOnly = stripComments(source);
-      if (/#[0-9A-Fa-f]{3,6}\b/.test(codeOnly)) {
-        offenders.push(relativePath);
+      const hexMatches = codeOnly.match(/#[0-9A-Fa-f]{3,6}\b/g) ?? [];
+      if (hexMatches.length === 0) continue;
+
+      // 06-07-PLAN.md — docs/designs/calendar-date-scrubber.md(CLEARED)가 명시한
+      // 눈금 색 하나(#C7C2B4, "이 phase의 유일한 신규 hex")만 좁게 예외 처리한다.
+      // 새 디자인 토큰으로 tokens.ts에 올리지 않기로 한 원본 문서의 결정을 그대로
+      // 따른다 — 이 파일이 다른 임의의 hex를 추가로 갖게 되면 여전히 이 가드에
+      // 걸린다(정확히 이 한 값만 허용).
+      if (
+        relativePath === path.join('calendar', 'DateScrubber.tsx') &&
+        hexMatches.every((match) => match.toUpperCase() === '#C7C2B4')
+      ) {
+        continue;
       }
+
+      offenders.push(relativePath);
     }
 
     expect(offenders).toEqual([]);
