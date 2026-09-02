@@ -86,8 +86,11 @@ class EntityPersistenceTest {
         // Test 2: id가 저장 시 넘긴 UUID와 정확히 같다(서버가 ID를 재발급하지 않음 — Pitfall 5)
         assertEquals(checkinId, found.id)
 
-        // Test 3: 모든 필드(널 허용 필드 포함)가 저장 값과 일치한다
-        assertEquals(now, found.timestampUtc)
+        // Test 3: 모든 필드(널 허용 필드 포함)가 저장 값과 일치한다.
+        // PostgreSQL timestamptz는 오프셋을 보존하지 않고 인스턴트만 저장하므로(JDBC 드라이버가
+        // UTC 오프셋으로 되돌려줌), OffsetDateTime.equals(오프셋까지 비교)가 아니라 isEqual
+        // (같은 인스턴트인지)로 비교한다 — 값 자체는 정확히 보존됨을 그대로 검증한다.
+        assertTrue(now.isEqual(found.timestampUtc), "timestampUtc는 같은 인스턴트로 보존돼야 한다")
         assertEquals("2026-09-02", found.localDateKey)
         assertEquals("Asia/Seoul", found.timezoneAtCapture)
         assertEquals(37.5665, found.lat)
@@ -96,8 +99,8 @@ class EntityPersistenceTest {
         assertEquals("gps", found.locationSource)
         assertEquals("테스트 메모", found.note)
         assertEquals("photos/test.jpg", found.photoPath)
-        assertEquals(now, found.createdAt)
-        assertEquals(now, found.updatedAt)
+        assertTrue(now.isEqual(found.createdAt), "createdAt은 같은 인스턴트로 보존돼야 한다")
+        assertTrue(now.isEqual(found.updatedAt), "updatedAt은 같은 인스턴트로 보존돼야 한다")
         assertEquals(1, found.schemaVersion)
     }
 
@@ -195,8 +198,13 @@ class EntityPersistenceTest {
         )
         dailyReflectionRepository.save(duplicate)
 
+        // entityManager.flush()가 아니라 리포지토리(JpaRepository.flush())를 통해 호출한다 —
+        // Spring의 예외 변환(PersistenceExceptionTranslationPostProcessor)은 @Repository로
+        // 등록된 프록시 호출에만 적용되므로, 원시 EntityManager.flush() 호출은 Hibernate의
+        // ConstraintViolationException을 그대로 던지고 DataIntegrityViolationException으로
+        // 변환되지 않는다.
         assertThrows<DataIntegrityViolationException> {
-            entityManager.flush()
+            dailyReflectionRepository.flush()
         }
     }
 
