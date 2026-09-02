@@ -127,3 +127,14 @@ None - 외부 서비스 설정 불필요.
 ---
 *Phase: 06-calendar-tab*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+- FOUND: src/settings/config.ts
+- FOUND: src/settings/settingsRepo.ts
+- FOUND: src/settings/settingsRepo.test.ts
+- FOUND: .planning/phases/06-calendar-tab/06-01-SUMMARY.md
+- FOUND commit: 702b9b3 (test RED — migrations)
+- FOUND commit: 37af576 (feat GREEN — migrations)
+- FOUND commit: 9c36671 (test RED — settingsRepo)
+- FOUND commit: 99b9fff (feat GREEN — settingsRepo)
