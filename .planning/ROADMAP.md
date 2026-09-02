@@ -232,7 +232,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 | 6. Calendar Tab | 8/8 | Complete   | 2026-09-02 |
 | 7. Day-end Reflection | 0/TBD | Not started | - |
 | 8. Export & Polish | 0/TBD | Not started | - |
-| 9. Backend Foundation | 0/6 | Planned | - |
+| 9. Backend Foundation | 1/6 | In Progress|  |
 | 10. Authentication (Kakao OAuth2/PKCE) | 0/TBD | Not started | - |
 | 11. Object Storage (S3-compatible) | 0/TBD | Not started | - |
 | 12. Client-Server Sync | 0/TBD | Not started | - |
@@ -249,7 +249,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 
 **Plans**: 6 plans (5 waves)
 
-- [ ] 09-01-PLAN.md — Spring Boot 4.1.1(Kotlin/Gradle KTS) 스캐폴딩 + Boot4 Flyway/allOpen 함정 차단 + 프로파일 3종 (wave 1)
+- [x] 09-01-PLAN.md — Spring Boot 4.1.1(Kotlin/Gradle KTS) 스캐폴딩 + Boot4 Flyway/allOpen 함정 차단 + 프로파일 3종 (wave 1)
 - [ ] 09-02-PLAN.md — Flyway V1~V3 마이그레이션(users/checkins/daily_reflections) + Testcontainers 스키마 계약 테스트 (wave 2)
 - [ ] 09-03-PLAN.md — multi-stage Dockerfile + .dockerignore + backend/** 경로 필터 GitHub Actions CI (wave 2)
 - [ ] 09-04-PLAN.md — JPA 엔티티/리포지토리 3종 + 클라이언트 발급 UUID 보존 왕복 테스트 (wave 3)
