@@ -1,0 +1,5 @@
+# 로컬 개발 프로파일 — DataSource 접속정보를 여기 하드코딩하지 않는다(D-12).
+# spring-boot-docker-compose가 같은 폴더의 compose.yaml을 감지해 Postgres 컨테이너를
+# 자동 기동하고 DataSource 접속정보를 자동 주입한다.
+spring:
+  docker.compose.enabled: true
