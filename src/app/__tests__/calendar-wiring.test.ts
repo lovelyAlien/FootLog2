@@ -82,3 +82,95 @@ describe('CALENDAR_COPY 단일 출처 계약', () => {
     expect(calendarContentSource).toMatch(/scrubberCaption:/);
   });
 });
+
+// 06-05-PLAN.md Task 3 — 과거 날짜 화면 회귀 가드. 06-03이 만든 위 describe 블록/it은
+// 건드리지 않고 여기서부터 append한다.
+const pastDateRouteSource = readSource(path.join('(tabs)', 'calendar', '[date]', 'index.tsx'));
+const pastDateRouteCodeOnly = stripComments(pastDateRouteSource);
+const pastDateDetailRouteSource = readSource(path.join('(tabs)', 'calendar', '[date]', '[id].tsx'));
+const pastDateDetailRouteCodeOnly = stripComments(pastDateDetailRouteSource);
+const pastDateScreenSource = readSrcSource(path.join('calendar', 'PastDateScreen.tsx'));
+const pastDateScreenCodeOnly = stripComments(pastDateScreenSource);
+
+// 06-RESEARCH.md Pitfall 1 — tabBarStyle을 만지는 파일이 이 저장소 전체에서
+// PastDateScreen.tsx와 (tabs)/_layout.tsx 두 개뿐이어야 한다. .tsx 파일만 재귀
+// 순회한다 — .test.ts 파일들은 이 문자열을 검색 패턴/단언 문자열로 포함할 뿐 실제로
+// 탭바를 조작하지 않으므로 대상에서 자연스럽게 제외된다.
+const SRC_DIR = path.join(APP_DIR, '..');
+
+function collectTsxFiles(dir: string): string[] {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return collectTsxFiles(fullPath);
+    }
+    return entry.name.endsWith('.tsx') ? [fullPath] : [];
+  });
+}
+
+describe('과거 날짜 라우트 파라미터 검증(T-06-02 fail-closed)', () => {
+  it('Test 8: [date]/index.tsx가 isValidLocalDateKey로 검증하고 실패 시 Redirect한다', () => {
+    expect(pastDateRouteCodeOnly).toMatch(/isValidLocalDateKey/);
+    expect(pastDateRouteCodeOnly).toMatch(/Redirect/);
+  });
+});
+
+describe('과거 날짜 라우트 얇은 래퍼 계약', () => {
+  it('Test 9: [date]/index.tsx와 [date]/[id].tsx 둘 다 StyleSheet/MapView/useState를 갖지 않는다', () => {
+    expect(pastDateRouteCodeOnly).not.toMatch(/\bStyleSheet\b/);
+    expect(pastDateRouteCodeOnly).not.toMatch(/\bMapView\b/);
+    expect(pastDateRouteCodeOnly).not.toMatch(/\buseState\b/);
+    expect(pastDateDetailRouteCodeOnly).not.toMatch(/\bStyleSheet\b/);
+    expect(pastDateDetailRouteCodeOnly).not.toMatch(/\bMapView\b/);
+    expect(pastDateDetailRouteCodeOnly).not.toMatch(/\buseState\b/);
+  });
+
+  it('Test 10 (T-06-09): [date]/[id].tsx가 CheckinDetailScreen을 import한다(화면 본체 복제 금지)', () => {
+    expect(pastDateDetailRouteCodeOnly).toMatch(/CheckinDetailScreen/);
+  });
+});
+
+describe('PastDateScreen 데이터/재사용 계약', () => {
+  it('Test 11: getTodayCheckins를 참조하고 날짜별 조회용 새 함수는 참조하지 않는다', () => {
+    expect(pastDateScreenCodeOnly).toMatch(/getTodayCheckins/);
+    expect(pastDateScreenCodeOnly).not.toMatch(/getCheckinsByDate/);
+  });
+
+  it('Test 12: TodayBottomSheet를 참조한다(새 시트 컴포넌트를 만들지 않는다)', () => {
+    expect(pastDateScreenCodeOnly).toMatch(/TodayBottomSheet/);
+  });
+
+  it('Test 13 (REQ-past-date-view): 체크인 버튼 관련 심볼이 등장하지 않는다', () => {
+    expect(pastDateScreenCodeOnly).not.toMatch(
+      /CheckinActionCard|checkinCta|checkinFlow|handleCheckinPress/
+    );
+  });
+
+  it('Test 14: getParent와 tabBarStyle을 참조한다(탭바 숨김 배선 존재)', () => {
+    expect(pastDateScreenCodeOnly).toMatch(/getParent/);
+    expect(pastDateScreenCodeOnly).toMatch(/tabBarStyle/);
+  });
+
+  it('Test 15 (06-RESEARCH.md Pitfall 1): tabBarStyle을 포함하는 .tsx 파일이 PastDateScreen.tsx와 (tabs)/_layout.tsx 둘뿐이다', () => {
+    const tsxFiles = collectTsxFiles(SRC_DIR);
+    const filesWithTabBarStyle = tsxFiles.filter((filePath) => {
+      const codeOnly = stripComments(fs.readFileSync(filePath, 'utf-8'));
+      return /tabBarStyle/.test(codeOnly);
+    });
+    const relativePaths = filesWithTabBarStyle.map((filePath) => path.relative(SRC_DIR, filePath));
+    expect(relativePaths.sort()).toEqual(
+      [path.join('calendar', 'PastDateScreen.tsx'), path.join('app', '(tabs)', '_layout.tsx')].sort()
+    );
+  });
+
+  it('Test 16: CALENDAR_COPY.pastDateEmptyState를 참조하고 한글 리터럴을 직접 포함하지 않는다', () => {
+    expect(pastDateScreenCodeOnly).toMatch(/CALENDAR_COPY\.pastDateEmptyState/);
+    expect(pastDateScreenCodeOnly).not.toContain("'이 날은 기록이 없어요'");
+  });
+
+  it('Test 17 (T-06-10): createPendingDeleteController와 dispose를 참조한다(삭제 확정 경로 존재)', () => {
+    expect(pastDateScreenCodeOnly).toMatch(/createPendingDeleteController/);
+    expect(pastDateScreenCodeOnly).toMatch(/dispose/);
+  });
+});
