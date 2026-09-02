@@ -76,6 +76,29 @@ All Task/Plan/Wave columns reconciled against actual 06-01~06-07 PLAN.md task ID
 | Bottom sheet force-collapse on scrubber touch | REQ-date-scrubber | Visual/animation timing | iOS Simulator: touch scrubber while sheet is OPEN, confirm sheet collapses and map remains visible |
 | Month swipe gesture (left/right) | (D-05, calendar grid) | Gesture feel | iOS Simulator: swipe grid left/right, confirm month changes and header arrow buttons produce identical result |
 
+### Claude 시뮬레이터 확인 (2026-09-02, 06-08 Task 2)
+
+iPhone 17 Pro 시뮬레이터에 dev-client를 연결하고, 검증용 체크인 3~4건을 SQLite에 직접 seed하여 확인. CLAUDE.md "실기기 확인이 필요한 검증 단계" 원칙에 따라 자동화로 못 잡는 항목을 Claude가 먼저 시뮬레이터로 확인했다.
+
+| # | 항목 | Claude 시뮬레이터 확인 | 비고 |
+|---|------|------------------------|------|
+| 1 | 월 그리드(일요일 시작·오늘 밑줄·톤 구분) | ✅ 확인됨 | 스크린샷으로 그리드 렌더/오늘 accent 밑줄 확인 |
+| 2 | 월 이동 2경로(헤더 화살표 + 스와이프) | ❌ **문제 발견** | 아래 Bug 1 참고 — 헤더 화살표가 탭에 반응하지 않음(스와이프는 미확인, 화살표 실패로 우선순위 판단) |
+| 3 | 과거 날짜 진입(지도+시트, 체크인 버튼 없음, 탭바 숨김/복원) | ✅ 확인됨 | 스크린샷 근거: 날짜 셀 탭 → 지도+시트 전환, 체크인 버튼 없음, 하단 탭바 사라짐. `< index` 뒤로가기로 캘린더 그리드 복귀 시 탭바 다시 보임 |
+| 4 | 기록 없는 날 → "이 날은 기록이 없어요" | ✅ 확인됨 | 스크린샷 근거: 2026-09-09(기록 없음) 진입 시 문구가 시트 표면에 보이고 지도 위에 겹치지 않음 |
+| 5 | 스크러버 드래그(실시간 반영·관성 없음·경계 클램프) | ❌ **문제 발견(크래시)** | 아래 Bug 2 참고 — 드래그 즉시 앱 크래시 |
+| 6 | 스크러버 숨김(기록 0~1일) | 🟡 부분 확인 | 기록 ≥3일일 때 스크러버가 보이는 것은 확인. 0~1일 숨김 조건은 `scrubberRange.test.ts`의 `shouldShowScrubber` 단위 테스트로 이미 커버되어 있어 별도 시뮬레이터 재확인은 생략 |
+| 7 | 설정 화면(3항목·탭바 유지) | ✅ 확인됨(버그 수정 후) | 아래 Bug 3 참고 — 최초 진입 자체가 실패해 발견/수정 후 재확인. 3항목(빈도/토글/버전)만 보이고 탭바 유지됨을 확인. 빈도 액션시트 탭 및 백그라운드→포그라운드 토글 유지는 시간 관계상 미확인 |
+| 8 | DESIGN.md 색상 대조(시맨틱 색 없음·accent 절제) | ✅ 확인됨 | 촬영된 모든 스크린샷에서 빨강/초록/파랑 계열 시맨틱 색 없음, accent(올리브)는 오늘 밑줄에서만 등장 |
+
+**발견된 문제 (Task 3에서 창업자 판단 필요 — 이 플랜에서 구현 변경 안 함):**
+
+- **Bug 1 — 캘린더 헤더 화살표가 상태바 영역에 깔려 탭 불가.** `src/calendar/CalendarGridScreen.tsx`의 `headerRow`가 `insets.top` 없이 화면 최상단(y=0)에서 시작해 Dynamic Island/상태바와 겹친다. 다른 화면(`(tabs)/index/index.tsx`의 `bannerStack`)은 모두 `paddingTop: insets.top`을 쓰는데 이 화면만 빠져있다. 시뮬레이터에서 화살표 위치에 반복 탭했으나 월이 전혀 바뀌지 않음(그리드 셀 탭은 같은 좌표계에서 정상 동작해 좌표 문제가 아님을 교차 확인). 좌우 스와이프는 별도로 시도하지 못함.
+- **Bug 2 — 날짜 스크러버 드래그 시 크래시.** 재현: 과거 날짜 화면에서 스크러버를 좌우로 드래그. 에러: `[Worklets] Tried to synchronously call a Remote Function. Called "indexForTranslation" on the UI Runtime.` at `DateScrubber.tsx:77:40`(`.onUpdate` 콜백, 즉 UI스레드 워클릿, 안에서 `scrubberRange.ts`의 일반 JS 함수 `indexForTranslation`을 워클릿 표시 없이 직접 호출). REQ-date-scrubber의 핵심 상호작용이 완전히 동작하지 않는다.
+- **Bug 3 (발견 즉시 수정 — 커밋 83e1c1b, 59df772) — 설정 화면 진입점이 404로 빠짐.** 최초 원인: 06-08 Task 1에서 타입 에러를 고치며 `router.push('/settings')`를 타입 선언에 맞춰 `/index/settings`로 바꿨으나, `(tabs)/index/` 탭 폴더와 그 안의 `index.tsx` 스크린이 둘 다 "index" 세그먼트를 공유하는 구조적 이름 충돌(Metro 부팅 로그가 경고하는 문제)로 인해 절대 경로가 타입 체크만 통과하고 런타임에는 +not-found로 빠졌다. 같은 스택 내 상대 경로 `./settings`로 재수정 후 시뮬레이터에서 정상 동작 확인. **동일 메커니즘의 잠재 버그**로 `handleRowPress`의 `/index/[id]`(Phase 5, 06-08 Task 1에서 같은 방식으로 "수정"했던 코드)도 상대 경로 `./[id]`로 함께 정정했다 — 다만 바텀시트 리스트 행의 정확한 탭 좌표를 시뮬레이터에서 특정하지 못해 이 경로는 타입 체크·정적 테스트 통과로만 확인했고 실기기/시뮬레이터 탭으로 직접 재현 확인하지 못했다.
+
+**시뮬레이터로 재현 불가 판단 항목:** 없음 — 이번 세션에서 만난 모든 항목은 시뮬레이터로 시도 가능했다(단, 위 부분 확인/미확인 항목은 재현 불가가 아니라 시간 제약으로 생략).
+
 ---
 
 ## Validation Sign-Off
