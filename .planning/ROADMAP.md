@@ -27,7 +27,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] **Phase 3: Check-in Core Loop** - 사용자가 자유형 체크인(위치 + 선택적 사진/메모)을 GPS·저장 실패를 포함해 안정적으로 남길 수 있다. (completed 2026-08-27)
 - [x] **Phase 4: Today View** - 사용자가 오늘의 체크인들을 지도에서 보여주는 홈 화면과, 새 체크인을 위한 마찰 낮은 진입점을 갖는다. (completed 2026-08-31)
 - [x] **Phase 5: Check-in Detail & Edit** - 사용자가 기록된 개별 체크인을 조회·수정·삭제할 수 있다. (completed 2026-08-31)
-- [ ] **Phase 6: Calendar Tab** - 사용자가 월 그리드와 빠른 날짜별 스크러버로 과거 날짜를 훑어볼 수 있다.
+- [x] **Phase 6: Calendar Tab** - 사용자가 월 그리드와 빠른 날짜별 스크러버로 과거 날짜를 훑어볼 수 있다. (completed 2026-09-02)
 - [ ] **Phase 7: Day-end Reflection** - 사용자가 하루 루프의 핵심 요소인 짧은 하루 마무리 회고를 완료할 수 있다.
 - [ ] **Phase 8: Export & Polish** - 사용자가 데이터를 로컬로 내보낼 수 있고, 앱이 이름/접근성 기준을 충족한다.
 
@@ -180,7 +180,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] 06-05-PLAN.md — 과거 날짜 읽기전용 지도+시트 화면 + 탭바 숨김 (wave 3)
 - [x] 06-06-PLAN.md — 설정 라우트 + Today 뷰 햄버거 진입점 + 포그라운드 자가진단 배선 (wave 3)
 - [x] 06-07-PLAN.md — 플로팅 날짜 스크러버 + 시트 강제 접힘 통합 (wave 4)
-- [ ] 06-08-PLAN.md — 전체 검증 + 시뮬레이터 확인 + 창업자 승인 체크포인트 (wave 5)
+- [x] 06-08-PLAN.md — 전체 검증 + 시뮬레이터 확인 + 창업자 승인 체크포인트 (wave 5)
 
 **UI hint**: yes
 
@@ -229,7 +229,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 | 3. Check-in Core Loop | 12/12 | Complete   | 2026-08-28 |
 | 4. Today View | 7/7 | Complete   | 2026-08-31 |
 | 5. Check-in Detail & Edit | 7/7 | Complete   | 2026-08-31 |
-| 6. Calendar Tab | 7/8 | In Progress|  |
+| 6. Calendar Tab | 8/8 | Complete   | 2026-09-02 |
 | 7. Day-end Reflection | 0/TBD | Not started | - |
 | 8. Export & Polish | 0/TBD | Not started | - |
 | 9. Backend Foundation | 0/TBD | Not started | - |
