@@ -173,8 +173,8 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 
 **Plans**: 8 plans (5 waves)
 
-- [ ] 06-01-PLAN.md — app_settings 스키마/마이그레이션 v3 + settingsRepo (wave 1)
-- [ ] 06-02-PLAN.md — 월 그리드·스크러버 순수 산수 + 월 범위 기록 조회 (wave 1)
+- [x] 06-01-PLAN.md — app_settings 스키마/마이그레이션 v3 + settingsRepo (wave 1)
+- [x] 06-02-PLAN.md — 월 그리드·스크러버 순수 산수 + 월 범위 기록 조회 (wave 1)
 - [ ] 06-03-PLAN.md — 캘린더 탭 nested Stack + 월 그리드 화면 + fence 테스트 갱신 (wave 2)
 - [ ] 06-04-PLAN.md — 설정 화면 컴포넌트 + 문구/액션시트 단일 출처 (wave 2)
 - [ ] 06-05-PLAN.md — 과거 날짜 읽기전용 지도+시트 화면 + 탭바 숨김 (wave 3)
@@ -229,7 +229,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 | 3. Check-in Core Loop | 12/12 | Complete   | 2026-08-28 |
 | 4. Today View | 7/7 | Complete   | 2026-08-31 |
 | 5. Check-in Detail & Edit | 7/7 | Complete   | 2026-08-31 |
-| 6. Calendar Tab | 0/TBD | Not started | - |
+| 6. Calendar Tab | 2/8 | In Progress|  |
 | 7. Day-end Reflection | 0/TBD | Not started | - |
 | 8. Export & Polish | 0/TBD | Not started | - |
 | 9. Backend Foundation | 0/TBD | Not started | - |
