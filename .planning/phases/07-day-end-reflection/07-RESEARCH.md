@@ -629,17 +629,19 @@ function ReflectionNotificationDeepLinkGate() {
 | A3 | SQLite `ALTER TABLE ... ADD COLUMN ... NOT NULL DEFAULT 21`이 expo-sqlite(iOS 번들 SQLite)에서 기존 row에 기본값을 자동 백필한다 | Pattern 7 | SQLite 표준 동작이라 위험도 낮음(3.x 전반 지원, ALTER TABLE ADD COLUMN + DEFAULT는 SQLite의 매우 오래된 기능) — 그러나 이 저장소에서 처음 쓰는 조합이므로 `migrations.test.ts`에 회귀 테스트로 명시적 검증 필요 |
 | A4 | expo-notifications의 `useLastNotificationResponse` 훅이 이 프로젝트의 SDK 57 버전에 존재한다 | Code Examples, Standard Stack | 공식 문서(docs.expo.dev/versions/latest)에서 확인했으나 "latest" 문서가 정확히 57.0.14와 일치하는지는 버전 고정 문서가 아니라서 완전히 동일하다고 단언 못함 — 계획 단계에서 `node_modules/expo-notifications`의 실제 타입 선언 파일에서 `useLastNotificationResponse` export를 확인 필요 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`runWithSingleRetry`를 `src/checkin/checkinRepo.ts`에서 그대로 import할 것인가, 공용 위치로 옮길 것인가?**
+1. **`runWithSingleRetry`를 `src/checkin/checkinRepo.ts`에서 그대로 import할 것인가, 공용 위치로 옮길 것인가? (RESOLVED)**
    - What we know: 헤더 주석이 "checkins에 종속되지 않는다... Phase 5가 그대로 재사용할 수 있도록 설계됐다"고 명시했고, 실제로 Phase 5(`CheckinDetailScreen.tsx`)가 이미 도메인 경계를 넘어 import했다(같은 `checkin/` 디렉토리 안이긴 함). Phase 7은 `reflection/`이라는 **다른** 도메인에서 이 함수가 필요하다.
    - What's unclear: 이 저장소의 "도메인별 디렉토리" 관례상 `reflection/`이 `checkin/`의 내부 함수를 import하는 것이 허용되는 패턴인지, 아니면 이 시점에 `runWithSingleRetry`를 `src/db/` 또는 `src/lib/` 같은 공용 위치로 옮기는 리팩터링이 필요한지.
    - Recommendation: 이 phase 스코프에서는 **그대로 import**(가장 낮은 리스크, 기존 코드 이동 없음)를 권장하되, 계획 단계에서 사용자/설계자가 "지금 옮길지, 다음에 세 번째 소비처가 생기면 옮길지"를 명시적으로 결정하도록 플래그한다(Rule of Three 관점에서는 아직 이동 시점이 아닐 수 있음).
+   - RESOLVED: 07-02-PLAN.md Task 1이 그대로 import하는 쪽으로 확정 — 소비처가 2곳(`checkin/`, `reflection/`)뿐이라 Rule of Three 기준 이동 시점이 아니라는 근거를 파일 헤더 주석에 명시.
 
-2. **`daily_reflections.date`에 이미 있는 `UNIQUE` 인덱스로 충분한가, 아니면 명시적 인덱스가 필요한가?**
+2. **`daily_reflections.date`에 이미 있는 `UNIQUE` 인덱스로 충분한가, 아니면 명시적 인덱스가 필요한가? (RESOLVED)**
    - What we know: `schema.ts` 주석이 "UNIQUE 제약이 이미 인덱스를 만들므로 별도 인덱스는 만들지 않는다"고 명시 — Phase 1이 이미 이 판단을 내렸다.
    - What's unclear: 없음 — 이 phase가 새로 걱정할 필요가 없는 이미 해결된 문제.
    - Recommendation: 그대로 둔다(재검토 불필요, 정보 제공 차원에서만 기록).
+   - RESOLVED: 계획 단계에서 재검토 없이 그대로 채택 — 추가 조치 없음.
 
 ## Environment Availability
 

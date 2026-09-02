@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 06 완료, Phase 07 계획 대기
+status: executing
 stopped_at: Phase 07 UI-SPEC approved
-last_updated: "2026-09-02T09:40:44.276Z"
-last_activity: 2026-09-02 -- Phase 06 (calendar-tab) 완료 — 시뮬레이터 확인 + 창업자 실기기 확인 통과
+last_updated: "2026-09-02T14:29:50.551Z"
+last_activity: 2026-09-02 -- Phase 07 planning complete
 progress:
   total_phases: 12
   completed_phases: 6
-  total_plans: 47
+  total_plans: 57
   completed_plans: 47
   percent: 50
 ---
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-08-25)
 
 Phase: 06 (calendar-tab) — COMPLETE
 Plan: 8 of 8
-Status: Phase 06 완료, Phase 07 계획 대기
-Last activity: 2026-09-02 -- Phase 06 (calendar-tab) 완료 — 시뮬레이터 확인 + 창업자 실기기 확인 통과
+Status: Ready to execute
+Last activity: 2026-09-02 -- Phase 07 planning complete
 
 Progress: [██████░░] 75% (6/8 v1.0 phases; Phase 9-12는 병행 트랙)
 
@@ -101,6 +101,7 @@ Progress: [██████░░] 75% (6/8 v1.0 phases; Phase 9-12는 병행 
 - TODOS.md에 사용자가 정리해야 할 오래된 항목 2개가 있음(비차단): 이미 footlog-product-design.md의 Success Criteria에서 해결된 "kill condition 부재" P1 항목(Key Decisions 참고), 그리고 현재의 정성적 kill condition이 아니라 이미 폐기된 정량적 게이트를 여전히 인용하는 2단계 "depends on" 문구.
 - [Phase 6, discuss-phase]: 원본 제품문서(footlog-product-design.md T10)는 "과거 날짜 뷰 + 햄버거 메뉴→설정 화면"을 한 태스크로 묶어뒀고 Phase 4 논의(D-08)가 햄버거 아이콘을 Phase 6로 넘겨뒀는데, REQUIREMENTS.md의 Phase 6 요구사항 3개(REQ-calendar-grid/past-date-view/date-scrubber)엔 설정 화면을 커버하는 항목이 없었음 — 06-CONTEXT.md D-01에서 "전체 포함"으로 확정했으나 REQUIREMENTS.md/ROADMAP.md엔 아직 새 requirement가 반영 안 됨. **해결됨(2026-09-01, 06-01):** REQUIREMENTS.md에 REQ-settings-screen 추가 완료, 06-04/06-06이 구현, 06-08에서 완료 확인.
 - [Phase 6, execute-phase]: 06-08 게이트 진행 중 라우트 문자열 버그 3건과 UI 버그 2건(캘린더 헤더 safe-area, 스크러버 드래그 크래시) 발견 → 전부 사용자 승인 하에 즉시 수정하고 시뮬레이터로 재확인. 상세는 06-08-SUMMARY.md/06-VALIDATION.md 참고. **패턴 노트:** `(tabs)/<name>/` 폴더와 그 안의 `<name>.tsx`처럼 세그먼트 이름이 중첩되면 expo-router 절대 경로가 타입체크만 통과하고 런타임엔 실패할 수 있음 — 같은 스택 내에서는 상대 경로(`./route`)를 쓸 것. Reanimated worklet은 외부 함수 호출 시 그 함수에도 `'worklet'` 지시어가 필요하고, 기본 매개변수가 모듈 상수를 참조하면 클로저 캡처에서 빠질 수 있어 호출부에서 명시적으로 전달할 것.
+- [Phase 7, plan-phase]: 동일한 결정 커버리지 게이트 도구 한계 세 번째 재발 — 07-CONTEXT.md의 D-01(저장 실패 공유 인라인 문구)/D-02("오늘 돌아보기" 행 완료 상태 미표시)/D-03(모달 헤더 ✕만) 3건이 "커버 안 됨"으로 보고됐으나, 07-04/07-05/07-09/07-10-PLAN.md 본문(objective/tasks/acceptance_criteria/done)에 D-01~D-03이 10곳 이상 구체적으로 인용됨을 grep으로 수동 확인 — 독립적으로 실행된 gsd-plan-checker 에이전트도 동일 결론(D-01~D-05 전부 구현 태스크 존재, 모순 없음). Phase 2/5와 동일 사유로 override하고 진행. verify-phase에서 재확인 권장.
 
 ## Deferred Items
 
