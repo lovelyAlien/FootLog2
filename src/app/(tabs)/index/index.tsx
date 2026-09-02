@@ -559,7 +559,7 @@ export default function Index() {
   // 객체 형태를 쓴다 — expo-router가 동적 세그먼트를 직접 인코딩해 id에 특수문자가
   // 있어도 경로가 깨지지 않는다(T-05-15).
   const handleRowPress = useCallback((id: string) => {
-    router.push({ pathname: '/index/[id]', params: { id } });
+    router.push({ pathname: './[id]', params: { id } });
   }, []);
 
   const isCapturing = state.phase === 'CAPTURING';
