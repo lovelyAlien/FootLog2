@@ -10,14 +10,27 @@
 // 그래서 index 스크린에 headerShown: false를 명시하지 않으면 월 그리드 화면
 // 최상단에 의도치 않은 빈 네비게이션 바가 생긴다.
 //
-// 과거 날짜 뷰 동적 라우트 스크린 등록은 그 라우트 파일이 실제로 생기는 06-04에서
-// 추가한다 — 존재하지 않는 라우트를 미리 등록하지 않는다.
+// 과거 날짜 뷰 동적 라우트 스크린 2개는 06-05-PLAN.md Task 1이 여기서 등록한다.
+//
+// `calendar/[date].tsx`(플랫 파일) + `calendar/[id].tsx` 조합을 쓰지 않고
+// `calendar/[date]/index.tsx` + `calendar/[date]/[id].tsx`로 중첩한 이유: 같은
+// 레벨의 동적 세그먼트 두 개(`[date]`와 `[id]`가 나란히)는 `/calendar/<무언가>`를
+// 날짜인지 체크인 id인지 라우터가 구분할 수 없어 라우트가 모호해진다. 중첩하면
+// 상세 경로가 `/calendar/2026-09-01/<id>`가 되어 "어느 날짜에서 들어온 상세인지"까지
+// URL이 표현한다.
+//
+// 두 화면 모두 title은 여기서 정적으로 주지 않는다 — 각 화면이 데이터 로드 후
+// navigation.setOptions로 채운다((tabs)/index/_layout.tsx의 [id] 주석과 동일 근거).
+// `[date]/index`의 headerShown: true는 calendar-date-scrubber.md Premise 8이 명시한
+// 44pt 헤더다.
 import { Stack } from 'expo-router';
 
 export default function CalendarStackLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="[date]/index" options={{ headerShown: true }} />
+      <Stack.Screen name="[date]/[id]" options={{ headerShown: true }} />
     </Stack>
   );
 }
