@@ -232,7 +232,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 | 6. Calendar Tab | 8/8 | Complete   | 2026-09-02 |
 | 7. Day-end Reflection | 0/TBD | Not started | - |
 | 8. Export & Polish | 0/TBD | Not started | - |
-| 9. Backend Foundation | 0/TBD | Not started | - |
+| 9. Backend Foundation | 0/6 | Planned | - |
 | 10. Authentication (Kakao OAuth2/PKCE) | 0/TBD | Not started | - |
 | 11. Object Storage (S3-compatible) | 0/TBD | Not started | - |
 | 12. Client-Server Sync | 0/TBD | Not started | - |
@@ -247,7 +247,14 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
   1. Spring Boot(Kotlin) 프로젝트가 초기화되고 로컬/스테이징 환경에서 빌드·기동된다.
   2. 서버측 DB에 클라이언트 `Checkin`/`DailyReflection` 스키마에 대응하는 테이블이 존재하며, 버전 관리되는 마이그레이션 프레임워크로 스키마를 변경할 수 있다.
 
-**Plans**: TBD
+**Plans**: 6 plans (5 waves)
+
+- [ ] 09-01-PLAN.md — Spring Boot 4.1.1(Kotlin/Gradle KTS) 스캐폴딩 + Boot4 Flyway/allOpen 함정 차단 + 프로파일 3종 (wave 1)
+- [ ] 09-02-PLAN.md — Flyway V1~V3 마이그레이션(users/checkins/daily_reflections) + Testcontainers 스키마 계약 테스트 (wave 2)
+- [ ] 09-03-PLAN.md — multi-stage Dockerfile + .dockerignore + backend/** 경로 필터 GitHub Actions CI (wave 2)
+- [ ] 09-04-PLAN.md — JPA 엔티티/리포지토리 3종 + 클라이언트 발급 UUID 보존 왕복 테스트 (wave 3)
+- [ ] 09-05-PLAN.md — 헬스체크/actuator 노출 잠금 + staging 프로파일 기동 테스트 + REQUIREMENTS.md 갱신 (wave 4)
+- [ ] 09-06-PLAN.md — 전체 게이트(build/docker/bootRun) + 스테이징 범위·PaaS 벤더 창업자 결정 (wave 5)
 
 ### Phase 10: Authentication (Kakao OAuth2/PKCE)
 
