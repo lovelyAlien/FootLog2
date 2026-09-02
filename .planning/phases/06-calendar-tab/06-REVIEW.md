@@ -45,7 +45,8 @@ findings:
   warning: 6
   info: 2
   total: 8
-status: issues_found
+status: resolved
+resolved: 2026-09-02T06:50:00Z
 ---
 
 # Phase 06: Code Review Report
@@ -202,6 +203,13 @@ VoiceOver traversal typically picks up the adjacent row label, but relying on tr
 
 ---
 
+## Resolution (2026-09-02)
+
+- **WR-01~05:** Fixed. See commit `4929696`. Each fix re-verified via `npm test` (616/616), `npx tsc --noEmit` (0 errors), and — for WR-01, WR-04, WR-05 — direct iOS Simulator re-check (today-underline gating on a padding cell, settings screen still loads/persists after the reordered `persist()`, record dot renders on the seeded 9/1 check-in).
+- **WR-06:** No code change — tap-verified directly in the simulator that `PastDateScreen` → check-in detail (`/calendar/[date]/[id]`) navigates correctly. The absolute path does not share the `(tabs)/index/index.tsx`-style segment collision that caused the other three route failures this phase.
+- **IN-01, IN-02:** Left as-is (not in the fix scope requested for this pass — IN-01 was already confirmed a non-issue by the reviewer; IN-02 remains a minor open nit for a future pass).
+
 _Reviewed: 2026-09-02T06:16:17Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+_Resolved: 2026-09-02T06:50:00Z_
