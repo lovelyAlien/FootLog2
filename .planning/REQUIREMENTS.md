@@ -50,8 +50,8 @@
 
 - [x] **REQ-calendar-grid** (M20, CM-T1a + CM-T5): 캘린더 탭은 탭 전용 월 그리드(1단계에는 드래그 없음)를 보여주며 "오늘"에 accent 밑줄을 표시한다.
 - [x] **REQ-past-date-view** (M21, PD-T10; M20에 의존): 과거 날짜를 탭하면 체크인 버튼 없이 해당 날짜의 읽기전용 지도+시트 뷰가 열린다.
-- [ ] **REQ-date-scrubber** (M22, CS-T1..T4; M21 확장): 플로팅 가로 날짜 스크러버 오버레이는 터치 시 바텀시트를 강제로 접고, 범위 경계에서 하드 클램프(러버밴딩 없음)되며, 44×44pt 터치 타겟과 44pt 헤더 높이를 사용한다.
-- [ ] **REQ-settings-screen** (PD-T10, 06-CONTEXT.md D-01/D-02; Today 뷰 상단 햄버거 아이콘에서 진입): 설정 화면은 알림 빈도(매시간/3시간마다/끔), 하루 마무리 알림 토글(기본 켜짐), 버전 정보 3개 항목을 노출하고, 알림 빈도/토글 값은 앱 재시작 후에도 보존된다("전체 데이터 삭제"는 포함하지 않음 — 2단계로 연기). 06-01 플랜이 영속화 계층(settingsRepo)만 완료했고, 실제 화면/햄버거 아이콘/배선은 이후 06-* 플랜 몫이다.
+- [x] **REQ-date-scrubber** (M22, CS-T1..T4; M21 확장): 플로팅 가로 날짜 스크러버 오버레이는 터치 시 바텀시트를 강제로 접고, 범위 경계에서 하드 클램프(러버밴딩 없음)되며, 44×44pt 터치 타겟과 44pt 헤더 높이를 사용한다.
+- [x] **REQ-settings-screen** (PD-T10, 06-CONTEXT.md D-01/D-02; Today 뷰 상단 햄버거 아이콘에서 진입): 설정 화면은 알림 빈도(매시간/3시간마다/끔), 하루 마무리 알림 토글(기본 켜짐), 버전 정보 3개 항목을 노출하고, 알림 빈도/토글 값은 앱 재시작 후에도 보존된다("전체 데이터 삭제"는 포함하지 않음 — 2단계로 연기). 06-01 플랜이 영속화 계층(settingsRepo)만 완료했고, 실제 화면/햄버거 아이콘/배선은 이후 06-* 플랜 몫이다.
 
 ### Day-end reflection
 
@@ -132,7 +132,7 @@
 | REQ-checkin-swipe-delete | Phase 5 | Pending |
 | REQ-calendar-grid | Phase 6 | Complete |
 | REQ-past-date-view | Phase 6 | Complete |
-| REQ-date-scrubber | Phase 6 | Pending |
+| REQ-date-scrubber | Phase 6 | Complete |
 | REQ-settings-screen | Phase 6 | Pending (영속화 계층은 06-01 완료, 화면/배선은 후속 플랜) |
 | REQ-reflection-base | Phase 7 | Pending |
 | REQ-reflection-autosave | Phase 7 | Pending |

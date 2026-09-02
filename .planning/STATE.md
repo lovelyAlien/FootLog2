@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 9 context gathered
-last_updated: "2026-09-02T01:48:08.171Z"
-last_activity: 2026-09-02 -- Phase 06 execution started
+stopped_at: Phase 06 complete
+last_updated: "2026-09-02T06:08:43.710Z"
+last_activity: 2026-09-02 -- Phase 06 (calendar-tab) 완료
 progress:
   total_phases: 12
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 47
-  completed_plans: 39
-  percent: 42
+  completed_plans: 47
+  percent: 50
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-25)
 
 **Core value:** 체크인을 남기는 행위가 실제 매일의 사용을 버텨낼 만큼 마찰이 적어야 합니다 — 이 습관이 형성되지 않으면 앱의 다른 어떤 부분도 의미가 없습니다.
-**Current focus:** Phase 06 — calendar-tab
+**Current focus:** Phase 06 완료 — 다음: Phase 07 (day-end reflection)
 
 ## Current Position
 
-Phase: 06 (calendar-tab) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 06
-Last activity: 2026-09-02 -- Phase 06 execution started
+Phase: 06 (calendar-tab) — COMPLETE
+Plan: 8 of 8
+Status: Phase 06 완료, Phase 07 계획 대기
+Last activity: 2026-09-02 -- Phase 06 (calendar-tab) 완료 — 시뮬레이터 확인 + 창업자 실기기 확인 통과
 
-Progress: [█████░░░] 63% (5/8 phases)
+Progress: [██████░░] 75% (6/8 v1.0 phases; Phase 9-12는 병행 트랙)
 
 ## Performance Metrics
 
@@ -99,7 +99,8 @@ Progress: [█████░░░] 63% (5/8 phases)
 - [Phase 5, plan-phase]: 계획 중 gsd-plan-checker가 블로커로 지적 — 05-UI-SPEC.md(작성 8/31 17:30)가 스와이프 삭제 어포던스 색상으로 `colors.accent`를 지정했는데, 같은 날 18:10 DESIGN.md 갱신이 accent 승인 용도를 캘린더 탭 전용 2개로 좁히고 체크인 관련 색상을 전부 Pin(테라코타)으로 이전한 것과 재검증 없이 충돌. accent 신규 승인 / Pin 전환 / accentSoft 3가지 목업을 창업자에게 제시했고 Pin(`#B85C38`)을 명시적으로 선택 — REQUIREMENTS.md/DESIGN.md/05-UI-SPEC.md/05-RESEARCH.md/05-PATTERNS.md/영향받은 PLAN.md 4개(05-03/05-05/05-06/05-07) 전부 갱신 완료, 재검증 통과. DESIGN.md Decisions Log 2026-09-01 항목 참고.
 - REQ-reflection-base(Phase 7)는 번호가 매겨진 원본 태스크 ID가 없음 — 스펙이 day-end-reflection-map.md에 빌드 태스크가 아니라 산문(Premises/Visual Design Decisions/Data Model)으로만 존재함. 원본 체크리스트 자체가 가장 과소 명세됐을 가능성이 높은 항목으로 플래그함 — Phase 7 계획 시 더 면밀히 검토할 것.
 - TODOS.md에 사용자가 정리해야 할 오래된 항목 2개가 있음(비차단): 이미 footlog-product-design.md의 Success Criteria에서 해결된 "kill condition 부재" P1 항목(Key Decisions 참고), 그리고 현재의 정성적 kill condition이 아니라 이미 폐기된 정량적 게이트를 여전히 인용하는 2단계 "depends on" 문구.
-- [Phase 6, discuss-phase]: 원본 제품문서(footlog-product-design.md T10)는 "과거 날짜 뷰 + 햄버거 메뉴→설정 화면"을 한 태스크로 묶어뒀고 Phase 4 논의(D-08)가 햄버거 아이콘을 Phase 6로 넘겨뒀는데, REQUIREMENTS.md의 Phase 6 요구사항 3개(REQ-calendar-grid/past-date-view/date-scrubber)엔 설정 화면을 커버하는 항목이 없었음 — 06-CONTEXT.md D-01에서 "전체 포함"으로 확정했으나 REQUIREMENTS.md/ROADMAP.md엔 아직 새 requirement가 반영 안 됨. Phase 6 plan-phase 착수 시 REQUIREMENTS.md에 REQ-settings-screen류 항목을 추가하거나 최소한 ROADMAP.md Phase 6 Success Criteria에 명시적으로 반영할 것 — 안 하면 결정 커버리지 게이트가 이 스코프를 놓칠 위험(Phase 2/5에서 반복된 게이트 한계와 동일 패턴).
+- [Phase 6, discuss-phase]: 원본 제품문서(footlog-product-design.md T10)는 "과거 날짜 뷰 + 햄버거 메뉴→설정 화면"을 한 태스크로 묶어뒀고 Phase 4 논의(D-08)가 햄버거 아이콘을 Phase 6로 넘겨뒀는데, REQUIREMENTS.md의 Phase 6 요구사항 3개(REQ-calendar-grid/past-date-view/date-scrubber)엔 설정 화면을 커버하는 항목이 없었음 — 06-CONTEXT.md D-01에서 "전체 포함"으로 확정했으나 REQUIREMENTS.md/ROADMAP.md엔 아직 새 requirement가 반영 안 됨. **해결됨(2026-09-01, 06-01):** REQUIREMENTS.md에 REQ-settings-screen 추가 완료, 06-04/06-06이 구현, 06-08에서 완료 확인.
+- [Phase 6, execute-phase]: 06-08 게이트 진행 중 라우트 문자열 버그 3건과 UI 버그 2건(캘린더 헤더 safe-area, 스크러버 드래그 크래시) 발견 → 전부 사용자 승인 하에 즉시 수정하고 시뮬레이터로 재확인. 상세는 06-08-SUMMARY.md/06-VALIDATION.md 참고. **패턴 노트:** `(tabs)/<name>/` 폴더와 그 안의 `<name>.tsx`처럼 세그먼트 이름이 중첩되면 expo-router 절대 경로가 타입체크만 통과하고 런타임엔 실패할 수 있음 — 같은 스택 내에서는 상대 경로(`./route`)를 쓸 것. Reanimated worklet은 외부 함수 호출 시 그 함수에도 `'worklet'` 지시어가 필요하고, 기본 매개변수가 모듈 상수를 참조하면 클로저 캡처에서 빠질 수 있어 호출부에서 명시적으로 전달할 것.
 
 ## Deferred Items
 
@@ -114,6 +115,7 @@ Ingest에서 확인되어 이어받은 항목들.
 
 ## Session Continuity
 
-Last session: 2026-09-01T10:11:21.419Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-backend-foundation/09-CONTEXT.md
+Last session: 2026-09-02T06:08:43.710Z
+Stopped at: Phase 06 (calendar-tab) 완료 — 4개 요구사항 전부 검증 통과
+Resume file: .planning/phases/06-calendar-tab/06-08-SUMMARY.md
+Also open: .planning/phases/09-backend-foundation/09-CONTEXT.md (병행 트랙, Phase 9 계획 대기)

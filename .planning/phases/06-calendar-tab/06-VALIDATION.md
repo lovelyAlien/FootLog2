@@ -115,4 +115,4 @@ iPhone 17 Pro 시뮬레이터에 dev-client를 연결하고, 검증용 체크인
 - [x] Feedback latency < 30s
 - [x] `nyquist_compliant` set to true in frontmatter
 
-**Approval:** Task 1 automated gate passed (`npm test` 616/616, `npx tsc --noEmit` clean). Pending Task 3 founder sign-off for device-only items.
+**Approval:** Task 1 automated gate passed (`npm test` 616/616, `npx tsc --noEmit` clean). Task 2 시뮬레이터 확인 완료, 발견된 버그 2건 수정·재검증 완료. Task 3 — 창업자가 실기기 전용 항목 4개(스와이프 손맛/스크러버 프레임·정지감/실제 조도 톤 구분/알림 빈도 실제 발화 간격) 전부 확인 완료(2026-09-02). **Phase 6 검증 승인.**
