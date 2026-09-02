@@ -121,6 +121,12 @@ None - 외부 서비스 설정 불필요.
 - 검증: `npm test` 전체 598/598 green, `npx tsc --noEmit` 에러 없음. 이 플랜은 checkpoint 태스크가 없어(전부 `type="auto"`) 시뮬레이터 수동 검증 게이트가 발생하지 않았음 — 자동화 테스트(정적 소스 분석 기반 배선 계약)로 아이콘 렌더링/라우팅/탭바 유지/자가진단 배선 전부를 커버.
 - 실기기/시뮬레이터에서 실제 탭 제스처로 최종 확인하는 것은 여전히 유효한 QA 단계이나, 이 플랜의 acceptance_criteria/verification에는 명시되지 않아 이번 실행 범위에 포함하지 않음.
 
+## Self-Check: PASSED
+
+- FOUND: `src/app/(tabs)/index/settings.tsx`
+- FOUND: `.planning/phases/06-calendar-tab/06-06-SUMMARY.md`
+- FOUND commits: `2ed3d17`, `2aa61c1`, `a96dd33` (all present in `git log --oneline --all`)
+
 ---
 *Phase: 06-calendar-tab*
 *Completed: 2026-09-02*
