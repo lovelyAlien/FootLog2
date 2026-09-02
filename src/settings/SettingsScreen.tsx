@@ -73,14 +73,18 @@ export function SettingsScreen({ db }: SettingsScreenProps) {
   }, [db]);
 
   // 두 행(빈도 액션시트 / 하루 마무리 토글)이 공유하는 단 하나의 쓰기 함수.
-  // 순서: (1) SQLite 업서트 → (2) 성공 시 기존 알림 재구성 함수 호출 → (3) 성공 시
+  // 순서: (1) 네이티브 알림 재구성 함수 호출 → (2) 성공 시 SQLite 업서트 → (3) 성공 시
   // 화면 state 반영. 어느 단계든 실패하면 saveFailed만 켜고 settings는 바꾸지 않는다.
+  // (2)를 (1)보다 먼저 실행하면 (1)이 실패했을 때 DB/UI/네이티브 스케줄 3자가
+  // 서로 다른 값을 갖게 되고, 다음 포그라운드 자가진단(NotificationSelfHealGate)이
+  // 이미 커밋된 DB 값을 사용자 모르게 조용히 다시 적용해버린다 — 그래서 되돌릴 수
+  // 없는 (2)는 반드시 (1)이 성공을 확인한 뒤에만 실행한다.
   const persist = useCallback(
     async (next: NotificationSettings) => {
       lastAttemptRef.current = next;
       try {
-        await settingsRepo.upsertSettings(db, next, new Date().toISOString());
         await applyNotificationSettings(next, defaultNotificationDeps);
+        await settingsRepo.upsertSettings(db, next, new Date().toISOString());
         if (!isMountedRef.current) return;
         setSettings(next);
         setSaveFailed(false);

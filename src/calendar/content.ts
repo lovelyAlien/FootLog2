@@ -9,6 +9,10 @@ export const CALENDAR_COPY = {
   // 아이콘 전용 헤더 화살표 버튼의 VoiceOver 라벨(D-05 접근성 보조 경로).
   prevMonthLabel: '이전 달',
   nextMonthLabel: '다음 달',
+  // 그리드 날짜 셀의 VoiceOver 라벨 접미사(06-08 코드 리뷰 WR-05 완화) — 기록 유무를
+  // 무채색 톤 차이만으로 전달하지 않도록, 날짜 제목(formatDateKeyTitle)에 이어 붙인다.
+  todayLabelSuffix: ', 오늘',
+  hasRecordLabelSuffix: ', 기록 있음',
   // 오늘 뷰의 TODAY_COPY.emptyState("아직 기록이 없어요 · 체크인하면 지도가
   // 채워져요")와 의도적으로 다르다 — 과거 날짜에는 새 체크인을 남길 수 없어
   // "체크인하면 채워져요"라는 CTA 자체가 성립하지 않는다(06-UI-SPEC.md §Copywriting
