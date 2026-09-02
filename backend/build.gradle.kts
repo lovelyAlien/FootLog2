@@ -35,6 +35,11 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-flyway-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+	// TestRestTemplate(org.springframework.boot.resttestclient)의 자동설정이 요구하는
+	// RestTemplateBuilder(org.springframework.boot.restclient)를 제공한다 — Boot 4.1부터
+	// REST 클라이언트 지원이 별도 모듈로 분리되어 webmvc-test 스타터만으로는 부족하다
+	// (09-05 실행 중 발견, ./gradlew dependencies로 좌표 존재 확인 후 추가).
+	testImplementation("org.springframework.boot:spring-boot-starter-restclient-test")
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
