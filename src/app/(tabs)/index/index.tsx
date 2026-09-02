@@ -738,7 +738,7 @@ export default function Index() {
   // 캘린더 탭에는 이 진입점을 두지 않는다(D-03) — src/calendar/ 아래 파일은 이
   // 플랜이 건드리지 않는다.
   const handleSettingsPress = useCallback(() => {
-    router.push('/index/settings');
+    router.push('./settings');
   }, []);
 
   const handleRecenterPress = useCallback(() => {
