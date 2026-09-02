@@ -38,7 +38,7 @@ FootLog는 iOS 전용, 완전 로컬 위치 체크인 저널입니다. 하루 �
 
 <!-- 명시적 스코프 경계. 재도입을 막기 위해 이유를 함께 기록. -->
 
-- 백엔드/인증/클라우드(Spring Boot/Kotlin, 카카오 OAuth2/PKCE, S3 호환 스토리지, 클라이언트-서버 동기화) — 미래의 "2단계" *제품* 마일스톤으로 연기(이 계획의 roadmap phase는 아님), 1단계의 정성적 성공 트라이얼 통과가 조건. 세션 중 두 번 뒤집힌 끝에 이 결론에 도달 — Key Decisions 참고. REQUIREMENTS.md v2에서 단일 백로그 버킷(`REQ-phase2-backend`)으로만 추적, roadmap phase로 확장하지 않음.
+- 백엔드/인증/클라우드(Spring Boot/Kotlin, 카카오 OAuth2/PKCE, S3 호환 스토리지, 클라이언트-서버 동기화) — 원래 미래의 "2단계" *제품* 마일스톤으로 연기(1단계의 정성적 성공 트라이얼 통과가 조건)했으나, 2026-09-01 창업자 명시적 승인으로 트라이얼 게이트를 우회하고 Phase 9~12 roadmap 트랙으로 착수함(⚠️ 트라이얼 데이터 없이 착수 — kill condition 재평가 필요, STATE.md §Decisions 2026-09-01 항목 참고). Phase 9(Backend Foundation: 프로젝트 스캐폴드 + DB 스키마/마이그레이션)는 2026-09-02 완료. REQUIREMENTS.md에서 `REQ-backend-scaffold`/`REQ-backend-db-schema` 등 8개 원자적 요구사항으로 분해되어 추적됨(§백엔드/인증/클라우드 (Phase 9~12)).
 - 캘린더 드래그 멀티셀렉트 + 멀티셀렉트 결과 화면(`REQ-calendar-multiselect-drag`) — 해당 스펙 문서 자체가 1단계 스코프에서 명시적으로 제외; 1단계는 탭 전용 캘린더 그리드만 출시.
 - 체크인 시 날씨/기온 자동 캡처 — 창업자가 명시적으로 제외 결정; 네트워크 호출이 필요해 1단계의 무네트워크-의존 원칙을 깨뜨림.
 - 주간 반복 패턴 분석, 회고 모달을 넘어서는 하루 리뷰 글쓰기, 잠금화면/홈화면 위젯 퀵 체크인, Apple Watch 컴패니언 — 유예됨, TODOS.md에서 추적, 1단계 빌드 블라스트 반경 밖.
@@ -82,6 +82,7 @@ FootLog는 iOS 전용, 완전 로컬 위치 체크인 저널입니다. 하루 �
 | EAS Dev Client 필수(Expo Go 아님) | `react-native-maps`가 네이티브 모듈을 필요로 함 — 기술적 제약 | ✓ Good |
 | 캘린더 탭 제스처 라우팅: 탭 → 과거 날짜 뷰, 드래그 → 멀티셀렉트(2단계 전용) | 1단계 캘린더를 단순하게 유지(탭 전용); 드래그 멀티셀렉트는 완전히 유예 | — Pending |
 | 진행률/완료 수치를 UI에 절대 노출하지 않음(CRITICAL, 문서 전반) | AI 생성 목업에서 반복적으로 재도입되었다가 반복적으로 거부됨 — 하드 룰로 확정 | ✓ Good |
+| 1단계 실사용 트라이얼 완료 게이트를 우회하고 백엔드(Phase 9~12) 착수 | 창업자 명시적 승인(2026-09-01) — ⚠️ Revisit: 트라이얼 데이터 없이 착수했으므로, 1단계 kill condition이 실제 발동하면 재평가 필요 | Phase 9 완료(2026-09-02) — Pending(Phase 10~12) |
 
 ---
-*Last updated: 2026-09-01 after Phase 5 (check-in-detail-edit) completion*
+*Last updated: 2026-09-02 after Phase 9 (backend-foundation) completion*
