@@ -13,6 +13,7 @@
 // 05-05-PLAN.md — onRowPress/onDeleteRequest를 CheckinListRow에 그대로 전달만 한다.
 // 이 시트 자신은 네비게이션이나 삭제 로직을 갖지 않는다(순수 전달) — 삭제 어포던스
 // 배경색도 CheckinListRow 안에만 있고 이 파일에는 등장하지 않는다.
+import type { Ref } from 'react';
 import { useMemo } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import BottomSheet, { BottomSheetFlatList, useBottomSheetTimingConfigs } from '@gorhom/bottom-sheet';
@@ -43,6 +44,12 @@ export type TodayBottomSheetProps = {
   // CALENDAR_COPY.pastDateEmptyState를 넘기기 위해 추가됐다 — 새 시트 컴포넌트를
   // 만들지 않고 이 시트를 그대로 재사용하기 위한 최소 확장이다.
   emptyText?: string;
+  // 06-07-PLAN.md Task 1 — 선택적 imperative ref. 오늘 뷰는 이 prop을 넘기지 않으므로
+  // 그 화면의 동작은 그대로 불변이다. PastDateScreen(과거 날짜 화면)만 이 ref를 넘겨
+  // 스크러버 터치 시 `sheetRef.current?.snapToIndex(0)`으로 시트를 CLOSED로 강제
+  // 접는다(docs/designs/calendar-date-scrubber.md T1, CRITICAL). 이 시트 자신은
+  // 스크러버 관련 로직/스타일을 전혀 갖지 않는다 — 배치·화면 로직 없음 계약 유지.
+  sheetRef?: Ref<BottomSheet>;
 };
 
 export function TodayBottomSheet({
@@ -52,6 +59,7 @@ export function TodayBottomSheet({
   onRowPress,
   onDeleteRequest,
   emptyText = TODAY_COPY.emptyState,
+  sheetRef,
 }: TodayBottomSheetProps) {
   const insets = useSafeAreaInsets();
 
@@ -81,6 +89,7 @@ export function TodayBottomSheet({
 
   return (
     <BottomSheet
+      ref={sheetRef}
       snapPoints={snapPoints}
       animatedPosition={animatedPosition}
       animationConfigs={animationConfigs}
