@@ -105,6 +105,16 @@ None - 외부 서비스 설정 불필요.
 - `src/calendar/content.ts`에 `pastDateEmptyState`/`scrubberCaption` 키가 이미 준비되어 있어 06-04/06-05가 새 문구를 추가로 발명하지 않고 이 파일에 이어 붙이면 된다.
 - `npm test` 전체 스위트(37 suites, 573 tests) green, `npx tsc --noEmit` 통과 확인 완료.
 
+## Self-Check: PASSED
+
+- FOUND: src/calendar/content.ts
+- FOUND: src/calendar/CalendarGridScreen.tsx
+- FOUND: src/app/(tabs)/calendar/_layout.tsx
+- FOUND: src/app/(tabs)/calendar/index.tsx
+- FOUND: src/app/__tests__/calendar-wiring.test.ts
+- CONFIRMED DELETED: src/app/(tabs)/calendar.tsx
+- FOUND commits: 006f743, d5341fc, 0923404, 6261315
+
 ---
 *Phase: 06-calendar-tab*
 *Completed: 2026-09-02*
