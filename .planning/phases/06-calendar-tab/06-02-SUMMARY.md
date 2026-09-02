@@ -111,3 +111,11 @@ None - no external service configuration required.
 ---
 *Phase: 06-calendar-tab*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+All created/modified files verified present on disk (src/calendar/monthGrid.ts,
+src/calendar/monthGrid.test.ts, src/calendar/scrubberRange.ts,
+src/calendar/scrubberRange.test.ts, src/checkin/checkinRepo.ts,
+src/checkin/checkinRepo.test.ts). All 6 task commits (86e3538, e10cff4, 5a42b5b,
+a32db8a, f2d323e, 48a0298) verified present in `git log`.
