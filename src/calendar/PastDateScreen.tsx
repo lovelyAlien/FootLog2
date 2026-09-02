@@ -82,6 +82,52 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
     };
   }, []);
 
+  // 06-07-PLAN.md Task 2 — 스크러버 데이터. 마운트 시 1회 getCheckinHistorySummary를
+  // 불러 첫 체크인 날짜/기록 있는 날 수를 얻는다(하루씩 반복 조회하지 않는다).
+  const [historySummary, setHistorySummary] = useState<{
+    earliestDateKey: string | null;
+    distinctDateCount: number;
+  }>({ earliestDateKey: null, distinctDateCount: 0 });
+  const [recordedDateKeys, setRecordedDateKeys] = useState<Set<string>>(new Set());
+
+  const todayKey = useMemo(() => resolveLocalDateKey(new Date()), []);
+
+  // 마운트 시점뿐 아니라 화면 내 변경(스와이프 삭제) 후, 그리고 상세화면에서
+  // 편집/삭제하고 돌아왔을 때도 다시 불러야 한다 — reloadCheckins와 같은 이유
+  // (그 시점의 distinctDateCount/recordedDateKeys가 스크러버 표시 여부/눈금에
+  // 그대로 반영되므로, 한 번만 불러오면 그 이후 변경이 스크러버에 반영되지 않는다).
+  const reloadScrubberData = useCallback(() => {
+    getCheckinHistorySummary(db)
+      .then((summary) => {
+        if (!isMountedRef.current) return;
+        setHistorySummary(summary);
+        if (!summary.earliestDateKey) {
+          setRecordedDateKeys(new Set());
+          return;
+        }
+        // 눈금 밀도 표시용 — 범위 전체를 한 번의 범위 쿼리로 가져온다(하루씩 N번
+        // 조회 금지, 06-RESEARCH.md §Don't Hand-Roll과 동일한 원칙).
+        return getCheckinDateKeysInRange(db, summary.earliestDateKey, todayKey).then((keys) => {
+          if (isMountedRef.current) {
+            setRecordedDateKeys(new Set(keys));
+          }
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to load check-in history summary for scrubber', error);
+      });
+  }, [db, todayKey]);
+
+  useEffect(() => {
+    reloadScrubberData();
+  }, [reloadScrubberData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      reloadScrubberData();
+    }, [reloadScrubberData])
+  );
+
   // getTodayCheckins는 이름만 "Today"일 뿐 임의의 localDateKey를 받는다
   // (checkinRepo.ts 헤더 주석이 Phase 6 재사용을 명시) — 날짜별 조회용 새 함수를
   // 별도로 만들지 않는다.
@@ -151,6 +197,7 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
             });
           }
           reloadCheckins();
+          reloadScrubberData();
           unhide();
         })
         .catch((error) => {
@@ -158,7 +205,7 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
           unhide();
         });
     },
-    [db, reloadCheckins]
+    [db, reloadCheckins, reloadScrubberData]
   );
 
   const commitPendingDeleteRef = useRef(commitPendingDelete);
@@ -233,35 +280,6 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
   const handleScrubStart = useCallback(() => {
     sheetRef.current?.snapToIndex(0);
   }, []);
-
-  // 06-07-PLAN.md Task 2 — 스크러버 데이터. 마운트 시 1회 getCheckinHistorySummary를
-  // 불러 첫 체크인 날짜/기록 있는 날 수를 얻는다(하루씩 반복 조회하지 않는다).
-  const [historySummary, setHistorySummary] = useState<{
-    earliestDateKey: string | null;
-    distinctDateCount: number;
-  }>({ earliestDateKey: null, distinctDateCount: 0 });
-  const [recordedDateKeys, setRecordedDateKeys] = useState<Set<string>>(new Set());
-
-  const todayKey = useMemo(() => resolveLocalDateKey(new Date()), []);
-
-  useEffect(() => {
-    getCheckinHistorySummary(db)
-      .then((summary) => {
-        if (!isMountedRef.current) return;
-        setHistorySummary(summary);
-        if (!summary.earliestDateKey) return;
-        // 눈금 밀도 표시용 — 범위 전체를 한 번의 범위 쿼리로 가져온다(하루씩 N번
-        // 조회 금지, 06-RESEARCH.md §Don't Hand-Roll과 동일한 원칙).
-        return getCheckinDateKeysInRange(db, summary.earliestDateKey, todayKey).then((keys) => {
-          if (isMountedRef.current) {
-            setRecordedDateKeys(new Set(keys));
-          }
-        });
-      })
-      .catch((error) => {
-        console.error('Failed to load check-in history summary for scrubber', error);
-      });
-  }, [db, todayKey]);
 
   // 범위는 첫 체크인 날짜 ~ 오늘이며 미래로는 넘어가지 않는다(Premise 5).
   const scrubberDateKeys = useMemo(

@@ -30,6 +30,7 @@ import { getCheckinDateKeysInRange } from '../checkin/checkinRepo';
 import { resolveLocalDateKey } from '../checkin/localDate';
 import {
   buildMonthGrid,
+  formatDateKeyTitle,
   formatMonthHeader,
   monthRangeBounds,
   shiftMonth,
@@ -61,6 +62,13 @@ export function CalendarGridScreen({ db }: CalendarGridScreenProps) {
   const todayKey = useMemo(() => resolveLocalDateKey(new Date()), []);
   const [recordedDateKeys, setRecordedDateKeys] = useState<Set<string>>(new Set());
   const isMountedRef = useRef(true);
+  // reloadMonthPresence의 클로저가 호출 시점의 visibleMonth를 캡처하므로, 응답이
+  // 돌아온 "현재" visibleMonth는 별도 ref로 추적해야 비교할 수 있다
+  // (PastDateScreen.tsx의 activeDateKeyRef와 동일한 이유 — T-06-14류 완화).
+  const visibleMonthRef = useRef(visibleMonth);
+  useEffect(() => {
+    visibleMonthRef.current = visibleMonth;
+  }, [visibleMonth]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -72,10 +80,14 @@ export function CalendarGridScreen({ db }: CalendarGridScreenProps) {
   // (tabs)/index/index.tsx의 reloadTodayCheckins 관용구를 그대로 복제한다 — 프로미스를
   // 조용히 삼키지 않고 실패해도 console.error만 남긴다(화면은 계속 동작해야 한다).
   const reloadMonthPresence = useCallback(() => {
-    const { startDateKey, endDateKey } = monthRangeBounds(visibleMonth);
+    // 클로저가 호출 시점의 visibleMonth를 캡처한다 — 응답이 돌아왔을 때 이 값이
+    // visibleMonthRef.current(그 시점의 "현재" 값)와 같은지 비교해, 빠른 연속
+    // 월 이동 중 이전 달의 늦은 응답이 최신 화면을 덮어쓰지 않도록 가드한다.
+    const requestedMonth = visibleMonth;
+    const { startDateKey, endDateKey } = monthRangeBounds(requestedMonth);
     getCheckinDateKeysInRange(db, startDateKey, endDateKey)
       .then((dateKeys) => {
-        if (isMountedRef.current) {
+        if (isMountedRef.current && requestedMonth === visibleMonthRef.current) {
           setRecordedDateKeys(new Set(dateKeys));
         }
       })
@@ -174,9 +186,23 @@ export function CalendarGridScreen({ db }: CalendarGridScreenProps) {
             const cellContent = (
               <View style={styles.cellContent}>
                 <Text style={[styles.dayNumber, { color: numberColor }]}>{cell.dayOfMonth}</Text>
-                {isToday ? <View style={styles.todayUnderline} /> : null}
+                {cell.inCurrentMonth && isToday ? <View style={styles.todayUnderline} /> : null}
+                {/* 기록 유무를 무채색 톤 차이만으로 전달하지 않기 위한 2차(색맹 무관)
+                    단서(06-08 코드 리뷰 WR-05) — 오늘 셀은 이미 accent 밑줄로 충분히
+                    구분되므로 중복 표시하지 않는다. */}
+                {cell.inCurrentMonth && !isToday && hasRecord ? (
+                  <View style={styles.recordDot} />
+                ) : null}
               </View>
             );
+
+            // 접근성 라벨은 날짜 제목(formatDateKeyTitle)에 오늘/기록 유무 접미사를
+            // 이어 붙인다 — 무채색 톤 차이만으로는 스크린리더 사용자에게 전달되지
+            // 않는다(06-08 코드 리뷰 WR-05).
+            const accessibilityLabel =
+              formatDateKeyTitle(cell.dateKey) +
+              (isToday ? CALENDAR_COPY.todayLabelSuffix : '') +
+              (hasRecord ? CALENDAR_COPY.hasRecordLabelSuffix : '');
 
             // 월 밖 패딩 셀은 그리드 정렬용일 뿐 인터랙션 대상이 아니다 — Pressable로
             // 감싸지 않는다.
@@ -193,6 +219,8 @@ export function CalendarGridScreen({ db }: CalendarGridScreenProps) {
                 key={cell.dateKey}
                 style={styles.cell}
                 onPress={() => handleCellPress(cell.dateKey)}
+                accessibilityRole="button"
+                accessibilityLabel={accessibilityLabel}
               >
                 {cellContent}
               </Pressable>
@@ -261,5 +289,12 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: radius.sm,
     backgroundColor: colors.accent,
+  },
+  recordDot: {
+    marginTop: spacing['2xs'],
+    width: 3,
+    height: 3,
+    borderRadius: radius.full,
+    backgroundColor: colors.textMuted,
   },
 });
