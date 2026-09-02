@@ -13,7 +13,7 @@ export default function NotFoundScreen() {
       <Stack.Screen options={{ title: '페이지를 찾을 수 없어요' }} />
       <View style={styles.container}>
         <Text style={[typography.screenTitle, styles.text]}>페이지를 찾을 수 없어요</Text>
-        <Link href="/" style={styles.link}>
+        <Link href="/index" style={styles.link}>
           <Text style={[typography.helperText, styles.text]}>홈으로 돌아가기</Text>
         </Link>
       </View>
