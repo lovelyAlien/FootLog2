@@ -74,7 +74,12 @@ export function DateScrubber({
       runOnJS(onScrubStart)();
     })
     .onUpdate((e) => {
-      const next = indexForTranslation(dragStartIndex.value, e.translationX, length);
+      const next = indexForTranslation(
+        dragStartIndex.value,
+        e.translationX,
+        length,
+        SCRUBBER_TICK_SPACING_PX
+      );
       if (next !== lastEmittedIndex.value) {
         lastEmittedIndex.value = next;
         runOnJS(onIndexChange)(next);

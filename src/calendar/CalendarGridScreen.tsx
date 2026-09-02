@@ -23,6 +23,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { MigratableDb } from '../db/migrations';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 import { getCheckinDateKeysInRange } from '../checkin/checkinRepo';
@@ -50,6 +51,10 @@ const HEADER_ARROW_SIZE = 44;
 const CELL_WIDTH_PERCENT = `${100 / 7}%` as const;
 
 export function CalendarGridScreen({ db }: CalendarGridScreenProps) {
+  // headerRow는 이 화면 최상단 절대 위치라 (tabs)/index/index.tsx의 bannerStack과
+  // 동일한 이유로 insets.top이 필요하다 — 없으면 월 이동 화살표가 상태바/Dynamic
+  // Island 아래 깔려 탭이 닿지 않는다(06-08 Task 2 시뮬레이터 확인으로 발견).
+  const insets = useSafeAreaInsets();
   const [visibleMonth, setVisibleMonth] = useState<YearMonth>(() =>
     yearMonthOf(resolveLocalDateKey(new Date()))
   );
@@ -122,7 +127,7 @@ export function CalendarGridScreen({ db }: CalendarGridScreenProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, { paddingTop: insets.top }]}>
         <Pressable
           onPress={() => setVisibleMonth((current) => shiftMonth(current, -1))}
           accessibilityRole="button"
@@ -205,7 +210,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   headerRow: {
-    height: 44,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
