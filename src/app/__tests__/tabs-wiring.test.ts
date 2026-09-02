@@ -144,7 +144,7 @@ describe('스코프 경계 계약 (D-08 → 06-01~06-03 D-01/D-03이 의도적�
   it('Test 14: (tabs)/index/index.tsx는 햄버거 진입점을 SF Symbol 이름으로 렌더하고, (tabs)/_layout.tsx는 여전히 설정을 세 번째 탭으로 승격하지 않는다', () => {
     // (tabs)/index/index.tsx — 진입점 존재 단언(D-01/D-03 반전).
     expect(todayIndexCodeOnly).toMatch(/line\.3\.horizontal/);
-    expect(todayIndexCodeOnly).toMatch(/router\.push\('\/index\/settings'\)/);
+    expect(todayIndexCodeOnly).toMatch(/router\.push\('\.\/settings'\)/);
     // 유니코드 문자를 코드에 직접 쓰지 않는다 — SF Symbol 이름으로만 렌더한다는
     // 저장소 아이콘 규약은 그대로 유지된다.
     expect(todayIndexCodeOnly).not.toContain('≡');
