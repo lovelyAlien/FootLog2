@@ -17,8 +17,18 @@ function readSource(relativePath: string): string {
 
 const layoutSource = readSource(path.join('(tabs)', '_layout.tsx'));
 const layoutCodeOnly = stripComments(layoutSource);
-const calendarSource = readSource(path.join('(tabs)', 'calendar.tsx'));
-const calendarCodeOnly = stripComments(calendarSource);
+// 06-03-PLAN.md Task 3 — Phase 6이 (tabs)/calendar.tsx 플랫 플레이스홀더를 nested
+// Stack 폴더(calendar/_layout.tsx + calendar/index.tsx)로 승격했다(D-07 경계 반전).
+// 이 파일이 읽던 대상도 함께 갱신한다.
+const calendarIndexSource = readSource(path.join('(tabs)', 'calendar', 'index.tsx'));
+const calendarIndexCodeOnly = stripComments(calendarIndexSource);
+const calendarLayoutSource = readSource(path.join('(tabs)', 'calendar', '_layout.tsx'));
+const calendarLayoutCodeOnly = stripComments(calendarLayoutSource);
+const calendarGridScreenSource = fs.readFileSync(
+  path.join(APP_DIR, '..', 'calendar', 'CalendarGridScreen.tsx'),
+  'utf-8'
+);
+const calendarGridScreenCodeOnly = stripComments(calendarGridScreenSource);
 const todayIndexSource = readSource(path.join('(tabs)', 'index', 'index.tsx'));
 const todayIndexCodeOnly = stripComments(todayIndexSource);
 const todayIndexLayoutSource = readSource(path.join('(tabs)', 'index', '_layout.tsx'));
@@ -29,10 +39,13 @@ const contentSource = fs.readFileSync(
 );
 
 describe('라우트 구조 계약', () => {
-  it('Test 1: (tabs)/_layout.tsx, (tabs)/index/index.tsx, (tabs)/calendar.tsx가 전부 존재한다', () => {
+  it('Test 1 (2026-09-01 갱신, 06-03-PLAN.md — Phase 4 D-07 경계를 Phase 6이 의도적으로 반전): (tabs)/_layout.tsx, (tabs)/index/index.tsx, (tabs)/calendar/_layout.tsx, (tabs)/calendar/index.tsx가 전부 존재하고 플랫 플레이스홀더 파일은 더 이상 존재하지 않는다', () => {
     expect(fs.existsSync(path.join(APP_DIR, '(tabs)', '_layout.tsx'))).toBe(true);
     expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'index', 'index.tsx'))).toBe(true);
-    expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'calendar.tsx'))).toBe(true);
+    expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'calendar', '_layout.tsx'))).toBe(true);
+    expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'calendar', 'index.tsx'))).toBe(true);
+    const flatPlaceholderFileName = ['calendar', 'tsx'].join('.');
+    expect(fs.existsSync(path.join(APP_DIR, '(tabs)', flatPlaceholderFileName))).toBe(false);
   });
 
   it('Test 2 (이동 완료 회귀 가드): src/app/index.tsx가 더 이상 존재하지 않는다', () => {
@@ -103,23 +116,21 @@ describe('탭바 계약 (D-06/D-07, 04-UI-SPEC.md)', () => {
   });
 });
 
-describe('캘린더 플레이스홀더 계약 (D-07)', () => {
-  it('Test 11: calendar.tsx가 TODAY_COPY.calendarPlaceholder를 참조하고 문구 리터럴을 하드코딩하지 않는다', () => {
-    expect(calendarCodeOnly).toMatch(/TODAY_COPY\.calendarPlaceholder/);
-    expect(calendarCodeOnly).not.toContain('캘린더는 곧 추가돼요');
+describe('캘린더 홈 라우트 계약 (2026-09-01 갱신, D-07 경계 반전 — 06-03-PLAN.md)', () => {
+  it('Test 11 (Phase 4 D-07 경계를 Phase 6이 의도적으로 반전): calendar/index.tsx가 CalendarGridScreen에 위임하는 얇은 래퍼이고 StyleSheet/useState를 갖지 않는다', () => {
+    expect(calendarIndexCodeOnly).toMatch(/CalendarGridScreen/);
+    expect(calendarIndexCodeOnly).not.toMatch(/\bStyleSheet\b/);
+    expect(calendarIndexCodeOnly).not.toMatch(/\buseState\b/);
   });
 
-  it('Test 12: typography.helperText와 colors.textMuted를 쓴다', () => {
-    expect(calendarCodeOnly).toMatch(/typography\.helperText/);
-    expect(calendarCodeOnly).toMatch(/colors\.textMuted/);
+  it('Test 12 (Phase 4 D-07 경계를 Phase 6이 의도적으로 반전): CalendarGridScreen.tsx가 colors.accent를 정확히 1회만 참조한다(오늘 밑줄 전용, accent 예산)', () => {
+    const accentMatches = calendarGridScreenCodeOnly.match(/colors\.accent\b/g) ?? [];
+    expect(accentMatches.length).toBe(1);
   });
 
-  it('Test 13: Phase 6 범위 식별자(Pressable/TouchableOpacity/FlatList/SectionList/useState)가 등장하지 않는다', () => {
-    expect(calendarCodeOnly).not.toMatch(/\bPressable\b/);
-    expect(calendarCodeOnly).not.toMatch(/\bTouchableOpacity\b/);
-    expect(calendarCodeOnly).not.toMatch(/\bFlatList\b/);
-    expect(calendarCodeOnly).not.toMatch(/\bSectionList\b/);
-    expect(calendarCodeOnly).not.toMatch(/\buseState\b/);
+  it('Test 13 (Phase 4 D-07 경계를 Phase 6이 의도적으로 반전 — 이제는 반대로 존재를 확인한다): CalendarGridScreen.tsx가 Pressable과 buildMonthGrid를 포함한다', () => {
+    expect(calendarGridScreenCodeOnly).toMatch(/\bPressable\b/);
+    expect(calendarGridScreenCodeOnly).toMatch(/\bbuildMonthGrid\b/);
   });
 });
 
@@ -134,11 +145,12 @@ describe('스코프 경계 계약 (D-08)', () => {
 });
 
 describe('문구 단일 출처 계약', () => {
-  it('Test 15: src/today/content.ts가 TODAY_COPY를 as const로 export하고 3개 키를 갖는다', () => {
+  it('Test 15 (2026-09-01 갱신, 06-03-PLAN.md — Phase 4 D-07 경계를 Phase 6이 의도적으로 반전: 소비자가 사라진 플레이스홀더 키 제거): src/today/content.ts가 TODAY_COPY를 as const로 export하고 tabToday/tabCalendar 키를 가지며 플레이스홀더 키는 더 이상 갖지 않는다', () => {
     expect(contentSource).toMatch(/export const TODAY_COPY = \{/);
     expect(contentSource).toMatch(/\}\s*as const;/);
     expect(contentSource).toMatch(/tabToday:\s*'오늘'/);
     expect(contentSource).toMatch(/tabCalendar:\s*'캘린더'/);
-    expect(contentSource).toMatch(/calendarPlaceholder:\s*'캘린더는 곧 추가돼요'/);
+    const removedPlaceholderKey = ['calendar', 'Placeholder'].join('');
+    expect(contentSource).not.toMatch(new RegExp(`${removedPlaceholderKey}:`));
   });
 });
