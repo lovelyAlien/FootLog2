@@ -233,7 +233,7 @@ describe('src/app/(tabs)/index.tsx 플로팅 버튼 연속 추적 계약 (04-CON
 
   it('react-native-reanimated default import가 Animated가 아니라 Reanimated로 바인딩된다 (RN Animated 섀도잉 회귀 가드)', () => {
     expect(codeOnly).toMatch(
-      /import Reanimated, \{ useAnimatedStyle, useSharedValue \} from 'react-native-reanimated';/
+      /import Reanimated, \{ FadeIn, FadeOut, useAnimatedStyle, useSharedValue \} from 'react-native-reanimated';/
     );
     expect(codeOnly).not.toMatch(/import Animated,[\s\S]{0,5}\{[\s\S]*?\} from 'react-native-reanimated';/);
   });

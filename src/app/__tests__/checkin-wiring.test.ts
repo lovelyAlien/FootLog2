@@ -199,15 +199,15 @@ describe('src/app/(tabs)/index.tsx 내 위치 재센터링 버튼 배선 계약'
     expect(block).toMatch(/animateToRegion/);
   });
 
-  it('Test 31 (2026-08-31 갱신): 재센터링 버튼은 accent 컬러를 쓰지 않는다 (colors.pin으로 대체 — DESIGN.md 체크인 정체성 색 통일)', () => {
+  it('Test 31 (2026-09-01 갱신): 재센터링 버튼은 애플 지도 스타일로 흰 배경 + 시스템 블루 아이콘을 쓴다 (2026-08-31 Pin 통일에서 되돌림 — DESIGN.md 2026-09-01 예외)', () => {
     const match = codeOnly.match(/recenterButton:\s*\{[\s\S]*?\n  \},/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
+    expect(block).toMatch(/colors\.mapControlButtonBackground/);
     expect(block).not.toMatch(/colors\.accent\b/);
-    // 아이콘 tintColor는 recenterButton 스타일 블록이 아니라 <SymbolView> JSX prop이라
-    // 별도로 확인한다 — textMuted(회색)에서 colors.pin(테라코타)으로 전환됐다.
-    expect(codeOnly).toMatch(/tintColor=\{colors\.pin\}/);
-    expect(codeOnly).not.toMatch(/tintColor=\{colors\.textMuted\}/);
+    expect(block).not.toMatch(/colors\.surface\b/);
+    expect(codeOnly).toMatch(/tintColor=\{colors\.mapControlIcon\}/);
+    expect(codeOnly).not.toMatch(/tintColor=\{colors\.pin\}/);
   });
 
   it('Test 32: expo-location을 직접 import하지 않고 checkin/deps의 defaultLocationDeps를 통해서만 접근한다', () => {
@@ -241,12 +241,13 @@ describe('src/app/(tabs)/index.tsx 나침반 모드 토글 배선 계약 (재센
     expect(indexSource).toMatch(/location\.north\.line\.fill/);
   });
 
-  it('Test 37 (2026-08-31 갱신): 재센터링 버튼 아이콘은 모드와 무관하게 colors.pin을 쓰고 accent/textMuted는 쓰지 않는다', () => {
+  it('Test 37 (2026-09-01 갱신): 재센터링 버튼 아이콘은 모드와 무관하게 colors.mapControlIcon을 쓰고 accent/pin/textMuted는 쓰지 않는다', () => {
     const match = codeOnly.match(/<SymbolView[\s\S]*?\/>/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
-    expect(block).toMatch(/colors\.pin\b/);
+    expect(block).toMatch(/colors\.mapControlIcon\b/);
     expect(block).not.toMatch(/colors\.accent\b/);
+    expect(block).not.toMatch(/colors\.pin\b/);
     expect(block).not.toMatch(/colors\.textMuted\b/);
   });
 
@@ -336,17 +337,27 @@ describe('src/app/(tabs)/index.tsx 재센터 버튼 수동 팬 리셋 배선 계
     expect(block).toMatch(/hasCenteredOnceRef\.current = false/);
   });
 
-  it('Test 49: handlePanDrag가 나침반 구독을 정리하고(remove) orientationMode를 north로 되돌린다', () => {
+  it('Test 49 (2026-09-01 갱신 — resetHeadingToNorth로 추출): handlePanDrag가 orientationMode가 north가 아닐 때 resetHeadingToNorth를 호출한다', () => {
     const match = codeOnly.match(/const handlePanDrag = useCallback\([\s\S]*?\n  \}, \[\]\);/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
-    expect(block).toMatch(/headingSubscriptionRef\.current\?\.remove\(\)/);
-    expect(block).toMatch(/headingSubscriptionRef\.current = null/);
-    expect(block).toMatch(/setOrientationMode\('north'\)/);
+    expect(block).toMatch(/if \(orientationModeRef\.current !== 'north'\) \{\s*resetHeadingToNorth\(\);\s*\}/);
+    expect(block).not.toMatch(/headingSubscriptionRef\.current\?\.remove\(\)/);
   });
 
   it('Test 50: handlePanDrag의 useCallback deps 배열은 []로 고정된다 (배선 시점 리렌더 방지, 기존 패턴과 동일)', () => {
     expect(codeOnly).toMatch(/const handlePanDrag = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/);
+  });
+
+  it('Test 78: resetHeadingToNorth가 나침반 구독 해제 + north 상태 전환 + animateCamera를 모두 수행한다 (나침반 배지와 handlePanDrag가 공유하는 리셋 로직)', () => {
+    const match = codeOnly.match(/const resetHeadingToNorth = useCallback\([\s\S]*?\n  \}, \[\]\);/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/headingSubscriptionRef\.current\?\.remove\(\)/);
+    expect(block).toMatch(/headingSubscriptionRef\.current = null/);
+    expect(block).toMatch(/orientationModeRef\.current = 'north'/);
+    expect(block).toMatch(/setOrientationMode\('north'\)/);
+    expect(block).toMatch(/animateCamera\(\{ heading: 0, pitch: 0 \}\)/);
   });
 });
 
@@ -599,5 +610,62 @@ describe('src/app/(tabs)/index.tsx 행 탭/지연 삭제 배선 계약 (2026-09-
 
   it('Test 77: UNDO_WINDOW_MS 단일 출처 — 4000 리터럴이 이 파일에 등장하지 않는다', () => {
     expect(codeOnly).not.toMatch(/\b4000\b/);
+  });
+});
+
+describe('src/app/(tabs)/index.tsx 나침반 배지 배선 계약 (2026-09-01 추가, 애플 지도 스타일 분리)', () => {
+  const indexSource = readSource(TODAY_SCREEN_PATH);
+  const codeOnly = stripComments(indexSource);
+
+  it('Test 79: 나침반 배지는 orientationMode가 compass일 때만 조건부 렌더된다', () => {
+    const match = codeOnly.match(/\{orientationMode === 'compass' && \([\s\S]*?styles\.compassBadgeContainer[\s\S]*?\)\}/);
+    expect(match).not.toBeNull();
+  });
+
+  it('Test 80: 배지 접근성 라벨이 "지도를 북쪽으로 정렬"이고 hitSlop이 등장한다', () => {
+    expect(indexSource).toMatch(/accessibilityLabel="지도를 북쪽으로 정렬"/);
+    expect(indexSource).toMatch(/\bCOMPASS_BADGE_HIT_SLOP\b/);
+  });
+
+  it('Test 81: 배지 onPress가 resetHeadingToNorth로 배선된다', () => {
+    const match = codeOnly.match(
+      /<Pressable\s+onPress=\{resetHeadingToNorth\}[\s\S]*?accessibilityLabel="지도를 북쪽으로 정렬"/
+    );
+    expect(match).not.toBeNull();
+  });
+
+  it('Test 82: 배지 스타일이 colors.mapControlBadgeBackground/mapControlBadgeNeedle을 쓰고 accent/pin은 쓰지 않는다', () => {
+    const bgMatch = codeOnly.match(/compassBadge:\s*\{[\s\S]*?\n  \},/);
+    expect(bgMatch).not.toBeNull();
+    expect(bgMatch ? bgMatch[0] : '').toMatch(/colors\.mapControlBadgeBackground/);
+
+    const needleMatch = codeOnly.match(/compassBadgeNeedle:\s*\{[\s\S]*?\n  \},/);
+    expect(needleMatch).not.toBeNull();
+    expect(needleMatch ? needleMatch[0] : '').toMatch(/colors\.mapControlBadgeNeedle/);
+
+    expect(codeOnly).not.toMatch(/compassBadge[\s\S]{0,400}colors\.accent\b/);
+  });
+
+  it('Test 83: 배지 등장/소멸 애니메이션이 motion.saveStateCrossfadeMs(180ms)를 재사용한다 (새 모션 값 추가 금지)', () => {
+    expect(codeOnly).toMatch(/entering=\{FadeIn\.duration\(motion\.saveStateCrossfadeMs\)\}/);
+    expect(codeOnly).toMatch(/exiting=\{FadeOut\.duration\(motion\.saveStateCrossfadeMs\)\}/);
+  });
+
+  it('Test 84 (2026-09-01 최종 리뷰 수정 — 중심 정렬 회귀 가드): compassBadgeContainer가 RECENTER_BUTTON_SIZE 폭 + alignItems center로 재센터 버튼과 중심을 맞춘다', () => {
+    const match = codeOnly.match(/compassBadgeContainer:\s*\{[\s\S]*?\n  \},/);
+    expect(match).not.toBeNull();
+    const block = match ? match[0] : '';
+    expect(block).toMatch(/width:\s*RECENTER_BUTTON_SIZE/);
+    expect(block).toMatch(/alignItems:\s*'center'/);
+  });
+
+  it('Test 85 (2026-09-01 최종 리뷰 수정): COMPASS_BADGE_BOTTOM_OFFSET과 recenterButton 크기가 RECENTER_BUTTON_SIZE 상수를 공유한다 (44 리터럴 중복 방지 회귀 가드)', () => {
+    expect(codeOnly).toMatch(/const RECENTER_BUTTON_SIZE = 44;/);
+    expect(codeOnly).toMatch(/const COMPASS_BADGE_BOTTOM_OFFSET = RECENTER_BUTTON_SIZE \+ spacing\.xs;/);
+    const recenterButtonMatch = codeOnly.match(/recenterButton:\s*\{[\s\S]*?\n  \},/);
+    expect(recenterButtonMatch).not.toBeNull();
+    const block = recenterButtonMatch ? recenterButtonMatch[0] : '';
+    expect(block).toMatch(/width:\s*RECENTER_BUTTON_SIZE/);
+    expect(block).toMatch(/height:\s*RECENTER_BUTTON_SIZE/);
   });
 });

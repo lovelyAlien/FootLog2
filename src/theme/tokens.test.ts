@@ -10,7 +10,7 @@ import path from 'path';
 import { colors, typography, spacing, motion, radius } from './tokens';
 
 describe('tokens.colors', () => {
-  it('DESIGN.md Color 표의 14개 키와 hex 값이 정확히 일치한다 (2026-08-31: pin/pinSoft 추가)', () => {
+  it('DESIGN.md Color 표의 19개 키와 hex 값이 정확히 일치한다 (2026-09-01: 애플 지도 스타일 예외 5개 추가)', () => {
     expect(colors).toEqual({
       background: '#F4F1EA',
       surface: '#FBFAF6',
@@ -26,8 +26,13 @@ describe('tokens.colors', () => {
       mapLand: '#E9E4D8',
       mapRoad: '#D2CDC1',
       mapWater: '#DDE3DF',
+      mapControlButtonBackground: '#FFFFFF',
+      mapControlIcon: '#007AFF',
+      mapControlBadgeBackground: '#2C2C2C',
+      mapControlBadgeNeedle: '#FF3B30',
+      mapControlButtonShadow: '#000000',
     });
-    expect(Object.keys(colors)).toHaveLength(14);
+    expect(Object.keys(colors)).toHaveLength(19);
   });
 
   it('semantic 색상 키(success/warning/error/info/danger)가 존재하지 않는다', () => {
