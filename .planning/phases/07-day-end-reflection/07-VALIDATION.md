@@ -40,19 +40,20 @@ created: 2026-09-02
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | 0 | REQ-reflection-base | V5 | `?` 파라미터 바인딩만 사용 | unit(node:sqlite) | `npx jest src/reflection/reflectionRepo.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | REQ-reflection-base | — | 모달 라우트 `presentation:'modal'` 등록, 정적 지도 재사용 | wiring | `npx jest src/app/__tests__/reflection-wiring.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | REQ-reflection-autosave | — | 5초 후 `onSave` 호출, `flush()` 즉시 호출, 재입력 시 타이머 리셋 | unit(jest fake timers) | `npx jest src/reflection/autosaveController.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | REQ-reflection-autosave | — | AppState 리스너가 `flush()` 호출 | wiring | `npx jest src/app/__tests__/reflection-wiring.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | REQ-reflection-save-failure-ui | — | 저장 실패 시 `runWithSingleRetry` 참조, 실패 문구 상수 일치 | wiring | `npx jest src/app/__tests__/reflection-wiring.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | REQ-reflection-copy-fix | — | `TODAY_COPY`에 체크인 개수 보간 문구 없음, "오늘의 흔적" 문구 정확 | wiring(기존 확장) | `npx jest src/app/__tests__/today-wiring.test.ts` | ✅ (확장 필요) | ⬜ pending |
-| TBD | TBD | TBD | REQ-reflection-notification | V5 | `daily_reflection_hour` 컬럼 존재/기본값 21/`resolveNotificationSettings` 반영 | unit(node:sqlite)+wiring | `npx jest src/db/migrations.test.ts src/settings/settingsRepo.test.ts` | ✅ (확장 필요) | ⬜ pending |
-| TBD | TBD | TBD | REQ-reflection-notification | — | 설정 화면 4번째 행/액션시트 상수 | wiring(기존 확장) | `npx jest src/app/__tests__/settings-wiring.test.ts` | ✅ (확장 필요) | ⬜ pending |
-| TBD | TBD | TBD | REQ-reflection-today-entry | — | "오늘 돌아보기" 헤더 행이 0건이어도 렌더됨 | wiring | `npx jest src/app/__tests__/today-wiring.test.ts` | ✅ (확장 필요) | ⬜ pending |
-| TBD | TBD | TBD | REQ-past-reflection-edit | — | `PastDateScreen.tsx`가 회고 프롬프트/저장 함수 참조 | wiring(기존 확장) | `npx jest src/app/__tests__/calendar-wiring.test.ts` | ✅ (확장 필요) | ⬜ pending |
+| 07-02 Task 1 | 07-02 | 1 | REQ-reflection-base | V5 | `?` 파라미터 바인딩만 사용 | unit(node:sqlite) | `npx jest src/reflection/reflectionRepo.test.ts` | ❌ W0 | ⬜ pending |
+| 07-08 Task 3 | 07-08 | 4 | REQ-reflection-base | — | 모달 라우트 `presentation:'modal'` 등록, 정적 지도 재사용 | wiring | `npx jest src/app/__tests__/reflection-wiring.test.ts` | ❌ W0 | ⬜ pending |
+| 07-02 Task 2 | 07-02 | 1 | REQ-reflection-autosave | — | 5초 후 `onSave` 호출, `flush()` 즉시 호출, 재입력 시 타이머 리셋 | unit(jest fake timers) | `npx jest src/reflection/autosaveController.test.ts` | ❌ W0 | ⬜ pending |
+| 07-04 Task 3 | 07-04 | 2 | REQ-reflection-autosave | — | AppState 리스너가 `flush()` 호출 | wiring | `npx jest src/app/__tests__/reflection-wiring.test.ts` | ❌ W0 | ⬜ pending |
+| 07-04 Task 3 | 07-04 | 2 | REQ-reflection-save-failure-ui | — | 저장 실패 시 `runWithSingleRetry` 참조, 실패 문구 상수 일치 | wiring | `npx jest src/app/__tests__/reflection-wiring.test.ts` | ❌ W0 | ⬜ pending |
+| 07-09 Task 3 | 07-09 | 5 | REQ-reflection-copy-fix | T-07-14 | 오늘 뷰에 체크인 개수/진행률 보간 없음, `TODAY_COPY` 키 집합 불변 | wiring(기존 확장) | `npx jest src/app/__tests__/today-wiring.test.ts` | ✅ (확장 필요) | ⬜ pending |
+| 07-05 Task 3 | 07-05 | 3 | REQ-reflection-copy-fix | T-07-14 | 회고 모달 "오늘의 흔적" 섹션 헤더에 개수 보간 없음 | wiring | `npx jest src/app/__tests__/reflection-wiring.test.ts` | ❌ W0 | ⬜ pending |
+| 07-01 Task 1·2 | 07-01 | 1 | REQ-reflection-notification | V5 | `daily_reflection_hour` 컬럼 존재/기본값 21/`resolveNotificationSettings` 반영 | unit(node:sqlite)+wiring | `npx jest src/db/migrations.test.ts src/settings/settingsRepo.test.ts` | ✅ (확장 필요) | ⬜ pending |
+| 07-03 Task 3 | 07-03 | 2 | REQ-reflection-notification | — | 설정 화면 4번째 행/액션시트 상수 | wiring(기존 확장) | `npx jest src/app/__tests__/settings-wiring.test.ts` | ✅ (확장 필요) | ⬜ pending |
+| 07-06 Task 2 + 07-09 Task 3 | 07-06, 07-09 | 1, 5 | REQ-reflection-today-entry | — | "오늘 돌아보기" 헤더 행이 0건이어도 렌더됨 | wiring | `npx jest src/app/__tests__/today-wiring.test.ts` | ✅ (확장 필요) | ⬜ pending |
+| 07-07 Task 2 | 07-07 | 3 | REQ-past-reflection-edit | — | `PastDateScreen.tsx`가 회고 프롬프트/저장 함수 참조 | wiring(기존 확장) | `npx jest src/app/__tests__/calendar-wiring.test.ts` | ✅ (확장 필요) | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
-*Task ID/Plan/Wave columns are TBD until gsd-planner assigns concrete plan IDs — planner MUST fill these in when generating PLAN.md.*
+*Task ID/Plan/Wave columns filled by gsd-planner on 2026-09-02. Status columns are updated during execution; 07-10 Task 1 performs the final sweep.*
 
 ---
 
@@ -60,7 +61,7 @@ created: 2026-09-02
 
 - [ ] `src/reflection/reflectionRepo.test.ts` — REQ-reflection-base 커버 (신규 디렉토리/프레임워크 설정 불필요, 기존 jest 설정이 `src/**/*.test.ts` 매칭)
 - [ ] `src/reflection/autosaveController.test.ts` — REQ-reflection-autosave 커버 (jest fake timers, Jest 29 표준 기능이라 추가 설정 불필요)
-- [ ] `src/app/__tests__/reflection-wiring.test.ts` — 신규 wiring 테스트 파일 (기존 `settings-wiring.test.ts` 패턴 복제)
+- [ ] `src/app/__tests__/reflection-wiring.test.ts` — 신규 wiring 테스트 파일 (기존 `settings-wiring.test.ts` 패턴 복제). 07-04 Task 3이 파일을 생성하고, 07-05 Task 3 / 07-08 Task 3이 각각 describe 블록을 append한다.
 - [ ] `src/db/migrations.test.ts`에 `daily_reflection_hour` 컬럼 테스트 추가 (기존 파일 확장)
 - [ ] `src/settings/settingsRepo.test.ts`에 `dailyReflectionHour` 읽기/쓰기 테스트 추가 (기존 파일 확장)
 
