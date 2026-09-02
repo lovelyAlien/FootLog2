@@ -38,7 +38,7 @@ key-decisions:
   - "isNotificationFrequency는 zod/joi 없이 닫힌 리터럴 배열로 판정 — 3값 enum에 검증 라이브러리는 과설계(06-RESEARCH.md Security Domain V5)"
   - "DATABASE_VERSION 3 부팅 시 마이그레이션이 v1/v2 기기를 한 번에 최신 버전까지 연쇄 실행 — 기존 Test 5/15/16의 하드코딩 버전 리터럴(2)이 자연스럽게 깨져 DATABASE_VERSION 참조로 교체(Rule 1)"
 
-requirements-completed: [REQ-settings-screen]
+requirements-completed: []  # REQ-settings-screen은 부분 기여만 함(영속화 계층) — 화면/배선까지 끝나는 후속 06-* 플랜이 완료 처리한다. REQUIREMENTS.md에 누락돼 있던 항목을 이번 플랜에서 신규 추가함(Pending 상태 유지).
 
 # Metrics
 duration: 10min
@@ -108,10 +108,18 @@ _Note: 두 태스크 모두 `tdd="true"`로 RED/GREEN 게이트를 따랐다. RE
 - **Verification:** `grep -v '^[[:space:]]*//' src/settings/settingsRepo.ts | grep -c '${'` → 0, `npm test -- src/settings/settingsRepo.test.ts` 9/9 통과
 - **Committed in:** `99b9fff` (Task 2 GREEN 커밋에 포함)
 
+**3. [Rule 2 - Missing critical functionality] REQUIREMENTS.md에 REQ-settings-screen 항목 자체가 없었음**
+- **Found during:** 플랜 완료 후 requirements 완료 처리 단계(`gsd-sdk query requirements.mark-complete REQ-settings-screen`)
+- **Issue:** 이 플랜의 frontmatter가 `requirements: [REQ-settings-screen]`를 선언하는데, REQUIREMENTS.md에는 이 ID 자체가 존재하지 않았음 — 06-CONTEXT.md D-01이 이미 "downstream(연구/계획) 단계가 이 gap을 메워야 한다"고 명시적으로 플래그했던 항목(STATE.md Blockers/Concerns에도 기록됨)인데, 계획 단계에서 반영되지 않은 채 실행 단계로 넘어옴.
+- **Fix:** REQUIREMENTS.md의 "### Calendar tab" 섹션과 Traceability 표에 `REQ-settings-screen` 항목을 06-CONTEXT.md D-01/D-02 문구 그대로 신규 추가. 처음에 `mark-complete`를 실행해 실수로 "Complete"로 표시됐던 것을 즉시 발견해 되돌리고, 이 플랜은 영속화 계층만 완료했을 뿐 화면/햄버거 아이콘/배선은 후속 플랜 몫이라는 점을 요구사항 본문과 traceability 표에 명시 — 조기 완료 마킹으로 인한 검증 누락을 방지.
+- **Files modified:** `.planning/REQUIREMENTS.md`
+- **Verification:** `grep -n "REQ-settings-screen" .planning/REQUIREMENTS.md`로 `[ ]`(미완료) 상태 확인, traceability 표가 "Pending"으로 남아 있음을 확인
+- **Committed in:** `66262b1`
+
 ---
 
-**Total deviations:** 2 auto-fixed (Rule 1 × 2)
-**Impact on plan:** 둘 다 acceptance criteria/테스트 정합성을 맞추기 위한 최소 수정이며, 스코프 확장 없음.
+**Total deviations:** 3 auto-fixed (Rule 1 × 2, Rule 2 × 1)
+**Impact on plan:** 셋 다 acceptance criteria/문서 정합성을 맞추기 위한 최소 수정이며, 스코프 확장 없음. REQ-settings-screen은 의도적으로 미완료 상태로 남김(정확한 진행 상황 반영).
 
 ## Issues Encountered
 None.
