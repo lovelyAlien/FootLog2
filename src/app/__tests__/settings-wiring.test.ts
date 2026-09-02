@@ -133,3 +133,87 @@ describe('SQL 격리 계약 (저장소 규약 — SQL은 repo 파일에만 존�
     expect(screenCodeOnly).not.toMatch(/app_settings/);
   });
 });
+
+// 06-06-PLAN.md Task 3(B) — 라우트 배선/햄버거 진입점/자가진단 배선 회귀 가드.
+// 06-04-PLAN.md 헤더 주석이 예고한 대로 이 파일에 append한다(위 Test 1~19는 수정하지
+// 않는다).
+const APP_DIR = path.join(__dirname, '..');
+const TODAY_ROUTE_DIR = path.join(APP_DIR, '(tabs)', 'index');
+const CALENDAR_SRC_DIR = path.join(__dirname, '..', '..', 'calendar');
+
+function readAppSource(relativePath: string): string {
+  return fs.readFileSync(path.join(APP_DIR, relativePath), 'utf-8');
+}
+
+const settingsRouteSource = fs.readFileSync(
+  path.join(TODAY_ROUTE_DIR, 'settings.tsx'),
+  'utf-8'
+);
+const settingsRouteCodeOnly = stripComments(settingsRouteSource);
+const todayIndexLayoutSource = readAppSource(path.join('(tabs)', 'index', '_layout.tsx'));
+const todayIndexLayoutCodeOnly = stripComments(todayIndexLayoutSource);
+const rootLayoutSource = readAppSource('_layout.tsx');
+const rootLayoutCodeOnly = stripComments(rootLayoutSource);
+
+// src/calendar/ 하위 모든 .ts/.tsx 파일을 재귀 수집한다 — notification-wiring.test.ts
+// collectSourceFiles와 동일 기법(테스트 환경 재사용, RN 렌더 불필요).
+function collectCalendarSourceFiles(dir: string): string[] {
+  if (!fs.existsSync(dir)) return [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  let files: string[] = [];
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files = files.concat(collectCalendarSourceFiles(fullPath));
+    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\.(ts|tsx)$/.test(entry.name)) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+describe('설정 라우트 얇은 래퍼 계약 (06-06-PLAN.md Task 1)', () => {
+  it('Test 20: (tabs)/index/settings.tsx가 useSQLiteContext와 SettingsScreen을 참조하고 StyleSheet/useState를 갖지 않는다', () => {
+    expect(settingsRouteCodeOnly).toMatch(/useSQLiteContext/);
+    expect(settingsRouteCodeOnly).toMatch(/SettingsScreen/);
+    expect(settingsRouteCodeOnly).not.toMatch(/\bStyleSheet\b/);
+    expect(settingsRouteCodeOnly).not.toMatch(/\buseState\b/);
+  });
+});
+
+describe('설정 스크린 등록 계약 (06-06-PLAN.md Task 1, D-07)', () => {
+  it('Test 21: (tabs)/index/_layout.tsx가 name="settings" 스크린을 headerShown: true로 등록한다', () => {
+    const match = todayIndexLayoutCodeOnly.match(/<Stack\.Screen\s+name="settings"[^/]*\/>/);
+    expect(match).not.toBeNull();
+    expect(match ? match[0] : '').toMatch(/headerShown:\s*true/);
+  });
+
+  it('Test 22: (tabs)/index/_layout.tsx와 settings.tsx 어디에도 tabBarStyle이 없다(설정 화면은 탭바 유지, 06-RESEARCH.md Pitfall 1)', () => {
+    expect(todayIndexLayoutCodeOnly).not.toMatch(/tabBarStyle/);
+    expect(settingsRouteCodeOnly).not.toMatch(/tabBarStyle/);
+  });
+});
+
+describe('포그라운드 자가진단 영속 설정 배선 계약 (06-RESEARCH.md Pitfall 5, T-06-05)', () => {
+  it('Test 23: src/app/_layout.tsx에 무인자 runForegroundNotificationCheck() 호출이 등장하지 않고 resolveNotificationSettings를 참조한다', () => {
+    expect(rootLayoutCodeOnly).not.toMatch(/runForegroundNotificationCheck\(\)/);
+    expect(rootLayoutCodeOnly).toMatch(/resolveNotificationSettings/);
+  });
+
+  it('Test 24: src/app/_layout.tsx에 AppState.addEventListener가 등장하지 않는다(리스너 중복 금지)', () => {
+    expect(rootLayoutCodeOnly).not.toMatch(/AppState\.addEventListener/);
+  });
+});
+
+describe('캘린더 탭 햄버거 부재 계약 (D-03)', () => {
+  it('Test 25: src/calendar/ 아래 어떤 파일도 line.3.horizontal을 포함하지 않는다(햄버거는 Today 뷰 전용)', () => {
+    const offenders: string[] = [];
+    for (const filePath of collectCalendarSourceFiles(CALENDAR_SRC_DIR)) {
+      const codeOnly = stripComments(fs.readFileSync(filePath, 'utf-8'));
+      if (/line\.3\.horizontal/.test(codeOnly)) {
+        offenders.push(path.relative(CALENDAR_SRC_DIR, filePath));
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

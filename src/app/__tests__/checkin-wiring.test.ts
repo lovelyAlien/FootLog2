@@ -241,8 +241,10 @@ describe('src/app/(tabs)/index.tsx 나침반 모드 토글 배선 계약 (재센
     expect(indexSource).toMatch(/location\.north\.line\.fill/);
   });
 
-  it('Test 37 (2026-08-31 갱신): 재센터링 버튼 아이콘은 모드와 무관하게 colors.pin을 쓰고 accent/textMuted는 쓰지 않는다', () => {
-    const match = codeOnly.match(/<SymbolView[\s\S]*?\/>/);
+  it('Test 37 (2026-09-01 갱신, 06-06-PLAN.md — 햄버거 SymbolView 추가로 "첫 SymbolView" 매칭이 더 이상 재센터 버튼을 가리키지 않게 됨): 재센터링 버튼 아이콘은 모드와 무관하게 colors.pin을 쓰고 accent/textMuted는 쓰지 않는다', () => {
+    // orientationMode 삼항식을 포함하는 SymbolView만 특정한다 — 파일 내 SymbolView
+    // 등장 순서에 의존하지 않는다(06-06이 배너 위에 햄버거 SymbolView를 추가해 순서가 바뀜).
+    const match = codeOnly.match(/<SymbolView[\s\S]*?orientationMode[\s\S]*?\/>/);
     expect(match).not.toBeNull();
     const block = match ? match[0] : '';
     expect(block).toMatch(/colors\.pin\b/);
