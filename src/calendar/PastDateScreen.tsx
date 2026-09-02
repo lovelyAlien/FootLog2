@@ -12,22 +12,28 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useFocusEffect, useNavigation, router } from 'expo-router';
 import MapView, { Marker, Polyline } from 'react-native-maps';
+import BottomSheet from '@gorhom/bottom-sheet';
 import { useSharedValue } from 'react-native-reanimated';
 import { colors, spacing } from '../theme/tokens';
 import { TodayBottomSheet } from '../today/TodayBottomSheet';
 import { UndoSnackbar } from '../today/UndoSnackbar';
+import { DateScrubber } from './DateScrubber';
 import { buildTrajectoryCoordinates } from '../today/trajectory';
 import { createPendingDeleteController } from '../today/pendingDelete';
 import type { PendingDeleteItem } from '../today/pendingDelete';
 import {
   deleteCheckin,
+  getCheckinDateKeysInRange,
+  getCheckinHistorySummary,
   getTodayCheckins,
   runWithSingleRetry,
 } from '../checkin/checkinRepo';
 import { defaultPhotoStorageDeps } from '../checkin/deps';
 import { MAP_REGION_DELTA } from '../checkin/config';
+import { resolveLocalDateKey } from '../checkin/localDate';
 import { formatDateKeyTitle } from './monthGrid';
 import { CALENDAR_COPY } from './content';
+import { buildScrubberDateKeys, SCRUBBER_BOTTOM_OFFSET_PT, shouldShowScrubber } from './scrubberRange';
 import type { MigratableDb } from '../db/migrations';
 import type { CheckinRow } from '../db/schema';
 
@@ -50,6 +56,25 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [pendingId, setPendingId] = useState<string | null>(null);
 
+  // 06-07-PLAN.md Task 2 — 활성 날짜를 화면 상태로 승격한다. 스크러버 드래그로 날짜가
+  // 바뀔 때마다 이 상태만 갱신하고, router.setParams로 라우트 파라미터를 되쓰지
+  // 않는다 — 파라미터↔상태 양방향 동기화 루프(라우트가 상태를 바꾸고 상태가 다시
+  // 라우트를 바꾸는 순환)를 만들지 않기 위함이다. `dateKey` prop이 바뀌면(예: 캘린더
+  // 그리드로 돌아가 다른 날짜를 탭한 뒤 이 화면이 새 파라미터로 재사용되는 경우)
+  // 아래 useEffect가 다시 동기화한다.
+  const [activeDateKey, setActiveDateKey] = useState(dateKey);
+  useEffect(() => {
+    setActiveDateKey(dateKey);
+  }, [dateKey]);
+
+  // 늦게 도착한 조회 응답이 최신 activeDateKey를 덮어쓰지 않도록 하는 가드용 ref —
+  // reloadCheckins의 클로저가 호출 시점의 activeDateKey를 캡처하므로, 응답이 돌아온
+  // "현재" activeDateKey는 별도 ref로 추적해야 비교할 수 있다.
+  const activeDateKeyRef = useRef(activeDateKey);
+  useEffect(() => {
+    activeDateKeyRef.current = activeDateKey;
+  }, [activeDateKey]);
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -61,16 +86,20 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
   // (checkinRepo.ts 헤더 주석이 Phase 6 재사용을 명시) — 날짜별 조회용 새 함수를
   // 별도로 만들지 않는다.
   const reloadCheckins = useCallback(() => {
-    getTodayCheckins(db, dateKey)
+    // 클로저가 호출 시점의 activeDateKey를 캡처한다 — 응답이 돌아왔을 때 이 값이
+    // activeDateKeyRef.current(그 시점의 "현재" 값)와 같은지 비교해, 스크럽 중
+    // 이전 날짜의 늦은 응답이 최신 상태를 덮어쓰지 않도록 가드한다(T-06-14 완화 —
+    // 06-07-PLAN.md threat_model).
+    getTodayCheckins(db, activeDateKey)
       .then((rows) => {
-        if (isMountedRef.current) {
+        if (isMountedRef.current && activeDateKey === activeDateKeyRef.current) {
           setCheckins(rows);
         }
       })
       .catch((error) => {
         console.error('Failed to load past-date check-ins', error);
       });
-  }, [db, dateKey]);
+  }, [db, activeDateKey]);
 
   useEffect(() => {
     reloadCheckins();
@@ -174,11 +203,14 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
 
   // 행 탭 → 캘린더 스택 전용 체크인 상세 라우트. pathname+params 객체 형태를 써
   // expo-router가 동적 세그먼트를 직접 인코딩하게 한다(T-06-09, T-05-15 선례).
+  // 06-07-PLAN.md Task 2 — 라우트 파라미터(dateKey)가 아니라 스크러버로 바뀐
+  // activeDateKey를 기준으로 상세화면을 연다(스크럽 중 다른 날짜를 보다가 행을
+  // 탭하면 원래 파라미터가 아니라 지금 보고 있는 날짜의 상세로 이동해야 한다).
   const handleRowPress = useCallback(
     (id: string) => {
-      router.push({ pathname: '/calendar/[date]/[id]', params: { date: dateKey, id } });
+      router.push({ pathname: '/calendar/[date]/[id]', params: { date: activeDateKey, id } });
     },
-    [dateKey]
+    [activeDateKey]
   );
 
   const handleContainerLayout = useCallback(
@@ -194,11 +226,76 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
   // 만족시키기 위해 이 화면이 소유한다(부모 소유 SharedValue 계약).
   const sheetPosition = useSharedValue(0);
 
-  // 헤더 타이틀 — 데이터 로드와 무관하게 dateKey만으로 즉시 확정 가능하므로 별도
-  // 로딩 분기 없이 마운트 시 1회 설정한다.
+  // 06-07-PLAN.md Task 2 — 스크러버가 손에 닿는 즉시 시트를 CLOSED로 강제 접기
+  // 위한 imperative ref(T1, CRITICAL). TodayBottomSheet.tsx가 06-07이 추가한
+  // 선택적 sheetRef prop을 그대로 전달만 받는다.
+  const sheetRef = useRef<BottomSheet>(null);
+  const handleScrubStart = useCallback(() => {
+    sheetRef.current?.snapToIndex(0);
+  }, []);
+
+  // 06-07-PLAN.md Task 2 — 스크러버 데이터. 마운트 시 1회 getCheckinHistorySummary를
+  // 불러 첫 체크인 날짜/기록 있는 날 수를 얻는다(하루씩 반복 조회하지 않는다).
+  const [historySummary, setHistorySummary] = useState<{
+    earliestDateKey: string | null;
+    distinctDateCount: number;
+  }>({ earliestDateKey: null, distinctDateCount: 0 });
+  const [recordedDateKeys, setRecordedDateKeys] = useState<Set<string>>(new Set());
+
+  const todayKey = useMemo(() => resolveLocalDateKey(new Date()), []);
+
   useEffect(() => {
-    navigation.setOptions({ title: formatDateKeyTitle(dateKey) });
-  }, [navigation, dateKey]);
+    getCheckinHistorySummary(db)
+      .then((summary) => {
+        if (!isMountedRef.current) return;
+        setHistorySummary(summary);
+        if (!summary.earliestDateKey) return;
+        // 눈금 밀도 표시용 — 범위 전체를 한 번의 범위 쿼리로 가져온다(하루씩 N번
+        // 조회 금지, 06-RESEARCH.md §Don't Hand-Roll과 동일한 원칙).
+        return getCheckinDateKeysInRange(db, summary.earliestDateKey, todayKey).then((keys) => {
+          if (isMountedRef.current) {
+            setRecordedDateKeys(new Set(keys));
+          }
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to load check-in history summary for scrubber', error);
+      });
+  }, [db, todayKey]);
+
+  // 범위는 첫 체크인 날짜 ~ 오늘이며 미래로는 넘어가지 않는다(Premise 5).
+  const scrubberDateKeys = useMemo(
+    () =>
+      historySummary.earliestDateKey
+        ? buildScrubberDateKeys(historySummary.earliestDateKey, todayKey)
+        : [],
+    [historySummary.earliestDateKey, todayKey]
+  );
+
+  // activeDateKey가 스크러버 범위 밖(캘린더 그리드에서 미래 날짜를 직접 탭한 경우 —
+  // 실제로는 그런 라우트가 생기지 않지만 방어적으로 처리)이면 -1이 되고, 아래 렌더
+  // 조건에서 스크러버 자체를 마운트하지 않는다.
+  const selectedIndex = scrubberDateKeys.indexOf(activeDateKey);
+
+  const showScrubber =
+    shouldShowScrubber(historySummary.distinctDateCount) &&
+    scrubberDateKeys.length > 0 &&
+    selectedIndex >= 0;
+
+  const handleScrubIndexChange = useCallback(
+    (index: number) => {
+      const nextDateKey = scrubberDateKeys[index];
+      if (nextDateKey) {
+        setActiveDateKey(nextDateKey);
+      }
+    },
+    [scrubberDateKeys]
+  );
+
+  // 헤더 타이틀 — activeDateKey가 바뀔 때마다(스크럽 포함) 다시 계산한다.
+  useEffect(() => {
+    navigation.setOptions({ title: formatDateKeyTitle(activeDateKey) });
+  }, [navigation, activeDateKey]);
 
   // 06-RESEARCH.md Pitfall 1 — 탭바를 조작하는 파일은 이 저장소에서 이 파일
   // 하나뿐이어야 한다. useFocusEffect(useLayoutEffect가 아니라)를 쓰는 이유:
@@ -256,6 +353,7 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
           문구는 시트 표면에만 렌더한다(지도 위에 절대 겹쳐 그리지 않는다 —
           대비 안전 규칙). */}
       <TodayBottomSheet
+        sheetRef={sheetRef}
         checkins={filteredCheckins}
         containerHeight={containerHeight}
         animatedPosition={sheetPosition}
@@ -263,6 +361,25 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
         onDeleteRequest={handleDeleteRequest}
         emptyText={CALENDAR_COPY.pastDateEmptyState}
       />
+
+      {/* 06-07-PLAN.md Task 2 — 스크러버는 시트보다 위 레이어(JSX상 더 뒤에 렌더돼
+          기본 스택 순서상 위에 옴)에 두어 시트 상태(CLOSED/OPEN)와 무관하게 항상
+          같은 화면 위치에 뜬다(docs/designs/calendar-date-scrubber.md Premise 8).
+          숨김 스타일이 아니라 조건이 false면 트리에서 아예 빼서 미마운트한다
+          (Premise 11 — 기록 0~1일이면 훑어볼 게 없다). 이 화면(PastDateScreen)만
+          카드의 화면상 위치(절대좌표 bottom 오프셋)를 결정한다 — DateScrubber
+          자신은 배치를 갖지 않는 컴포넌트 계약(Task 1)을 그대로 유지한다. */}
+      {showScrubber && (
+        <View style={styles.scrubberContainer} pointerEvents="box-none">
+          <DateScrubber
+            dateKeys={scrubberDateKeys}
+            recordedDateKeys={recordedDateKeys}
+            selectedIndex={selectedIndex}
+            onScrubStart={handleScrubStart}
+            onIndexChange={handleScrubIndexChange}
+          />
+        </View>
+      )}
 
       <View style={styles.undoSnackbarContainer} pointerEvents="box-none">
         <UndoSnackbar visible={pendingId !== null} onUndo={handleUndoDelete} />
@@ -283,6 +400,15 @@ const styles = StyleSheet.create({
     left: spacing.lg,
     right: spacing.lg,
     bottom: spacing.lg,
+  },
+  // 06-07-PLAN.md Task 2 — 스크러버 카드의 화면상 위치. 132 같은 숫자 리터럴을 쓰지
+  // 않고 SCRUBBER_BOTTOM_OFFSET_PT(scrubberRange.ts 단일 출처)를 참조한다. 시트보다
+  // 위 레이어에 항상 같은 자리로 고정한다(Premise 8).
+  scrubberContainer: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    bottom: SCRUBBER_BOTTOM_OFFSET_PT,
   },
   // 저장된 체크인 핀 — (tabs)/index/index.tsx의 pinWrapper/pinDrop/pinSaved와
   // 동일한 물방울 모양(구글맵/애플맵 관례 차용). 원본 location_source 구분은
