@@ -170,3 +170,41 @@ export async function getCheckinById(
 export async function deleteCheckin(db: MigratableDb, id: string): Promise<void> {
   await db.runAsync('DELETE FROM checkins WHERE id = ?', id);
 }
+
+// 06-02-PLAN.md Task 1 — 캘린더 탭 월 그리드가 "이 달에 기록이 있는 날짜"를 알아내는 데 쓴다.
+// 하루씩 N번 getTodayCheckins를 부르는 루프를 절대 만들지 않는다(06-RESEARCH.md §Don't
+// Hand-Roll) — local_date_key가 YYYY-MM-DD 사전식 정렬 = 시간순이라는 점이 이 단일 범위
+// 쿼리가 성립하는 근거이며, 기존 idx_checkins_local_date_key 인덱스가 이 접근 패턴을 위해
+// 이미 존재한다. DISTINCT로 같은 날 여러 건을 1개로 접는다.
+export async function getCheckinDateKeysInRange(
+  db: MigratableDb,
+  startDateKey: string,
+  endDateKey: string
+): Promise<string[]> {
+  const rows = await db.getAllAsync<{ local_date_key: string }>(
+    'SELECT DISTINCT local_date_key FROM checkins WHERE local_date_key BETWEEN ? AND ? ORDER BY local_date_key ASC',
+    startDateKey,
+    endDateKey
+  );
+  return rows.map((r) => r.local_date_key);
+}
+
+// 06-02-PLAN.md Task 1 — 스크러버 가시성 게이트(기록 있는 날이 0~1일이면 숨김,
+// calendar-date-scrubber.md Premise 11)와 스크러버 스크롤 범위의 시작점(첫 체크인 날짜)을
+// 한 쿼리로 함께 얻기 위한 함수(06-RESEARCH.md Assumption A4). 빈 테이블에서 MIN(...)은
+// NULL을 돌려주므로 ?? null로, COUNT(DISTINCT ...)는 0을 돌려주지만 명시적으로 ?? 0으로
+// 정규화한다.
+export async function getCheckinHistorySummary(
+  db: MigratableDb
+): Promise<{ earliestDateKey: string | null; distinctDateCount: number }> {
+  const row = await db.getFirstAsync<{
+    earliest_date_key: string | null;
+    distinct_date_count: number;
+  }>(
+    'SELECT MIN(local_date_key) AS earliest_date_key, COUNT(DISTINCT local_date_key) AS distinct_date_count FROM checkins'
+  );
+  return {
+    earliestDateKey: row?.earliest_date_key ?? null,
+    distinctDateCount: row?.distinct_date_count ?? 0,
+  };
+}
