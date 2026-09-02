@@ -118,3 +118,14 @@ None - 이번 phase 스코프(로컬/스테이징 프로파일 존재 확인)에
 ---
 *Phase: 09-backend-foundation*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+- FOUND: backend/build.gradle.kts
+- FOUND: backend/src/main/resources/application.yml
+- FOUND: backend/src/main/resources/application-local.yml
+- FOUND: backend/src/main/resources/application-staging.yml
+- FOUND: .planning/phases/09-backend-foundation/09-01-SUMMARY.md
+- FOUND commit: aba89d4 (Task 1)
+- FOUND commit: b780f1b (Task 3)
+- FOUND commit: 6e1ae14 (SUMMARY)
