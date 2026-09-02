@@ -554,9 +554,9 @@ describe('src/app/(tabs)/index.tsx 행 탭/지연 삭제 배선 계약 (2026-09-
   const indexSource = readSource(TODAY_SCREEN_PATH);
   const codeOnly = stripComments(indexSource);
 
-  it('Test 71: 행 탭이 router.push({ pathname: \'/index/[id]\', ... })로 상세화면에 진입한다', () => {
+  it('Test 71: 행 탭이 router.push({ pathname: \'./[id]\', ... })로 상세화면에 진입한다', () => {
     expect(codeOnly).toMatch(/router\.push\(\{/);
-    expect(codeOnly).toMatch(/pathname:\s*'\/index\/\[id\]'/);
+    expect(codeOnly).toMatch(/pathname:\s*'\.\/\[id\]'/);
   });
 
   it('Test 72: createPendingDeleteController가 등장하고, cleanup에 dispose()가 등장한다', () => {
