@@ -218,7 +218,9 @@ describe('migrateDbIfNeeded', () => {
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
-      expect(versionRow.user_version).toBe(2);
+      // DATABASE_VERSION 3(Plan 06-01)으로 갱신 — 빈 DB에서 시작한 첫 migrateDbIfNeeded
+      // 호출이 이미 최신 버전까지 연쇄 실행하므로 재실행 후에도 3이다.
+      expect(versionRow.user_version).toBe(DATABASE_VERSION);
     } finally {
       close();
     }
@@ -474,7 +476,9 @@ describe('migrateDbIfNeeded', () => {
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
-      expect(versionRow.user_version).toBe(2);
+      // DATABASE_VERSION 3(Plan 06-01)으로 갱신 — v1에서 시작한 migrateDbIfNeeded 호출이
+      // 이미 최신 버전까지 연쇄 실행한다.
+      expect(versionRow.user_version).toBe(DATABASE_VERSION);
     } finally {
       close();
     }
@@ -497,7 +501,8 @@ describe('migrateDbIfNeeded', () => {
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
-      expect(versionRow.user_version).toBe(2);
+      // DATABASE_VERSION 3(Plan 06-01)으로 갱신.
+      expect(versionRow.user_version).toBe(DATABASE_VERSION);
     } finally {
       close();
     }

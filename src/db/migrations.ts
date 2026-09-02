@@ -7,6 +7,7 @@
 // 으로만 전달한다(Plan 01-04가 배선을 담당한다).
 import { type SQLiteDatabase } from 'expo-sqlite';
 import {
+  CREATE_APP_SETTINGS_TABLE_SQL,
   CREATE_CHECKINS_INDEXES_SQL,
   CREATE_CHECKINS_TABLE_SQL,
   CREATE_DAILY_REFLECTIONS_TABLE_SQL,
@@ -14,7 +15,7 @@ import {
 } from './schema';
 
 export const DATABASE_NAME = 'footlog.db';
-export const DATABASE_VERSION = 2;
+export const DATABASE_VERSION = 3;
 
 export type MigratableDb = Pick<SQLiteDatabase, 'getFirstAsync' | 'execAsync' | 'runAsync' | 'getAllAsync'>;
 
@@ -39,10 +40,15 @@ export async function migrateDbIfNeeded(db: MigratableDb): Promise<void> {
     currentDbVersion = 2;
   }
 
+  if (currentDbVersion === 2) {
+    await db.execAsync(CREATE_APP_SETTINGS_TABLE_SQL);
+    currentDbVersion = 3;
+  }
+
   // 다음 phase에서 컬럼/테이블 추가가 필요하면 여기에 새 블록을 append한다:
-  // if (currentDbVersion === 2) { await db.execAsync('ALTER TABLE ...'); currentDbVersion = 3; }
-  // 이전 버전 블록 두 개(위쪽 두 개의 if문)는 절대 사후 수정하지 않는다 — 이미 그
-  // 버전을 통과한 기기는 변경분을 받지 못한다(migration_discipline #2).
+  // if (currentDbVersion === 3) { await db.execAsync('ALTER TABLE ...'); currentDbVersion = 4; }
+  // 이전 버전 블록들(위쪽 if문들)은 절대 사후 수정하지 않는다 — 이미 그 버전을 통과한
+  // 기기는 변경분을 받지 못한다(migration_discipline #2).
 
   // 보안 주석(T-1-01): SQLite PRAGMA는 바인딩 파라미터를 받지 않으므로, 이 한 줄만
   // 템플릿 보간을 사용한다. 보간되는 값(currentDbVersion)은 이 모듈 내부에서 정수
