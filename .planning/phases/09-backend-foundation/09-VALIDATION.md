@@ -1,9 +1,9 @@
 ---
 phase: 9
 slug: backend-foundation
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-09-02
 ---
 
@@ -38,8 +38,11 @@ created: 2026-09-02
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 09-01-XX | 01 | 1 | REQ-backend-scaffold | — | N/A | smoke/integration | `./gradlew test --tests "*HealthCheckSmokeTest"` | ❌ W0 | ⬜ pending |
-| 09-02-XX | 02 | 1 | REQ-backend-db-schema | — | N/A | integration | `./gradlew test --tests "*FlywayMigrationTest"` | ❌ W0 | ⬜ pending |
+| 09-01-T1 | 01 | 1 | REQ-backend-scaffold | — | N/A | smoke | `./gradlew test --tests "*BackendApplicationTests"` | ✅ | ✅ green |
+| 09-02-T1 | 02 | 2 | REQ-backend-db-schema | — | N/A | integration | `./gradlew test --tests "*FlywayMigrationTest"` | ✅ | ✅ green |
+| 09-04-T1 | 04 | 3 | REQ-backend-db-schema | — | N/A | integration | `./gradlew test --tests "*EntityPersistenceTest"` | ✅ | ✅ green |
+| 09-05-T1 | 05 | 4 | REQ-backend-scaffold | T-9-02 | actuator 노출 잠금(health만) | integration | `./gradlew test --tests "*HealthCheckSmokeTest"` | ✅ | ✅ green |
+| 09-05-T2 | 05 | 4 | REQ-backend-scaffold | T-9-18 | 스테이징 프로파일 env var DataSource 기동 | integration | `./gradlew test --tests "*StagingProfileBootTest"` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -47,10 +50,10 @@ created: 2026-09-02
 
 ## Wave 0 Requirements
 
-- [ ] `backend/src/test/kotlin/com/footlog/backend/FlywayMigrationTest.kt` — Testcontainers Postgres에 V1~V3 마이그레이션이 에러 없이 적용되는지, 기대 컬럼/타입/제약(FK, UNIQUE)이 실제로 존재하는지 검증 — REQ-backend-db-schema 커버
-- [ ] `backend/src/test/kotlin/com/footlog/backend/HealthCheckSmokeTest.kt` — `@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)`로 컨텍스트 로딩 + `/actuator/health` 200 확인 — REQ-backend-scaffold 성공 기준 1 커버
-- [ ] `backend/src/test/kotlin/com/footlog/backend/TestcontainersConfiguration.kt` — start.spring.io 스캐폴딩 태스크가 자동 생성(추가 작업 불필요, 존재만 확인)
-- [ ] `.github/workflows/backend-ci.yml` — 신규 작성 필요(D-10, 아직 저장소에 없음)
+- [x] `backend/src/test/kotlin/com/footlog/backend/FlywayMigrationTest.kt` — Testcontainers Postgres에 V1~V3 마이그레이션이 에러 없이 적용되는지, 기대 컬럼/타입/제약(FK, UNIQUE)이 실제로 존재하는지 검증 — REQ-backend-db-schema 커버
+- [x] `backend/src/test/kotlin/com/footlog/backend/HealthCheckSmokeTest.kt` — `@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)`로 컨텍스트 로딩 + `/actuator/health` 200 확인 — REQ-backend-scaffold 성공 기준 1 커버
+- [x] `backend/src/test/kotlin/com/footlog/backend/TestcontainersConfiguration.kt` — start.spring.io 스캐폴딩 태스크가 자동 생성(추가 작업 불필요, 존재만 확인)
+- [x] `.github/workflows/backend-ci.yml` — 신규 작성 필요(D-10, 아직 저장소에 없음)
 
 ---
 
@@ -58,17 +61,17 @@ created: 2026-09-02
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| 스테이징 환경 실제 배포·기동 확인 | REQ-backend-scaffold | PaaS 계정 프로비저닝 여부가 계획 단계 미확정 사안(RESEARCH.md Open Question 1) — 자동화된 CI로는 실제 스테이징 인프라까지 검증 불가 | `application-staging.yml` 프로파일로 로컬에서 기동 확인 후, 실제 PaaS(Railway 등) 배포는 계획 단계에서 범위가 확정되면 수동으로 1회 검증 |
+| 스테이징 환경 실제 배포·기동 확인 | REQ-backend-scaffold | 프로파일 + 자동 테스트로 대체됨, 실제 PaaS 배포는 이번 phase 범위 밖 | 09-06 창업자 결정(option-a): `StagingProfileBootTest`가 `application-staging.yml` 프로파일 + 환경변수 DataSource 기동을 자동 테스트로 커버. 실제 PaaS(Railway 등) 배포는 Phase 10 이후 별도 플랜 스코프로 이관 |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 90s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 90s
+- [x] `nyquist_compliant` set to `true` in frontmatter
 
-**Approval:** pending
+**Approval:** approved (09-06)
