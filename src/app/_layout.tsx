@@ -17,7 +17,7 @@
 // 호출하지 않는다.
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { SQLiteProvider } from 'expo-sqlite';
+import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -28,8 +28,53 @@ import { DATABASE_NAME, migrateDbIfNeeded } from '../db/migrations';
 import { newsreaderFonts } from '../theme/fonts';
 import { runForegroundNotificationCheck } from '../notifications/registry';
 import { subscribeToForegroundActive } from '../notifications/permissions';
+import { getSettingsRow, resolveNotificationSettings } from '../settings/settingsRepo';
 
 SplashScreen.preventAutoHideAsync();
+
+// 06-06-PLAN.md Task 2 (06-RESEARCH.md Pitfall 5) — 자가진단이 영속 설정을 읽어야
+// 하는데, useSQLiteContext()는 SQLiteProvider 자식 트리 안에서만 쓸 수 있다.
+// RootLayout 본문(아래)은 SQLiteProvider 바깥이라 여기서 이 훅을 쓸 수 없으므로,
+// db 접근이 필요해진 자가진단 오케스트레이션 전체를 이 내부 컴포넌트로 옮겼다 —
+// <SQLiteProvider> 자식 트리 최상단에 렌더하고 UI는 그리지 않는다(항상 null).
+//
+// 배선 규칙(Plan 02-07)은 그대로 유지된다: 자가진단 호출 지점은 앱 전체에서
+// 이 컴포넌트 하나뿐이고, 아래에서 import한 구독 함수가 이미 AppState의
+// 래퍼이므로 이 파일에서 그 네이티브 API를 직접 다시 부르지 않는다(중복 호출
+// 시 리스너가 두 개가 된다, T-02-19).
+function NotificationSelfHealGate() {
+  const db = useSQLiteContext();
+
+  // 반드시 RootLayout의 `if (!fontsLoaded && !fontError) { return null; }` 조기
+  // 반환보다 위쪽 트리에서 마운트된다 — 이 컴포넌트 자체가 그 조기 반환 아래
+  // (SQLiteProvider 자식)에 있으므로 훅 순서 문제는 없다.
+  useEffect(() => {
+    const runCheck = () => {
+      (async () => {
+        // 설정 읽기 실패가 자가진단 자체를 건너뛰게 만들지 않는다(T-06-11) — 실패
+        // 시 row를 null로 두면 resolveNotificationSettings(null)이 Phase 2
+        // 기본값("매시간"/하루마무리 켜짐)으로 폴백한다.
+        let row = null;
+        try {
+          row = await getSettingsRow(db);
+        } catch (error) {
+          console.error('[notifications] failed to read settings for self-heal', error);
+        }
+        await runForegroundNotificationCheck(resolveNotificationSettings(row));
+      })().catch((error) => {
+        // 프로미스를 조용히 삼키지 않는다(repo 규약, T-02-21) — 자가진단 실패를
+        // 콘솔에 반드시 남긴다.
+        console.error('[notifications] foreground check failed', error);
+      });
+    };
+    // 마운트 시 1회 호출 — 콜드스타트 경로. 신규 설치 시 최초 트리거 등록도
+    // 이 경로가 담당한다.
+    runCheck();
+    return subscribeToForegroundActive(runCheck);
+  }, [db]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(newsreaderFonts);
@@ -39,27 +84,6 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
-
-  // 콜드스타트 + 포그라운드 복귀 시 정확히 하나의 경로로 권한 재확인·자가진단을
-  // 실행한다. 아래에서 import한 구독 함수가 이미 AppState의 래퍼이므로(Plan 04),
-  // 이 파일에서 AppState.addEventListener를 직접 다시 부르지 않는다 — 그러면
-  // 리스너가 두 개가 된다.
-  //
-  // 반드시 아래 `if (!fontsLoaded && !fontError) { return null; }` 조기 반환보다
-  // 위쪽에 둔다 — 조기 반환 아래에 훅을 두면 React 훅 호출 순서 규칙이 깨진다.
-  useEffect(() => {
-    const runCheck = () => {
-      // 프로미스를 조용히 삼키지 않는다(repo 규약, T-02-21) — 자가진단 실패를
-      // 콘솔에 반드시 남긴다.
-      runForegroundNotificationCheck().catch((error) => {
-        console.error('[notifications] foreground check failed', error);
-      });
-    };
-    // 마운트 시 1회 호출 — 콜드스타트 경로. 신규 설치 시 최초 트리거 등록도
-    // 이 경로가 담당한다.
-    runCheck();
-    return subscribeToForegroundActive(runCheck);
-  }, []);
 
   if (!fontsLoaded && !fontError) {
     return null;
@@ -77,6 +101,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.flex}>
       <SafeAreaProvider>
         <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
+          <NotificationSelfHealGate />
           <StatusBar style="auto" />
           <Stack screenOptions={{ headerShown: false }} />
         </SQLiteProvider>

@@ -134,13 +134,26 @@ describe('캘린더 홈 라우트 계약 (2026-09-01 갱신, D-07 경계 반전 
   });
 });
 
-describe('스코프 경계 계약 (D-08)', () => {
-  it('Test 14: (tabs)/index.tsx와 (tabs)/_layout.tsx 어디에도 설정 진입점 관련 식별자와 햄버거 문자가 등장하지 않는다', () => {
-    for (const codeOnly of [todayIndexCodeOnly, layoutCodeOnly]) {
-      expect(codeOnly).not.toMatch(/headerRight/);
-      expect(codeOnly).not.toMatch(/\bsettings\b/i);
-      expect(codeOnly).not.toContain('≡');
-    }
+describe('스코프 경계 계약 (D-08 → 06-01~06-03 D-01/D-03이 의도적으로 반전, 06-06-PLAN.md Task 3)', () => {
+  // Phase 4 D-08은 "설정 진입점은 이 phase에서 만들지 않는다"는 경계를 fence로
+  // 심어둔 테스트였다. 06-CONTEXT.md D-01(햄버거+설정 화면을 이번 phase에 전체
+  // 포함)/D-03(햄버거 위치는 Today 뷰 상단 전용, 탭으로 승격하지 않음)가 그 경계를
+  // 이번 phase에 의도적으로 반전했으므로, 이 테스트는 "부재 단언"에서 "존재 단언"으로
+  // 바뀐다 — 단, 설정이 세 번째 탭이 아니라는 부분(탭 레이아웃 자체는 여전히
+  // settings를 모른다)은 그대로 부재 단언을 유지한다.
+  it('Test 14: (tabs)/index/index.tsx는 햄버거 진입점을 SF Symbol 이름으로 렌더하고, (tabs)/_layout.tsx는 여전히 설정을 세 번째 탭으로 승격하지 않는다', () => {
+    // (tabs)/index/index.tsx — 진입점 존재 단언(D-01/D-03 반전).
+    expect(todayIndexCodeOnly).toMatch(/line\.3\.horizontal/);
+    expect(todayIndexCodeOnly).toMatch(/router\.push\('\/settings'\)/);
+    // 유니코드 문자를 코드에 직접 쓰지 않는다 — SF Symbol 이름으로만 렌더한다는
+    // 저장소 아이콘 규약은 그대로 유지된다.
+    expect(todayIndexCodeOnly).not.toContain('≡');
+
+    // (tabs)/_layout.tsx(탭바 자체) — 설정은 세 번째 탭으로 승격되지 않는다는
+    // 원본 제품 원칙은 이번 phase에도 그대로 유지된다(부재 단언 유지).
+    expect(layoutCodeOnly).not.toMatch(/headerRight/);
+    expect(layoutCodeOnly).not.toMatch(/\bsettings\b/i);
+    expect(layoutCodeOnly).not.toContain('≡');
   });
 });
 

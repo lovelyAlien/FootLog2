@@ -90,6 +90,7 @@ import { buildTrajectoryCoordinates } from '../../../today/trajectory';
 import { createPendingDeleteController } from '../../../today/pendingDelete';
 import type { PendingDeleteItem } from '../../../today/pendingDelete';
 import { UndoSnackbar } from '../../../today/UndoSnackbar';
+import { SETTINGS_COPY } from '../../../settings/content';
 
 // MAP_REGION_DELTA(확인 핀으로 카메라를 이동시킬 때 쓰는 줌 레벨 근사치)는
 // 05-03-PLAN.md Task 2부터 src/checkin/config.ts로 옮겨졌다 — CheckinDetailScreen.tsx의
@@ -123,6 +124,10 @@ const EXTREME_ZOOM_OUT_RATIO = 10;
 
 // 확인 핀 히트 영역 확장값 — 24px 원을 최소 터치 타겟 크기까지 넓힌다.
 const PIN_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
+
+// 06-06-PLAN.md Task 1 — 햄버거 진입점 히트 영역. CheckinDetailScreen.tsx
+// 54~57줄과 동일 관용구(시각 크기는 작게, 터치 영역은 44×44pt를 채운다).
+const SMALL_ICON_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
 // 이동 궤적선 두께 — 2px, 실선. 색상은 2026-08-31부터 colors.pinSoft(테라코타, DESIGN.md 참고).
 const TRAJECTORY_STROKE_WIDTH = 2;
@@ -708,6 +713,13 @@ export default function Index() {
   // 콜백으로 백그라운드 GPS 보정 결과를 받아, 이 탭이 여전히 최신 탭일 때만
   // (recenterRequestIdRef로 판정 — 그 사이 재탭하거나 손으로 지도를 옮겼으면
   // 무시) 조용히 재보정한다. 한 번만 눌러도 잠시 후 정확한 위치로 수렴한다.
+  // 06-06-PLAN.md Task 1 — Today 뷰 상단 햄버거(D-01/D-03) → 설정 라우트 push.
+  // 캘린더 탭에는 이 진입점을 두지 않는다(D-03) — src/calendar/ 아래 파일은 이
+  // 플랜이 건드리지 않는다.
+  const handleSettingsPress = useCallback(() => {
+    router.push('/settings');
+  }, []);
+
   const handleRecenterPress = useCallback(() => {
     (async () => {
       const requestId = ++recenterRequestIdRef.current;
@@ -1181,6 +1193,20 @@ export default function Index() {
       </MapView>
 
       <View style={[styles.bannerStack, { paddingTop: insets.top }]}>
+        {/* 06-06-PLAN.md Task 1 — 햄버거 진입점(D-01/D-03). 배너들보다 위쪽 행에
+            둬 배너가 떠 있어도 가려지지 않는다. accent를 절대 쓰지 않는다 — accent
+            예산은 이 phase에서 캘린더 2곳(오늘 밑줄/스크러버 선택 위치) 전용이다. */}
+        <View style={styles.settingsButtonRow}>
+          <Pressable
+            onPress={handleSettingsPress}
+            accessibilityRole="button"
+            accessibilityLabel={SETTINGS_COPY.settingsEntryLabel}
+            hitSlop={SMALL_ICON_HIT_SLOP}
+            style={styles.settingsButton}
+          >
+            <SymbolView name="line.3.horizontal" tintColor={colors.textPrimary} />
+          </Pressable>
+        </View>
         <NotificationDeniedBanner />
         <LocationDeniedBanner />
       </View>
@@ -1276,6 +1302,19 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+  },
+  // 06-06-PLAN.md Task 1 — 햄버거 행. 44×44pt 터치 타겟을 채우도록 버튼 자체가
+  // 크기를 갖고, 이 행은 좌측 정렬 + 좌우 여백만 준다.
+  settingsButtonRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  settingsButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkinButtonContainer: {
     position: 'absolute',
