@@ -161,9 +161,9 @@ describe('src/app/(tabs)/index.tsx accent 예산 계약', () => {
 // 경계를 의도한 대로 반전시킨다 — 아래 단언은 회귀가 아니라 Phase 4→5 전환의 계획된
 // 결과다. Phase 7(회고) 스코프 경계는 이 phase와 무관하므로 그대로 유지한다.
 describe('src/app/(tabs)/index.tsx 스코프 경계 계약 (D-03 반전 — Phase 5 REQ-checkin-detail-base 배선, Phase 7 미선점)', () => {
-  it('상세화면 진입 배선이 존재한다: router.push와 pathname: \'/[id]\' (2026-09-01: D-03 반전, useRouter/<Link>는 여전히 쓰지 않는다)', () => {
+  it('상세화면 진입 배선이 존재한다: router.push와 pathname: \'./[id]\' (2026-09-01: D-03 반전, useRouter/<Link>는 여전히 쓰지 않는다)', () => {
     expect(codeOnly).toMatch(/router\.push/);
-    expect(codeOnly).toMatch(/pathname:\s*'\/\[id\]'/);
+    expect(codeOnly).toMatch(/pathname:\s*'\.\/\[id\]'/);
     expect(codeOnly).not.toMatch(/useRouter/);
     expect(codeOnly).not.toMatch(/<Link\b/);
   });

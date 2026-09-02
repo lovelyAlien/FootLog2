@@ -54,8 +54,15 @@ const DRAFTS_COLUMNS = [
   'updated_at',
 ];
 
+const APP_SETTINGS_COLUMNS = [
+  'id',
+  'checkin_frequency',
+  'daily_reflection_enabled',
+  'updated_at',
+];
+
 describe('migrateDbIfNeeded', () => {
-  it('Test 1: 빈 DB에서 checkins/daily_reflections/drafts 테이블을 생성하고 user_version을 2로 올린다', async () => {
+  it('Test 1: 빈 DB에서 checkins/daily_reflections/drafts/app_settings 테이블을 생성하고 user_version을 3으로 올린다', async () => {
     const { db, raw, close } = createTestDb();
     try {
       await migrateDbIfNeeded(db);
@@ -67,12 +74,13 @@ describe('migrateDbIfNeeded', () => {
       expect(tableNames).toContain('checkins');
       expect(tableNames).toContain('daily_reflections');
       expect(tableNames).toContain('drafts');
+      expect(tableNames).toContain('app_settings');
 
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
       expect(versionRow.user_version).toBe(DATABASE_VERSION);
-      expect(DATABASE_VERSION).toBe(2);
+      expect(DATABASE_VERSION).toBe(3);
     } finally {
       close();
     }
@@ -210,7 +218,9 @@ describe('migrateDbIfNeeded', () => {
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
-      expect(versionRow.user_version).toBe(2);
+      // DATABASE_VERSION 3(Plan 06-01)으로 갱신 — 빈 DB에서 시작한 첫 migrateDbIfNeeded
+      // 호출이 이미 최신 버전까지 연쇄 실행하므로 재실행 후에도 3이다.
+      expect(versionRow.user_version).toBe(DATABASE_VERSION);
     } finally {
       close();
     }
@@ -466,7 +476,9 @@ describe('migrateDbIfNeeded', () => {
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
-      expect(versionRow.user_version).toBe(2);
+      // DATABASE_VERSION 3(Plan 06-01)으로 갱신 — v1에서 시작한 migrateDbIfNeeded 호출이
+      // 이미 최신 버전까지 연쇄 실행한다.
+      expect(versionRow.user_version).toBe(DATABASE_VERSION);
     } finally {
       close();
     }
@@ -489,7 +501,151 @@ describe('migrateDbIfNeeded', () => {
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
-      expect(versionRow.user_version).toBe(2);
+      // DATABASE_VERSION 3(Plan 06-01)으로 갱신.
+      expect(versionRow.user_version).toBe(DATABASE_VERSION);
+    } finally {
+      close();
+    }
+  });
+
+  it('Test A: 마이그레이션 후 app_settings 테이블이 sqlite_master에 존재한다', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      const tables = raw
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .all() as { name: string }[];
+      expect(tables.map((t) => t.name)).toContain('app_settings');
+    } finally {
+      close();
+    }
+  });
+
+  it('Test B: app_settings 테이블이 정확히 4개 컬럼을 계약대로 갖는다', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      const columns = raw
+        .prepare('PRAGMA table_info(app_settings)')
+        .all() as { name: string }[];
+      expect(columns).toHaveLength(4);
+
+      const columnNames = new Set(columns.map((c) => c.name));
+      expect(columnNames).toEqual(new Set(APP_SETTINGS_COLUMNS));
+    } finally {
+      close();
+    }
+  });
+
+  it('Test C: id 없이 insert하면 실패하고, 필수 컬럼에 NULL을 넣으면 실패한다', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      expect(() => {
+        raw
+          .prepare(
+            `INSERT INTO app_settings (checkin_frequency, daily_reflection_enabled, updated_at)
+             VALUES (?, ?, ?)`
+          )
+          .run('hourly', 1, '2026-09-01T00:00:00Z');
+      }).toThrow();
+
+      const baseRow: Record<string, unknown> = {
+        id: 'settings',
+        checkin_frequency: 'hourly',
+        daily_reflection_enabled: 1,
+        updated_at: '2026-09-01T00:00:00Z',
+      };
+      const notNullColumns = ['checkin_frequency', 'daily_reflection_enabled', 'updated_at'];
+
+      for (const column of notNullColumns) {
+        const row = { ...baseRow, [column]: null };
+        const columns = Object.keys(row);
+        const placeholders = columns.map(() => '?').join(', ');
+        expect(() => {
+          raw
+            .prepare(`INSERT INTO app_settings (${columns.join(', ')}) VALUES (${placeholders})`)
+            .run(...columns.map((c) => row[c] as never));
+        }).toThrow();
+      }
+    } finally {
+      close();
+    }
+  });
+
+  it('Test D: user_version=2 기기를 업그레이드해도 기존 checkins/drafts 데이터가 보존되고 app_settings만 추가된다', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      // v2 기기 재현: v2 시점의 DDL을 직접 실행하고 user_version을 2로 세팅한다
+      // (app_settings 테이블은 아직 없는 상태).
+      raw.exec(CREATE_CHECKINS_TABLE_SQL);
+      raw.exec(CREATE_DAILY_REFLECTIONS_TABLE_SQL);
+      raw.exec(CREATE_CHECKINS_INDEXES_SQL);
+      raw.exec(CREATE_DRAFTS_TABLE_SQL);
+      raw.exec('PRAGMA user_version = 2');
+
+      await db.runAsync(
+        `INSERT INTO checkins (
+           id, timestamp_utc, local_date_key, timezone_at_capture,
+           lat, lng, location_source, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        'c1',
+        '2026-08-26T00:00:00Z',
+        '2026-08-26',
+        'Asia/Seoul',
+        37.5665,
+        126.978,
+        'gps_auto',
+        '2026-08-26T00:00:00Z',
+        '2026-08-26T00:00:00Z'
+      );
+
+      await db.runAsync(
+        `INSERT INTO drafts (
+           id, lat, lng, location_source, local_date_key, timezone_at_capture,
+           created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        'draft',
+        37.0,
+        127.0,
+        'gps_auto',
+        '2026-08-26',
+        'Asia/Seoul',
+        '2026-08-26T00:00:00Z',
+        '2026-08-26T00:00:00Z'
+      );
+
+      await migrateDbIfNeeded(db);
+
+      const tables = raw
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .all() as { name: string }[];
+      expect(tables.map((t) => t.name)).toContain('app_settings');
+
+      const checkins = raw.prepare('SELECT * FROM checkins').all();
+      const drafts = raw.prepare('SELECT * FROM drafts').all();
+      expect(checkins).toHaveLength(1);
+      expect(drafts).toHaveLength(1);
+
+      const versionRow = raw.prepare('PRAGMA user_version').get() as {
+        user_version: number;
+      };
+      expect(versionRow.user_version).toBe(3);
+    } finally {
+      close();
+    }
+  });
+
+  it('Test E: 마이그레이션 직후 app_settings는 0행이다 (기본 row를 시드하지 않는다)', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      const rows = raw.prepare('SELECT COUNT(*) as c FROM app_settings').get() as { c: number };
+      expect(rows.c).toBe(0);
     } finally {
       close();
     }

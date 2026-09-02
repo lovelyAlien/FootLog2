@@ -18,16 +18,31 @@
 // 않는다 — 체크인마다 다른 로컬 날짜라서 CheckinDetailScreen이 데이터 로드 후
 // navigation.setOptions로 채운다.
 //
+// settings 스크린은 2026-09-01 06-06-PLAN.md Task 1이 등록한다 — 이 화면을 별도
+// 라우트 그룹이 아니라 이 Today 탭의 nested Stack 안에 두는 이유: 이 Stack은
+// (tabs)/_layout.tsx의 Tabs 네비게이터 자식이므로, 여기서 push해도 탭바가 계속
+// 보인다(설정 화면은 체크인 상세화면과 동급 — 둘 다 탭바를 유지하는 push 화면,
+// D-07). title은 SETTINGS_COPY.screenTitle(단일 출처, src/settings/content.ts)을
+// 그대로 쓴다 — 화면 본체가 navigation.setOptions로 다시 덮어쓰지 않는다는 점에서
+// [id] 스크린과 다르다(체크인마다 달라지는 동적 제목이 없기 때문). 탭바 관련
+// 네비게이터 옵션은 여기서도, settings.tsx/SettingsScreen.tsx 어디서도 절대
+// 조작하지 않는다 — 탭바 유지가 기본 동작이라 손댈 이유가 없다.
+//
 // src/app/(tabs)/_layout.tsx(형제 Tabs 레이아웃)는 이 이동으로 바뀌지 않는다 —
 // expo-router는 (tabs)/index/index.tsx를 여전히 "index" 세그먼트로 매칭한다
 // (폴더명이 파일명 대신 세그먼트를 대표하기 때문).
 import { Stack } from 'expo-router';
+import { SETTINGS_COPY } from '../../../settings/content';
 
 export default function TodayStackLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="[id]" options={{ headerShown: true }} />
+      <Stack.Screen
+        name="settings"
+        options={{ headerShown: true, title: SETTINGS_COPY.screenTitle }}
+      />
     </Stack>
   );
 }

@@ -40,13 +40,13 @@ export default function PrimingScreen() {
         console.error('Failed to request notification permission', error);
       })
       .finally(() => {
-        router.replace('/');
+        router.replace('/index');
       });
   };
 
   const handleLater = () => {
     permissions.markPrimingDismissed();
-    router.replace('/');
+    router.replace('/index');
   };
 
   return (
