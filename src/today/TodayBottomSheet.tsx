@@ -38,6 +38,11 @@ export type TodayBottomSheetProps = {
   // 05-05-PLAN.md — 스와이프 삭제 확정(임계값 초과) 시 부모의 지연 삭제 컨트롤러에
   // 위임한다. 이 시트는 어떤 삭제 로직도 갖지 않는다.
   onDeleteRequest: (checkin: CheckinRow) => void;
+  // 06-05-PLAN.md — 선택적 빈 상태 문구. 기본값은 기존 TODAY_COPY.emptyState라
+  // 오늘 뷰 동작은 불변이다. 과거 날짜 화면(PastDateScreen)이
+  // CALENDAR_COPY.pastDateEmptyState를 넘기기 위해 추가됐다 — 새 시트 컴포넌트를
+  // 만들지 않고 이 시트를 그대로 재사용하기 위한 최소 확장이다.
+  emptyText?: string;
 };
 
 export function TodayBottomSheet({
@@ -46,6 +51,7 @@ export function TodayBottomSheet({
   animatedPosition,
   onRowPress,
   onDeleteRequest,
+  emptyText = TODAY_COPY.emptyState,
 }: TodayBottomSheetProps) {
   const insets = useSafeAreaInsets();
 
@@ -84,7 +90,7 @@ export function TodayBottomSheet({
       handleIndicatorStyle={styles.handleIndicator}
     >
       {checkins.length === 0 ? (
-        <Text style={[typography.helperText, styles.emptyText]}>{TODAY_COPY.emptyState}</Text>
+        <Text style={[typography.helperText, styles.emptyText]}>{emptyText}</Text>
       ) : (
         <BottomSheetFlatList
           data={checkins}
