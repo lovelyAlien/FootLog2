@@ -1,0 +1,19 @@
+# 빌드 컨텍스트에서 로컬 산출물/비밀 파일을 제외한다(T-9-09).
+# src/, build.gradle.kts, settings.gradle.kts는 빌드에 필요하므로 제외하지 않는다.
+
+build/
+.gradle/
+*.jar
+.git
+.gitignore
+.gitattributes
+.env
+.env*
+compose.yaml
+*.md
+.idea
+.vscode
+.kotlin
+out/
+bin/
+HELP.md

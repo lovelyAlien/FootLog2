@@ -1,0 +1,18 @@
+# 공통 프로파일 — local/staging 모두에 적용되는 기본값
+spring:
+  application:
+    name: backend
+  jpa:
+    hibernate:
+      # Flyway가 스키마의 유일한 소유자다 — JPA는 엔티티↔실제 테이블 일치 여부를
+      # 검증만 하고 절대 DDL을 실행하지 않는다(update/create/create-drop 금지, T-9-03).
+      ddl-auto: validate
+    # 트랜잭션 종료 후에도 지연 로딩을 열어두는 Open Session In View 패턴을 끈다 —
+    # 컨트롤러 계층에서 예기치 않은 추가 쿼리가 발생하는 것을 방지한다.
+    open-in-view: false
+management:
+  endpoints:
+    web:
+      exposure:
+        # actuator는 health만 노출한다 — env/beans/heapdump 등은 절대 열지 않는다(T-9-02).
+        include: health

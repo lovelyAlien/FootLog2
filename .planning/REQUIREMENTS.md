@@ -71,13 +71,29 @@
 - [ ] **REQ-app-name** (M33, PD-T15): "FootLog"는 priming/설정 화면에서만 표시되며, 매일 보는 오늘 뷰에는 노출되지 않는다.
 - [ ] **REQ-accessibility-baseline** (M34, PD-T16): 앱 전역에서 44px 터치 타겟, 4.5:1 명도 대비, 아이콘 전용 버튼의 VoiceOver 라벨을 적용한다. (명시적으로 다루지 않는 알려진 gap: 확인 핀 드래그 제스처의 VoiceOver 대체 경로 없음 — 별도로 추적되며 이 요구사항의 인수 조건에는 포함되지 않음.)
 
+## 백엔드/인증/클라우드 (Phase 9~12)
+
+1단계 로드맵(Phase 1~8)과 병행하는 독립 트랙. 2026-09-01 사용자 명시 승인으로 1단계 실사용
+트라이얼 완료 게이트를 우회하고 착수됐다(PROJECT.md Key Decisions 참고). 아래 8개는 기존
+단일 백로그 버킷 `REQ-phase2-backend`를 ROADMAP.md Phase 9~12의 Success Criteria에 근거해
+원자적으로 분해한 것이다.
+
+- [x] **REQ-backend-scaffold** (Phase 9): Spring Boot(Kotlin) 프로젝트가 초기화되고 로컬/스테이징 환경에서 빌드·기동된다.
+- [x] **REQ-backend-db-schema** (Phase 9): 서버측 DB에 클라이언트 `Checkin`/`DailyReflection` 스키마에 대응하는 테이블이 존재하며, 버전 관리되는 마이그레이션 프레임워크로 스키마를 변경할 수 있다.
+- [ ] **REQ-auth-kakao-oauth** (Phase 10): 사용자가 카카오 로그인 화면에서 OAuth2/PKCE 플로우를 완료하면 서버가 사용자 계정을 생성/조회한다.
+- [ ] **REQ-auth-session-token** (Phase 10): 서버가 인증 토큰을 발급하고, 클라이언트는 발급된 토큰을 안전하게 저장·만료 시 갱신·이후 모든 서버 요청에 재사용한다.
+- [ ] **REQ-storage-s3-upload** (Phase 11): 인증된 사용자가 체크인 사진을 서버 경유로 S3 호환 오브젝트 스토리지에 업로드할 수 있다.
+- [ ] **REQ-storage-access-control** (Phase 11): 업로드된 사진은 소유자만 접근 가능한 방식(서명 URL 또는 동등한 접근 제어)으로 조회된다.
+- [ ] **REQ-sync-local-first** (Phase 12): 오프라인 상태에서 작성된 체크인/회고가 클라이언트 SQLite에 즉시 반영되고, 온라인 복귀 시 서버와 자동 동기화된다.
+- [ ] **REQ-sync-conflict-resolution** (Phase 12): 동일 레코드가 여러 기기에서 수정된 충돌 상황이 정의된 전략(예: last-write-wins 또는 필드 단위 병합)으로 결정론적으로 해소된다.
+
 ## v2 Requirements
 
 향후 릴리스로 연기됨. 추적은 하되 현재 roadmap에는 없음.
 
 ### Phase 2 (제품 마일스톤 — 연기됨, 단일 백로그 버킷)
 
-- **REQ-phase2-backend**: Spring Boot(Kotlin) 백엔드, Spring Security + 카카오 OAuth2/PKCE, S3 호환 오브젝트 스토리지, 클라이언트-서버 local-first 동기화. 1단계가 정성적 kill-condition 트라이얼을 통과하는 것이 조건(PROJECT.md Context 참고). 언블록되기 전까지는 하위 요구사항이나 roadmap phase로 확장하지 않음.
+- **REQ-phase2-backend**: Spring Boot(Kotlin) 백엔드, Spring Security + 카카오 OAuth2/PKCE, S3 호환 오브젝트 스토리지, 클라이언트-서버 local-first 동기화. 1단계가 정성적 kill-condition 트라이얼을 통과하는 것이 조건(PROJECT.md Context 참고). 언블록되기 전까지는 하위 요구사항이나 roadmap phase로 확장하지 않음. **분해됨(2026-09-02):** 8개 원자 요구사항으로 나뉘어 Phase 9~12 트랙으로 이동 → `## 백엔드/인증/클라우드 (Phase 9~12)` 참고.
 
 ### Calendar multiselect (해당 스펙 문서 자체에서 명시적으로 연기됨)
 
@@ -146,12 +162,21 @@
 | REQ-exif-disclosure | Phase 8 | Pending |
 | REQ-app-name | Phase 8 | Pending |
 | REQ-accessibility-baseline | Phase 8 | Pending |
+| REQ-backend-scaffold | Phase 9 | Complete |
+| REQ-backend-db-schema | Phase 9 | Complete |
+| REQ-auth-kakao-oauth | Phase 10 | Pending |
+| REQ-auth-session-token | Phase 10 | Pending |
+| REQ-storage-s3-upload | Phase 11 | Pending |
+| REQ-storage-access-control | Phase 11 | Pending |
+| REQ-sync-local-first | Phase 12 | Pending |
+| REQ-sync-conflict-resolution | Phase 12 | Pending |
 
 **Coverage:**
 
 - v1 requirements: 34 total
 - Mapped to phases: 34
 - Unmapped: 0 ✓
+- 백엔드/인증/클라우드(Phase 9~12) requirements: 8 total, 8 mapped
 
 ---
 *Requirements defined: 2026-08-25*
