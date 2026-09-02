@@ -52,6 +52,7 @@ export function buildScrubberDateKeys(
 }
 
 export function clampIndex(index: number, length: number): number {
+  'worklet';
   if (length <= 0) return 0;
   return Math.min(Math.max(index, 0), length - 1);
 }
@@ -67,6 +68,7 @@ export function indexForTranslation(
   length: number,
   tickSpacingPx: number = SCRUBBER_TICK_SPACING_PX
 ): number {
+  'worklet';
   return clampIndex(startIndex - Math.round(translationX / tickSpacingPx), length);
 }
 
