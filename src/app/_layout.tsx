@@ -103,7 +103,23 @@ export default function RootLayout() {
         <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
           <NotificationSelfHealGate />
           <StatusBar style="auto" />
-          <Stack screenOptions={{ headerShown: false }} />
+          {/* 07-08-PLAN.md Task 1 — "reflection" 스크린은 (tabs) 그룹의 형제로 루트
+              Stack에 등록해야 탭 네비게이터 전체를 덮는다(presentation: 'modal').
+              이 저장소의 기존 두 화면 전환 패턴 — 같은 탭 nested Stack 안의 push(예:
+              체크인 상세/설정), nested Stack 안에서 탭바 표시 스타일을 'none'으로
+              숨기는 push(과거 날짜 뷰) — 어느 쪽도 아닌 세 번째 방식이다. 회고 화면
+              쪽에 탭바 표시 스타일을 조작하는 코드를 추가하지 않는다 — 모달이 이미
+              루트 레벨에서 탭 네비게이터를 통째로 덮으므로 PastDateScreen.tsx의 탭바
+              숨김 조작 패턴을 복제하면 불필요한 코드이자 "탭바를 만지는 파일은 한
+              개뿐" 계약 위반이다(07-RESEARCH.md Anti-Patterns). 커스텀 전환
+              애니메이션(duration/easing)도 지정하지 않는다 — iOS 네이티브 기본
+              전환에 위임한다(07-UI-SPEC.md 확정). */}
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen
+              name="reflection"
+              options={{ presentation: 'modal', headerShown: false }}
+            />
+          </Stack>
         </SQLiteProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
