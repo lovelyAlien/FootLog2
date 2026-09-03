@@ -66,7 +66,7 @@ created: 2026-09-02
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| 카카오 개발자 콘솔 앱 등록(REST API/네이티브 앱 키 — client_secret은 D-14 AMENDMENT 이후 백엔드 코드 경로에서 불필요) | REQ-auth-kakao-oauth | 창업자 본인의 카카오 개발자 계정 접근이 필요 — 이 세션에서 확인 불가, 대체 경로 없음 | 10-01-PLAN.md 체크포인트 태스크로 명시. 창업자가 카카오 개발자 콘솔에서 앱 생성 후 REST API/네이티브 앱 키를 확인해 환경변수로 제공 |
+| ✅ 완료(2026-09-03) 카카오 개발자 콘솔 앱 등록(네이티브 앱 키만 발급 — REST API 키/client_secret은 D-14 AMENDMENT 이후 백엔드 코드 경로에서 불필요해 발급하지 않음) | REQ-auth-kakao-oauth | 창업자 본인의 카카오 개발자 계정 접근이 필요 — 이 세션에서 확인 불가, 대체 경로 없음 | 10-01-PLAN.md Task 1 체크포인트로 수행 완료. 창업자가 `FootLog` 앱 생성, iOS 플랫폼 등록(번들 ID `com.jaeseungchoun.footlog`), 카카오 로그인 활성화, 동의항목(닉네임/프로필 사진만, 카카오계정(이메일)은 설정 안 함 — D-05/D-07)까지 마친 뒤 로컬 `.env`(git-ignored)에 `KAKAO_NATIVE_APP_KEY`/`JWT_SECRET`/`EXPO_PUBLIC_API_BASE_URL` 3개 값을 채움. 값 존재/길이만 자동 검증(`ENV_CONTRACT_OK`), 실제 값은 어떤 문서에도 인용하지 않음 |
 | 실제 카카오 계정으로 전체 OAuth 왕복 완주 | REQ-auth-kakao-oauth, REQ-auth-session-token | 실제 네트워크 호출 + 실제 카카오 계정 필요. 화면 전환/텍스트 렌더링/토큰 저장 배선은 시뮬레이터로 검증 가능하나, 카카오 서버와의 실제 왕복은 실기기(카카오톡 앱 전환 필요)가 요구됨 — 10-07-PLAN.md에서 검증 주체를 확정(시뮬레이터: 화면/배선, 실기기: 창업자 본인) | D-16 검증 화면에서 카카오 로그인 버튼 탭 → 카카오 SDK가 accessToken 반환 → 백엔드가 `/v2/user/me`로 JWT 발급 → 클라이언트가 안전 저장 확인 |
 
 ---
