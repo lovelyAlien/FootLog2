@@ -16,10 +16,6 @@ import org.springframework.security.oauth2.jwt.JwtEncoder
 import org.springframework.security.oauth2.jwt.JwtValidators
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
-import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.jwk.JWKSet
-import com.nimbusds.jose.jwk.OctetSequenceKey
-import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import java.time.Duration
 import javax.crypto.spec.SecretKeySpec
 
@@ -48,11 +44,13 @@ class JwtConfig(private val jwtProperties: JwtProperties) {
     private val secretKey: SecretKeySpec
         get() = SecretKeySpec(jwtProperties.secret.toByteArray(), "HmacSHA256")
 
+    // NimbusJwtEncoder(JWKSource) 공개 생성자를 직접 쓰면 defaultJwsHeader가 RS256으로
+    // 고정돼(Nimbus 내부 상수), HS256 전용 키만 있는 JWKSet에서 서명 키를 못 찾아 매 호출이
+    // "Failed to select a JWK signing key"로 실패한다(실행 중 실제로 재현해 발견, RESEARCH.md
+    // Pattern 4 코드 스니펫을 그대로 옮기면 걸리는 함정 — Rule 1 버그 수정). withSecretKey
+    // 빌더를 쓰면 내부적으로 JWK의 실제 알고리즘(HS256)을 기본 헤더에 반영한다.
     @Bean
-    fun jwtEncoder(): JwtEncoder {
-        val jwk = OctetSequenceKey.Builder(secretKey).algorithm(JWSAlgorithm.HS256).build()
-        return NimbusJwtEncoder(ImmutableJWKSet(JWKSet(jwk)))
-    }
+    fun jwtEncoder(): JwtEncoder = NimbusJwtEncoder.withSecretKey(secretKey).algorithm(MacAlgorithm.HS256).build()
 
     // Primary 지정이 필요한 이유: JwtDecoder 타입 빈이 이 파일에 2개(access용/refresh용)
     // 존재하는데, oauth2ResourceServer 자동설정은 JwtDecoder 빈을 정확히 1개만 기대한다.
