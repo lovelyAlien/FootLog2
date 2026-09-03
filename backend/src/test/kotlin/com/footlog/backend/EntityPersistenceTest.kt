@@ -4,6 +4,7 @@ import com.footlog.backend.checkin.Checkin
 import com.footlog.backend.checkin.CheckinRepository
 import com.footlog.backend.dailyreflection.DailyReflection
 import com.footlog.backend.dailyreflection.DailyReflectionRepository
+import com.footlog.backend.user.User
 import com.footlog.backend.user.UserRepository
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -238,5 +239,126 @@ class EntityPersistenceTest {
         val found = checkinRepository.findById(checkinId).orElseThrow()
 
         assertEquals(PLACEHOLDER_USER_ID, found.user.id)
+    }
+
+    // 10-02-PLAN.md Task 3 — User 엔티티 확장(kakaoId/nickname/profileImageUrl) +
+    // UserRepository.findByKakaoId 계약 테스트. 10-04(KakaoAuthService)의 find-or-create가
+    // 기댈 조회/유일성/갱신 계약을 여기서 고정한다.
+
+    // Test A: kakaoId/nickname/profileImageUrl을 가진 새 User를 서버 생성 UUID로 저장하면
+    // findByKakaoId가 그 로우를 반환하고 세 필드 값이 그대로 보존된다.
+    @Test
+    fun `kakaoId로 저장한 신규 User를 findByKakaoId로 조회하면 세 필드가 보존된다`() {
+        val now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS)
+        val user = User(
+            id = UUID.randomUUID(),
+            createdAt = now,
+            kakaoId = 1234567890L,
+            nickname = "테스터",
+            profileImageUrl = "https://k.kakaocdn.net/x.jpg",
+        )
+        userRepository.save(user)
+        entityManager.flush()
+        entityManager.clear()
+
+        val found = userRepository.findByKakaoId(1234567890L)
+
+        assertTrue(found != null, "findByKakaoId가 저장한 User를 반환해야 한다")
+        assertEquals(1234567890L, found!!.kakaoId)
+        assertEquals("테스터", found.nickname)
+        assertEquals("https://k.kakaocdn.net/x.jpg", found.profileImageUrl)
+    }
+
+    // Test B: Int.MAX_VALUE를 초과하는 카카오 회원번호를 저장/조회해도 값이 정확히 보존된다 —
+    // 음수로 뒤집히지 않는다(10-RESEARCH.md Pitfall 3의 회귀 게이트).
+    @Test
+    fun `Int MAX_VALUE를 초과하는 kakaoId도 값 손상 없이 왕복 보존된다`() {
+        val now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS)
+        val largeKakaoId = 4_294_967_296L
+        val user = User(
+            id = UUID.randomUUID(),
+            createdAt = now,
+            kakaoId = largeKakaoId,
+        )
+        userRepository.save(user)
+        entityManager.flush()
+        entityManager.clear()
+
+        val found = userRepository.findByKakaoId(largeKakaoId)
+
+        assertTrue(found != null, "findByKakaoId가 저장한 User를 반환해야 한다")
+        assertEquals(largeKakaoId, found!!.kakaoId, "Int 범위를 넘는 kakaoId가 음수로 뒤집히지 않고 보존돼야 한다")
+    }
+
+    // Test C: 이미 존재하는 kakaoId로 다른 UUID의 User를 저장하고 flush하면
+    // DataIntegrityViolationException이 발생한다(D-08 UNIQUE가 애플리케이션 코드가 아니라
+    // DB에서 강제됨). Test 5와 동일하게 리포지토리(JpaRepository.flush())를 통해 호출해야
+    // Spring의 예외 변환이 적용된다.
+    @Test
+    fun `이미 존재하는 kakaoId로 다른 User를 저장하면 UNIQUE 제약 위반이 발생한다`() {
+        val now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS)
+        val kakaoId = 9876543210L
+
+        val first = User(id = UUID.randomUUID(), createdAt = now, kakaoId = kakaoId)
+        userRepository.save(first)
+        userRepository.flush()
+
+        val duplicate = User(id = UUID.randomUUID(), createdAt = now, kakaoId = kakaoId)
+        userRepository.save(duplicate)
+
+        assertThrows<DataIntegrityViolationException> {
+            userRepository.flush()
+        }
+    }
+
+    // Test D: findByKakaoId에 존재하지 않는 회원번호를 넘기면 null을 반환한다
+    // (10-04 find-or-create의 "create" 분기 진입 조건).
+    @Test
+    fun `존재하지 않는 kakaoId로 findByKakaoId를 호출하면 null을 반환한다`() {
+        val found = userRepository.findByKakaoId(111222333L)
+
+        assertNull(found, "존재하지 않는 kakaoId 조회는 null을 반환해야 한다")
+    }
+
+    // Test E: 플레이스홀더 사용자를 findById로 조회하면 존재하고, kakaoId/nickname/
+    // profileImageUrl이 전부 null이다(D-10 — 기존 fixture가 엔티티 확장 후에도 깨지지 않음).
+    @Test
+    fun `플레이스홀더 사용자의 kakaoId nickname profileImageUrl이 전부 null이다`() {
+        val found = userRepository.findById(PLACEHOLDER_USER_ID).orElseThrow()
+
+        assertNull(found.kakaoId)
+        assertNull(found.nickname)
+        assertNull(found.profileImageUrl)
+    }
+
+    // Test F: 같은 User의 nickname/profileImageUrl을 변경하고 flush하면 변경이 반영된다
+    // (D-06 매 로그인 갱신이 가능하려면 두 필드가 var여야 함).
+    @Test
+    fun `nickname과 profileImageUrl을 변경하고 flush하면 변경이 반영된다`() {
+        val now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS)
+        val user = User(
+            id = UUID.randomUUID(),
+            createdAt = now,
+            kakaoId = 555000111L,
+            nickname = "이전닉네임",
+            profileImageUrl = "https://k.kakaocdn.net/old.jpg",
+        )
+        userRepository.save(user)
+        entityManager.flush()
+        entityManager.clear()
+
+        // save()가 반환한 인스턴스는 id가 이미 채워진 엔티티라 Spring Data가 merge()를 호출해
+        // 만든 별도 복사본이고, 원본 user 참조는 detached 상태로 남는다 — 그 원본을 직접 수정하면
+        // 변경이 반영되지 않는다. 리포지토리로 다시 조회해 관리 상태(managed)인 엔티티를 수정한다.
+        val toUpdate = userRepository.findByKakaoId(555000111L)!!
+        toUpdate.nickname = "새닉네임"
+        toUpdate.profileImageUrl = "https://k.kakaocdn.net/new.jpg"
+        entityManager.flush()
+        entityManager.clear()
+
+        val found = userRepository.findByKakaoId(555000111L)!!
+
+        assertEquals("새닉네임", found.nickname)
+        assertEquals("https://k.kakaocdn.net/new.jpg", found.profileImageUrl)
     }
 }
