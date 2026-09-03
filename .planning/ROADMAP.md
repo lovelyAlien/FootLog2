@@ -28,7 +28,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] **Phase 4: Today View** - 사용자가 오늘의 체크인들을 지도에서 보여주는 홈 화면과, 새 체크인을 위한 마찰 낮은 진입점을 갖는다. (completed 2026-08-31)
 - [x] **Phase 5: Check-in Detail & Edit** - 사용자가 기록된 개별 체크인을 조회·수정·삭제할 수 있다. (completed 2026-08-31)
 - [x] **Phase 6: Calendar Tab** - 사용자가 월 그리드와 빠른 날짜별 스크러버로 과거 날짜를 훑어볼 수 있다. (completed 2026-09-02)
-- [ ] **Phase 7: Day-end Reflection** - 사용자가 하루 루프의 핵심 요소인 짧은 하루 마무리 회고를 완료할 수 있다.
+- [x] **Phase 7: Day-end Reflection** - 사용자가 하루 루프의 핵심 요소인 짧은 하루 마무리 회고를 완료할 수 있다. (completed 2026-09-03)
 - [ ] **Phase 8: Export & Polish** - 사용자가 데이터를 로컬로 내보낼 수 있고, 앱이 이름/접근성 기준을 충족한다.
 
 **Phase 9~12: 백엔드/인증/클라우드(2단계)** — 1단계 로드맵(Phase 1~8)과 별도 트랙으로, 1단계 실사용 트라이얼 완료 게이트를 사용자 명시적 승인으로 우회하고 착수됨(2026-09-01). PROJECT.md Out of Scope / Key Decisions 참고.
@@ -208,7 +208,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] 07-07-PLAN.md — 과거 날짜 뷰 인라인 회고 편집 (wave 3)
 - [x] 07-08-PLAN.md — /reflection 모달 라우트 등록 + 알림 탭 딥링크 게이트 (wave 4)
 - [x] 07-09-PLAN.md — 오늘 뷰 "오늘 돌아보기" 상시 진입 행 + 개수 미표시 가드 (wave 5)
-- [ ] 07-10-PLAN.md — 전체 게이트 + 시뮬레이터 자체 검증 + 창업자 실기기 확인 (wave 6)
+- [x] 07-10-PLAN.md — 전체 게이트 + 시뮬레이터 자체 검증 + 창업자 실기기 확인 (wave 6)
 
 **UI hint**: yes
 
@@ -242,7 +242,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 | 4. Today View | 7/7 | Complete   | 2026-08-31 |
 | 5. Check-in Detail & Edit | 7/7 | Complete   | 2026-08-31 |
 | 6. Calendar Tab | 8/8 | Complete   | 2026-09-02 |
-| 7. Day-end Reflection | 9/10 | In Progress|  |
+| 7. Day-end Reflection | 10/10 | Complete   | 2026-09-03 |
 | 8. Export & Polish | 0/TBD | Not started | - |
 | 9. Backend Foundation | 6/6 | Complete   | 2026-09-02 |
 | 10. Authentication (Kakao OAuth2/PKCE) | 0/TBD | Not started | - |
