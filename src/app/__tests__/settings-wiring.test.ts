@@ -18,6 +18,10 @@ import {
   FREQUENCY_ACTION_SHEET_OPTIONS,
   FREQUENCY_BY_ACTION_SHEET_INDEX,
   FREQUENCY_LABEL_BY_VALUE,
+  REFLECTION_HOUR_BY_ACTION_SHEET_INDEX,
+  REFLECTION_HOUR_CANCEL_INDEX,
+  REFLECTION_HOUR_LABEL_BY_VALUE,
+  REFLECTION_HOUR_OPTIONS,
   SETTINGS_COPY,
 } from '../../settings/content';
 
@@ -37,9 +41,13 @@ describe('SETTINGS_COPY 문구 단일 출처 계약 (D-01/D-02)', () => {
     expect(contentSource).toMatch(/\}\s*as const;/);
   });
 
-  it('Test 2: 설정 화면 3개 행 라벨이 D-02가 확정한 문구와 정확히 같다', () => {
+  it('Test 2: 설정 화면 4개 행 라벨이 D-02/D-05가 확정한 문구와 정확히 같다', () => {
+    // 06-04-PLAN.md 시절엔 "정확히 3개 행"이었으나, 07-UI-SPEC.md §Component
+    // Contracts 4가 "회고 알림 시각" 행을 추가하며 예산을 4개로 명시적으로
+    // 확장했다(D-05). 기존 3개 단언은 그대로 유지하고 신규 라벨만 추가한다.
     expect(SETTINGS_COPY.rowFrequency).toBe('알림 빈도');
     expect(SETTINGS_COPY.rowDailyReflection).toBe('하루 마무리 알림');
+    expect(SETTINGS_COPY.rowReflectionHour).toBe('회고 알림 시각');
     expect(SETTINGS_COPY.rowVersion).toBe('버전');
   });
 });
@@ -215,5 +223,67 @@ describe('캘린더 탭 햄버거 부재 계약 (D-03)', () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+// 07-03-PLAN.md Task 3 — 설정 4행 계약(회고 알림 시각) 회귀 가드. D-05가
+// 07-UI-SPEC.md §Component Contracts 4에서 "정확히 3개 행" 예산을 4개로 명시적으로
+// 확장한 지점. content.ts는 런타임 import가 없어 직접 import해 값 자체를
+// 단언하고(Test 26~30), SettingsScreen.tsx는 정적 소스 분석으로만 검증한다(Test
+// 31~35) — 위 describe 블록들과 동일한 두 갈래 검증 규약을 그대로 따른다.
+describe('회고 알림 시각 액션시트 상수 계약 (D-05, FREQUENCY_* 트리오 패턴 복제)', () => {
+  it('Test 26: REFLECTION_HOUR_OPTIONS가 정확히 6개 원소이고 마지막이 SETTINGS_COPY.actionSheetCancel이다', () => {
+    expect(REFLECTION_HOUR_OPTIONS).toHaveLength(6);
+    expect(REFLECTION_HOUR_OPTIONS[REFLECTION_HOUR_OPTIONS.length - 1]).toBe(
+      SETTINGS_COPY.actionSheetCancel
+    );
+  });
+
+  it('Test 27: REFLECTION_HOUR_CANCEL_INDEX가 REFLECTION_HOUR_OPTIONS.length - 1과 같다', () => {
+    expect(REFLECTION_HOUR_CANCEL_INDEX).toBe(REFLECTION_HOUR_OPTIONS.length - 1);
+  });
+
+  it('Test 28: REFLECTION_HOUR_BY_ACTION_SHEET_INDEX가 [19, 20, 21, 22, 23, null]이고 길이가 REFLECTION_HOUR_OPTIONS와 같다', () => {
+    expect(REFLECTION_HOUR_BY_ACTION_SHEET_INDEX).toEqual([19, 20, 21, 22, 23, null]);
+    expect(REFLECTION_HOUR_BY_ACTION_SHEET_INDEX).toHaveLength(REFLECTION_HOUR_OPTIONS.length);
+  });
+
+  it('Test 29: REFLECTION_HOUR_BY_ACTION_SHEET_INDEX의 non-null 값 전부가 REFLECTION_HOUR_LABEL_BY_VALUE에 키로 존재한다', () => {
+    for (const hour of REFLECTION_HOUR_BY_ACTION_SHEET_INDEX) {
+      if (hour === null) continue;
+      expect(REFLECTION_HOUR_LABEL_BY_VALUE[hour]).toBeDefined();
+    }
+  });
+
+  it('Test 30: 21이 후보에 포함된다(기존 기본값 PHASE2_NOTIFICATION_SETTINGS.dailyReflectionHour 보존 게이트)', () => {
+    expect(REFLECTION_HOUR_BY_ACTION_SHEET_INDEX).toContain(21);
+    expect(REFLECTION_HOUR_LABEL_BY_VALUE[21]).toBe('21시');
+  });
+});
+
+describe('설정 화면 4번째 행 배선 계약 (07-UI-SPEC.md §Component Contracts 4)', () => {
+  it('Test 31: SettingsScreen.tsx 코드에 ActionSheetIOS.showActionSheetWithOptions(가 정확히 2회 등장한다', () => {
+    const matches = screenCodeOnly.match(/ActionSheetIOS\.showActionSheetWithOptions\(/g) ?? [];
+    expect(matches).toHaveLength(2);
+  });
+
+  it('Test 32: SettingsScreen.tsx 코드에 settingsRepo.upsertSettings(가 정확히 1회 등장한다(단일 쓰기 경로)', () => {
+    const matches = screenCodeOnly.match(/settingsRepo\.upsertSettings\(/g) ?? [];
+    expect(matches).toHaveLength(1);
+  });
+
+  it('Test 33: SettingsScreen.tsx 코드에 액션시트 인덱스 숫자 리터럴이 하드코딩되어 있지 않다(cancelButtonIndex: 뒤에 상수 식별자만 온다)', () => {
+    expect(screenCodeOnly).not.toMatch(/cancelButtonIndex:\s*\d/);
+    expect(screenCodeOnly).toMatch(/cancelButtonIndex:\s*FREQUENCY_ACTION_SHEET_CANCEL_INDEX/);
+    expect(screenCodeOnly).toMatch(/cancelButtonIndex:\s*REFLECTION_HOUR_CANCEL_INDEX/);
+  });
+
+  it('Test 34: SettingsScreen.tsx 코드에 SETTINGS_COPY.rowReflectionHour가 등장하고, 한국어 리터럴 \'회고 알림 시각\'은 등장하지 않는다(문구 단일 출처)', () => {
+    expect(screenCodeOnly).toMatch(/SETTINGS_COPY\.rowReflectionHour/);
+    expect(screenCodeOnly).not.toMatch(/'회고 알림 시각'/);
+  });
+
+  it('Test 35: SettingsScreen.tsx 코드에 disabled가 등장하지 않는다(토글 꺼짐 시 dimmed 금지)', () => {
+    expect(screenCodeOnly).not.toMatch(/disabled/);
   });
 });
