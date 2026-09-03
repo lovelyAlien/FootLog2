@@ -66,11 +66,18 @@
   카카오톡 설치 시 앱 전환, 미설치 시 웹뷰 폴백을 SDK가 자동 처리. 프로젝트가 이미
   EAS Dev Client(네이티브 모듈 필수, `react-native-maps` 때문)를 쓰고 있어 SDK 도입에
   제약이 없다(PROJECT.md Constraints).
-- **D-14:** 인가 코드(authorization code) ↔ 토큰 교환은 **백엔드가 처리** — 클라이언트는
-  카카오 인가 코드 + PKCE `code_verifier`만 백엔드로 전달하고, 백엔드가 카카오 토큰
-  엔드포인트와 통신해 사용자 정보를 받고 자체 JWT(D-01~D-04)를 발급한다. 카카오 액세스
-  토큰이 클라이언트에 노출되지 않으며, REQ-auth-kakao-oauth의 "서버가 사용자 계정을
-  생성/조회"와 정합적이다.
+- **D-14 (2026-09-02 계획 단계에서 수정, 원안 폐기):** 원안은 "인가 코드+PKCE만 백엔드로
+  전달, 백엔드가 카카오와 토큰 교환"이었으나, 계획 단계에서 `@react-native-seoul/kakao-login`
+  v6.0.4의 실제 타입 정의(`node_modules/.../src/index.d.ts`, `src/types/index.d.ts`)를
+  직접 설치·확인한 결과 `login()`/`loginWithKakaoAccount()`는 인가 코드가 아니라 카카오
+  `accessToken`/`refreshToken`/`idToken`을 포함한 `KakaoOAuthToken` 전체를 JS로 직접
+  반환하며, 인가 코드만 받는 저수준 API는 SDK에 존재하지 않음을 확인(D-13 네이티브 SDK
+  유지와 구조적으로 양립 불가). **수정된 결정:** 클라이언트는 SDK가 반환한 카카오
+  `accessToken`을 백엔드로 전달하고, 백엔드는 그 액세스 토큰으로 카카오
+  `/v2/user/me`만 호출해 사용자 정보를 얻은 뒤 **DB에 저장하지 않고 폐기**한다(자체
+  JWT만 발급). PKCE `code_verifier`는 이 경로에서 쓰이지 않는다(SDK 내부에서 이미
+  처리됨). "카카오 액세스 토큰을 저장하지 않는다"는 D-14의 핵심 취지는 유지되며,
+  "클라이언트가 그 토큰을 아예 보지 않는다"는 부분만 완화됐다.
 - **D-15:** 로그인 실패/취소 시 **에러 메시지 + 재시도 버튼**을 표시 — 기존 앱의 체크인
   저장 실패 UX 패턴과 일관성 유지.
 - **D-16:** 로그인 화면은 **Phase 10 백엔드 검증용으로만 존재** — 1단계(Phase 1~8) 앱
@@ -155,10 +162,11 @@
 <specifics>
 ## Specific Ideas
 
-- 토큰 발급까지의 흐름: 클라이언트(네이티브 카카오 SDK, D-13) → 카카오 인가 코드 획득 →
-  백엔드로 (인가 코드 + PKCE code_verifier) 전달(D-14) → 백엔드가 카카오 토큰 엔드포인트와
-  통신해 사용자 정보 수신 → `users` 테이블 조회/생성(kakao_id UNIQUE 매칭, D-08) → 자체
-  JWT(access+refresh, D-01~D-04) 발급 → 클라이언트가 안전하게 저장.
+- 토큰 발급까지의 흐름(2026-09-02 D-14 수정 반영): 클라이언트(네이티브 카카오 SDK, D-13)
+  → `login()`이 카카오 `accessToken`을 직접 반환 → 백엔드로 그 `accessToken` 전달(D-14) →
+  백엔드가 그 토큰으로 카카오 `/v2/user/me`만 호출해 사용자 정보 수신, 토큰 자체는 저장하지
+  않고 폐기 → `users` 테이블 조회/생성(kakao_id UNIQUE 매칭, D-08) → 자체 JWT(access+refresh,
+  D-01~D-04) 발급 → 클라이언트가 안전하게 저장.
 
 </specifics>
 
