@@ -64,10 +64,18 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
   // 라우트를 바꾸는 순환)를 만들지 않기 위함이다. `dateKey` prop이 바뀌면(예: 캘린더
   // 그리드로 돌아가 다른 날짜를 탭한 뒤 이 화면이 새 파라미터로 재사용되는 경우)
   // 아래 useEffect가 다시 동기화한다.
+  // dateKey prop이 바뀌면(예: 캘린더 그리드로 돌아가 다른 날짜를 탭한 뒤 이 화면이
+  // 새 파라미터로 재사용되는 경우) activeDateKey를 다시 동기화해야 하지만,
+  // activeDateKey는 스크러버 드래그로도 독립적으로 갱신된다(순수 prop 미러가 아님).
+  // 이런 "파생 상태 + 로컬 갱신 병행" 케이스는 React 공식 문서가 권장하는 대로
+  // useEffect+setState 대신 렌더 중 비교로 처리한다(react-hooks/set-state-in-effect
+  // — 이전 방식은 매 prop 변경마다 불필요한 추가 렌더를 유발했다).
   const [activeDateKey, setActiveDateKey] = useState(dateKey);
-  useEffect(() => {
+  const [prevDateKeyProp, setPrevDateKeyProp] = useState(dateKey);
+  if (dateKey !== prevDateKeyProp) {
+    setPrevDateKeyProp(dateKey);
     setActiveDateKey(dateKey);
-  }, [dateKey]);
+  }
 
   // 늦게 도착한 조회 응답이 최신 activeDateKey를 덮어쓰지 않도록 하는 가드용 ref —
   // reloadCheckins의 클로저가 호출 시점의 activeDateKey를 캡처하므로, 응답이 돌아온
@@ -215,6 +223,10 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
     commitPendingDeleteRef.current = commitPendingDelete;
   }, [commitPendingDelete]);
 
+  // (tabs)/index/index.tsx의 동일 패턴과 같은 이유로 eslint-disable — onCommit
+  // 클로저는 정의 시점(렌더 중)이 아니라 실제 삭제 커밋 시점(이벤트 콜백)에만
+  // ref.current를 읽는다.
+  // eslint-disable-next-line react-hooks/refs
   const pendingDeleteController = useState(() =>
     createPendingDeleteController({
       onCommit: (item) => commitPendingDeleteRef.current(item),

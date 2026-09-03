@@ -81,7 +81,12 @@ export function useReflectionDraft(db: MigratableDb, dateKey: string): Reflectio
   );
 
   // 컨트롤러는 마운트 시 1회만 생성한다(lazy useState 초기화) — onSave는 db가 바뀌지
-  // 않는 한 안정적인 useCallback이라 재생성할 필요가 없다.
+  // 않는 한 안정적인 useCallback이라 재생성할 필요가 없다. eslint-disable 근거:
+  // (tabs)/index/index.tsx pendingDeleteController와 동일 — onSave 내부의
+  // lastAttemptRef.current 쓰기는 onSave가 실제 호출될 때(자동저장 이벤트
+  // 시점)만 일어나며, 이 초기화 함수 실행(렌더 중) 자체는 ref를 읽거나 쓰지
+  // 않는다.
+  // eslint-disable-next-line react-hooks/refs
   const [controller] = useState<AutosaveController>(() => createAutosaveController({ onSave }));
 
   // (1) 로드 — dateKey가 바뀔 때마다 getReflectionByDate를 호출한다. 로드로 채운 값은
