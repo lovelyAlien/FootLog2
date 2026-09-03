@@ -55,12 +55,12 @@
 
 ### Day-end reflection
 
-- [ ] **REQ-reflection-base** (M23; 스펙은 day-end-reflection-map.md의 Premises/Visual Design Decisions/Data Model에 산문으로만 존재, 번호 있는 원본 태스크 없음 — 계획 시 과소 명세 가능성이 가장 높은 항목으로 플래그됨): 전체화면 회고 모달이 그날의 정적 지도를 재사용하고, 2개의 프롬프트를 보여주며, `DailyReflection` 레코드로 저장한다. 진입점이 연결되어 있다.
+- [x] **REQ-reflection-base** (M23; 스펙은 day-end-reflection-map.md의 Premises/Visual Design Decisions/Data Model에 산문으로만 존재, 번호 있는 원본 태스크 없음 — 계획 시 과소 명세 가능성이 가장 높은 항목으로 플래그됨): 전체화면 회고 모달이 그날의 정적 지도를 재사용하고, 2개의 프롬프트를 보여주며, `DailyReflection` 레코드로 저장한다. 진입점이 연결되어 있다.
 - [ ] **REQ-reflection-autosave** (M24, DE-T2): 회고 답변은 5초 디바운스, `AppState` 백그라운드 flush, 모달 닫기(✕/스와이프) flush — 모두 동일한 저장 함수를 통해 — 자동저장된다.
 - [ ] **REQ-reflection-save-failure-ui** (M25, DE-T1): 회고 저장 실패는 체크인 저장 실패와 동일한 재시도 패턴을 사용한다.
-- [ ] **REQ-reflection-copy-fix** (M26, DE-T3): "오늘의 흔적" 섹션명이 변경되고 더 이상 체크인 개수를 표시하지 않는다(진행률 노출 금지).
+- [x] **REQ-reflection-copy-fix** (M26, DE-T3): "오늘의 흔적" 섹션명이 변경되고 더 이상 체크인 개수를 표시하지 않는다(진행률 노출 금지).
 - [x] **REQ-reflection-notification** (M27, DE-T4; M4에 의존): 매일 고정 시각의 회고 알림이 기본으로 켜져 있으며, 설정에서 끌 수 있는 토글이 있다. 설정 화면에서 회고 알림 시각을 직접 선택할 수 있다(후보: 19/20/21/22/23시, 기본 21시) — (원본 문서 `day-end-reflection-map.md` Premise #4는 "시각 변경 UI는 스코프 밖"이었으나, 2026-09-02 창업자 논의(D-05)에서 명시적으로 뒤집혀 이번 phase 스코프로 편입됨).
-- [ ] **REQ-reflection-today-entry** (M28; M11 확장): "오늘 돌아보기" 행이 오늘 뷰 바텀시트 리스트 최상단에 고정되며, 체크인이 0건이어도 항상 보인다.
+- [x] **REQ-reflection-today-entry** (M28; M11 확장): "오늘 돌아보기" 행이 오늘 뷰 바텀시트 리스트 최상단에 고정되며, 체크인이 0건이어도 항상 보인다.
 - [x] **REQ-past-reflection-edit** (M29, DE-T5; M23에 의존): 과거 날짜 뷰(REQ-past-date-view)에 편집 가능한 회고 프롬프트가 추가되며, 회고 문서 자체의 원래 "읽기전용" 스코프 결정을 뒤집는다.
 
 ### Export & polish
@@ -155,7 +155,7 @@
 | REQ-reflection-save-failure-ui | Phase 7 | Complete |
 | REQ-reflection-copy-fix | Phase 7 | Complete |
 | REQ-reflection-notification | Phase 7 | Complete |
-| REQ-reflection-today-entry | Phase 7 | Pending |
+| REQ-reflection-today-entry | Phase 7 | Complete |
 | REQ-past-reflection-edit | Phase 7 | Complete |
 | REQ-export | Phase 8 | Pending |
 | REQ-exif-geotag | Phase 8 | Pending |
