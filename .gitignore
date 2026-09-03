@@ -35,6 +35,8 @@ yarn-error.*
 
 # local env files
 .env*
+# .env* 패턴이 .env.example까지 삼키므로, 값 없는 계약 파일은 예외로 커밋한다(10-01-PLAN.md Task 3)
+!.env.example
 
 # typescript
 *.tsbuildinfo
