@@ -105,3 +105,102 @@ describe('autosaveController.ts 의미 역전 게이트 (pendingDelete와 반대
     expect(autosaveCodeOnly).not.toMatch(/undo/);
   });
 });
+
+// 07-05-PLAN.md Task 3 — ReflectionModal.tsx 배선 회귀 가드. 위 Test 1~12(07-04)는
+// 수정하지 않고 이 블록만 append한다.
+const modalSource = readReflectionSource('ReflectionModal.tsx');
+const modalCodeOnly = stripComments(modalSource);
+
+describe('ReflectionModal.tsx 단일 쿼리 계약 (T-07-13)', () => {
+  it('Test 13: getTodayCheckins(가 정확히 1회 등장한다', () => {
+    const matches = modalCodeOnly.match(/getTodayCheckins\(/g) ?? [];
+    expect(matches).toHaveLength(1);
+  });
+
+  it('Test 14: SQL 키워드가 등장하지 않는다', () => {
+    expect(modalCodeOnly).not.toMatch(/INSERT |SELECT |UPDATE |DELETE /);
+  });
+});
+
+describe('ReflectionModal.tsx 탭바 미조작 계약 (모달은 탭바를 조작하지 않는다)', () => {
+  it('Test 15: tabBarStyle이 등장하지 않는다', () => {
+    expect(modalCodeOnly).not.toMatch(/tabBarStyle/);
+  });
+});
+
+describe('ReflectionModal.tsx 색상/재사용 경계 계약', () => {
+  it('Test 16: colors.accent가 등장하지 않는다', () => {
+    expect(modalCodeOnly).not.toMatch(/colors\.accent/);
+  });
+
+  it('Test 17: 기존 리스트 행 컴포넌트를 재사용하지 않는다(신규 read-only 행 사용)', () => {
+    expect(modalCodeOnly).not.toMatch(/CheckinListRow/);
+  });
+});
+
+describe('ReflectionModal.tsx 정적 지도 잠금 계약 (T-07-15)', () => {
+  it('Test 18: 지도 잠금 4종 prop이 모두 등장한다', () => {
+    expect(modalCodeOnly).toMatch(/scrollEnabled=\{false\}/);
+    expect(modalCodeOnly).toMatch(/zoomEnabled=\{false\}/);
+    expect(modalCodeOnly).toMatch(/rotateEnabled=\{false\}/);
+    expect(modalCodeOnly).toMatch(/pitchEnabled=\{false\}/);
+  });
+});
+
+describe('ReflectionModal.tsx 공유 조각 소비 계약 (07-04 산출물만 소비, 재구현 없음)', () => {
+  it('Test 19: useReflectionDraft(가 정확히 1회 등장한다', () => {
+    const matches = modalCodeOnly.match(/useReflectionDraft\(/g) ?? [];
+    expect(matches).toHaveLength(1);
+  });
+
+  it('Test 20: <ReflectionPrompts가 정확히 1회 등장한다', () => {
+    const matches = modalCodeOnly.match(/<ReflectionPrompts/g) ?? [];
+    expect(matches).toHaveLength(1);
+  });
+
+  it('Test 21: TextInput이 등장하지 않는다(프롬프트 입력칸을 재구현하지 않았다)', () => {
+    expect(modalCodeOnly).not.toMatch(/TextInput/);
+  });
+});
+
+describe('ReflectionModal.tsx 자동저장 모델 게이트 (상세화면의 명시적 flush 모델 혼입 금지)', () => {
+  it('Test 22: beforeRemove가 등장하지 않는다', () => {
+    expect(modalCodeOnly).not.toMatch(/beforeRemove/);
+  });
+
+  it('Test 23: Alert가 등장하지 않는다', () => {
+    expect(modalCodeOnly).not.toMatch(/Alert/);
+  });
+});
+
+describe('ReflectionModal.tsx 닫기 시 강제 저장 순서 계약 (T-07-12)', () => {
+  it('Test 24: handleClose 안에서 draft.flush()가 router.back()보다 먼저 나온다', () => {
+    const handleCloseMatch = modalCodeOnly.match(
+      /const handleClose = useCallback\(\(\) => \{([\s\S]*?)\}, \[draft\]\);/
+    );
+    expect(handleCloseMatch).not.toBeNull();
+    const body = handleCloseMatch ? handleCloseMatch[1] : '';
+    const flushIndex = body.indexOf('draft.flush()');
+    const backIndex = body.indexOf('router.back()');
+    expect(flushIndex).toBeGreaterThanOrEqual(0);
+    expect(backIndex).toBeGreaterThan(flushIndex);
+  });
+});
+
+describe('ReflectionModal.tsx 문구 단일 출처 계약', () => {
+  it('Test 25: 한글 문자열 리터럴이 등장하지 않는다(전부 REFLECTION_COPY 경유)', () => {
+    expect(modalCodeOnly).not.toMatch(/[가-힣]/);
+  });
+});
+
+describe('ReflectionModal.tsx 진행률 수치 노출 금지 게이트 (T-07-14)', () => {
+  it('Test 26: 섹션 헤더 근처에 개수 보간이 없다', () => {
+    const sectionHeaderBlock = modalCodeOnly.match(
+      /<Text style=\{\[typography\.helperText, styles\.sectionHeader\]\}>[\s\S]*?<\/Text>/
+    );
+    expect(sectionHeaderBlock).not.toBeNull();
+    const blockText = sectionHeaderBlock ? sectionHeaderBlock[0] : '';
+    expect(blockText).not.toMatch(/\{checkins\.length\}/);
+    expect(blockText).not.toMatch(/\$\{/);
+  });
+});
