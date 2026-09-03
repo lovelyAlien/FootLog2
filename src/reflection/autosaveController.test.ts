@@ -124,4 +124,31 @@ describe('createAutosaveController', () => {
   it('REFLECTION_AUTOSAVE_DEBOUNCE_MS가 정확히 5000이다', () => {
     expect(REFLECTION_AUTOSAVE_DEBOUNCE_MS).toBe(5000);
   });
+
+  // 코드 리뷰 발견(#2) 회귀 가드 — flush()가 onSave의 성공/실패 결과를 그대로
+  // Promise<boolean>으로 돌려줘야, 호출자(모달 닫기 핸들러)가 저장 실패 시 화면을
+  // 이미 떠나기 전에 그 사실을 알 수 있다.
+  it('notify 후 flush()를 부르면 onSave가 resolve한 값을 그대로 반환한다(성공)', async () => {
+    const onSave = jest.fn().mockResolvedValue(true);
+    const controller = createAutosaveController({ onSave });
+
+    controller.notify(makeDraft());
+    await expect(controller.flush()).resolves.toBe(true);
+  });
+
+  it('notify 후 flush()를 부르면 onSave가 resolve한 값을 그대로 반환한다(실패)', async () => {
+    const onSave = jest.fn().mockResolvedValue(false);
+    const controller = createAutosaveController({ onSave });
+
+    controller.notify(makeDraft());
+    await expect(controller.flush()).resolves.toBe(false);
+  });
+
+  it('notify 없이 flush()를 부르면 대기 중인 draft가 없으므로 즉시 true를 반환한다(onSave 미호출)', async () => {
+    const onSave = jest.fn().mockResolvedValue(false);
+    const controller = createAutosaveController({ onSave });
+
+    await expect(controller.flush()).resolves.toBe(true);
+    expect(onSave).not.toHaveBeenCalled();
+  });
 });

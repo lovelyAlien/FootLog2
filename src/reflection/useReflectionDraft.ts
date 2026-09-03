@@ -21,7 +21,9 @@ export type ReflectionDraftBinding = {
   onChangeFreeReflection: (value: string) => void;
   saveFailed: boolean;
   onRetry: () => void;
-  flush: () => void;
+  // Promise<boolean>을 반환한다(true = 저장 성공 또는 대기 중인 변경 없음) — 호출자가
+  // 실패 시 화면을 떠나지 않고 재시도 UI를 보여줄 수 있게 하기 위함.
+  flush: () => Promise<boolean>;
 };
 
 export function useReflectionDraft(db: MigratableDb, dateKey: string): ReflectionDraftBinding {
@@ -47,8 +49,13 @@ export function useReflectionDraft(db: MigratableDb, dateKey: string): Reflectio
   }, [dateKey]);
 
   // 현재 편집 중인 레코드 id. 로드된 행이 있으면 그 id, 없으면 새 id(아직 DB에 쓰지
-  // 않는다 — 사용자가 아무것도 입력하지 않으면 빈 레코드를 만들지 않는다).
-  const recordIdRef = useRef<string>('');
+  // 않는다 — 사용자가 아무것도 입력하지 않으면 빈 레코드를 만들지 않는다). 초기값과
+  // dateKey 변경 시 리셋값은 항상 신선한 UUID다(빈 문자열이 아니다) — 코드 리뷰 발견:
+  // 이전에는 로드가 끝나야만 값이 채워져, 로드 완료 전에 입력하면 (a) 최초 진입 시
+  // 빈 문자열 id로 저장되거나 (b) 과거 날짜 뷰에서 스크러버로 날짜를 옮긴 직후 이전
+  // 날짜의 실제 id가 새 날짜의 draft에 새어 들어가 INSERT 시 PRIMARY KEY 충돌로
+  // 저장이 조용히 실패했다.
+  const recordIdRef = useRef<string>(defaultCryptoDeps.randomUUID());
 
   // 마지막으로 시도한(그러나 실패했을 수 있는) draft — SettingsScreen.tsx의
   // lastAttemptRef/handleRetry 관용구와 동일 정신.
@@ -56,11 +63,14 @@ export function useReflectionDraft(db: MigratableDb, dateKey: string): Reflectio
 
   // 저장 함수. onSave(draft)는 upsertReflection의 결과로만 saveFailed를 반영한다 —
   // upsertReflection이 이미 내부에서 1회 재시도를 수행하므로 여기서 다시 감싸지 않는다
-  // (이중 래핑은 D-01이 정한 "1회 자동 재시도" 계약을 깬다).
+  // (이중 래핑은 D-01이 정한 "1회 자동 재시도" 계약을 깬다). 성공 여부를 Promise<boolean>
+  // 으로도 반환한다 — flush()를 기다리는 호출자(모달 닫기 핸들러)가 React state 갱신
+  // 타이밍에 기대지 않고 이 반환값만으로 성공/실패를 곧바로 알 수 있게 하기 위함(코드
+  // 리뷰 발견 — isMountedRef가 false여도 반환값 자체는 그대로 흘러간다).
   const onSave = useCallback(
-    (draft: ReflectionDraft) => {
+    (draft: ReflectionDraft): Promise<boolean> => {
       lastAttemptRef.current = draft;
-      upsertReflection(db, {
+      return upsertReflection(db, {
         id: draft.id,
         date: draft.dateKey,
         newPlaceAnswer: draft.newPlaceAnswer,
@@ -68,13 +78,13 @@ export function useReflectionDraft(db: MigratableDb, dateKey: string): Reflectio
         now: toIsoTimestamp(),
       })
         .then((result) => {
-          if (!isMountedRef.current) return;
-          setSaveFailed(!result.ok);
+          if (isMountedRef.current) setSaveFailed(!result.ok);
+          return result.ok;
         })
         .catch((error) => {
           console.error('Failed to save reflection', error);
-          if (!isMountedRef.current) return;
-          setSaveFailed(true);
+          if (isMountedRef.current) setSaveFailed(true);
+          return false;
         });
     },
     [db]
@@ -88,6 +98,17 @@ export function useReflectionDraft(db: MigratableDb, dateKey: string): Reflectio
   // 않는다.
   // eslint-disable-next-line react-hooks/refs
   const [controller] = useState<AutosaveController>(() => createAutosaveController({ onSave }));
+
+  // (0) recordIdRef 리셋 — dateKey가 바뀌면 (1) 로드 effect의 비동기 응답을 기다리지
+  // 않고 즉시 새 UUID로 리셋한다. React는 같은 커밋에서 변경된 모든 effect의 cleanup을
+  // 먼저(선언 순서대로) 실행한 뒤에야 setup을 실행하므로, 아래 (5) flush-on-date-change
+  // effect의 cleanup(이전 날짜 강제 저장)은 이 리셋이 실행되기 전에 이미 이전 날짜의
+  // id로 완료된다 — 그 다음에야 이 effect가 새 날짜용 신선한 id로 교체하므로 두 날짜의
+  // id가 뒤섞이지 않는다. 로드가 기존 행을 찾으면 (1)에서 그 행의 실제 id로 다시
+  // 덮어쓴다.
+  useEffect(() => {
+    recordIdRef.current = defaultCryptoDeps.randomUUID();
+  }, [dateKey]);
 
   // (1) 로드 — dateKey가 바뀔 때마다 getReflectionByDate를 호출한다. 로드로 채운 값은
   // controller.notify를 호출하지 않는다(로드가 저장을 유발하면 안 된다).
@@ -103,7 +124,8 @@ export function useReflectionDraft(db: MigratableDb, dateKey: string): Reflectio
         } else {
           setNewPlaceAnswer('');
           setFreeReflection('');
-          recordIdRef.current = defaultCryptoDeps.randomUUID();
+          // recordIdRef는 위 (0) 리셋 effect가 이미 신선한 UUID로 채워뒀다 — 여기서
+          // 다시 만들면 (0)이 만든 값과 달라져 리셋의 의미가 없어진다.
         }
         setSaveFailed(false);
       })
@@ -114,17 +136,18 @@ export function useReflectionDraft(db: MigratableDb, dateKey: string): Reflectio
 
   // (5) 날짜 전환/언마운트 flush — dateKey에 의존하는 effect의 cleanup에서
   // controller.flush()를 호출한다. draft가 자신의 dateKey/id를 들고 있으므로 이 flush는
-  // 이전 날짜 레코드에 정확히 기록된다(T-07-05).
+  // 이전 날짜 레코드에 정확히 기록된다(T-07-05). 결과를 기다리지 않는다 — cleanup은
+  // async를 반환할 수 없고, 실패 시 saveFailed 상태는 setSaveFailed로 이미 반영된다.
   useEffect(() => {
     return () => {
-      controller.flush();
+      void controller.flush();
     };
   }, [controller, dateKey]);
 
   // 마운트 해제 시에는 flush 이후 controller.dispose()로 타이머를 정리한다.
   useEffect(() => {
     return () => {
-      controller.flush();
+      void controller.flush();
       controller.dispose();
     };
   }, [controller]);
@@ -134,7 +157,7 @@ export function useReflectionDraft(db: MigratableDb, dateKey: string): Reflectio
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active') return;
-      controller.flush();
+      void controller.flush();
     });
     return () => subscription.remove();
   }, [controller]);
@@ -174,10 +197,11 @@ export function useReflectionDraft(db: MigratableDb, dateKey: string): Reflectio
     }
   }, [onSave]);
 
-  // (7) flush 노출 — 모달의 닫기 핸들러가 flush() 후 router.back()을 호출하는 순서를
-  // 07-05가 쓴다.
+  // (7) flush 노출 — 모달의 닫기 핸들러가 flush()의 결과를 기다린 뒤에만 router.back()을
+  // 호출한다(07-05). Promise<boolean>을 그대로 반환해, 저장이 실패했을 때 호출자가 화면을
+  // 떠나지 않고 이미 렌더된 재시도 UI(saveFailed)를 사용자가 보게 할 수 있다.
   const flush = useCallback(() => {
-    controller.flush();
+    return controller.flush();
   }, [controller]);
 
   return {

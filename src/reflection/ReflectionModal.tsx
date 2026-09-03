@@ -125,16 +125,27 @@ export function ReflectionModal({ db }: ReflectionModalProps) {
 
   const draft = useReflectionDraft(db, dateKey);
 
-  // 닫기(✕) — draft.flush()를 먼저 호출해 미저장 답변을 강제 저장한 뒤 화면을 닫는다.
-  // 아래로 스와이프해 닫는 경로는 별도 화면 이탈 리스너를 달지 않는다 —
-  // useReflectionDraft가 언마운트 cleanup에서 이미 flush하므로, 화면 제거 시점을
-  // 다시 구독하면 같은 draft가 두 경로로 저장될 위험이 생긴다(스와이프 닫기는 훅의
-  // 언마운트 flush가 커버한다는 판단). 상세화면의 미저장 경고 방식은 여기서 복제하지
-  // 않는다 — 05-CONTEXT.md D-01/D-02가 상세화면(명시적 flush 모델)과 회고(자동저장
-  // 모델)를 의도적으로 다른 모델로 확정했기 때문이다.
+  // 닫기(✕) — draft.flush()의 결과를 기다린 뒤에만 화면을 닫는다. 아래로 스와이프해
+  // 닫는 경로는 별도 화면 이탈 리스너를 달지 않는다 — useReflectionDraft가 언마운트
+  // cleanup에서 이미 flush하므로, 화면 제거 시점을 다시 구독하면 같은 draft가 두
+  // 경로로 저장될 위험이 생긴다(스와이프 닫기는 훅의 언마운트 flush가 커버한다는
+  // 판단). 상세화면의 미저장 경고 방식은 여기서 복제하지 않는다 — 05-CONTEXT.md
+  // D-01/D-02가 상세화면(명시적 flush 모델)과 회고(자동저장 모델)를 의도적으로 다른
+  // 모델로 확정했기 때문이다.
+  //
+  // 코드 리뷰 발견: 이전에는 flush()를 기다리지 않고 곧장 router.back()을 불러
+  // 화면이 언마운트됐다 — 그 직후 저장이 실패해도 useReflectionDraft의
+  // isMountedRef 가드 때문에 saveFailed가 갱신되지 않고 재시도 UI도 뜨지 않은 채
+  // 입력 내용이 조용히 사라졌다. 이제 flush()가 반환하는 성공 여부를 기다려, 실패
+  // 시에는 화면을 닫지 않고 이미 렌더된 ReflectionPrompts의 저장 실패/재시도 UI를
+  // 사용자가 보게 둔다(대기 중인 변경이 없으면 flush()는 즉시 true를 반환하므로,
+  // 아무것도 입력하지 않고 닫는 흔한 경우는 체감 지연이 없다).
   const handleClose = useCallback(() => {
-    draft.flush();
-    router.back();
+    draft.flush().then((ok) => {
+      if (ok && isMountedRef.current) {
+        router.back();
+      }
+    });
   }, [draft]);
 
   return (

@@ -280,3 +280,36 @@ describe('알림 콘텐츠 반복 트리거 고정 함정 게이트 (07-RESEARCH
     expect(notificationContentSource).not.toMatch(/data:/);
   });
 });
+
+// 코드 리뷰 발견(PR #8) 회귀 가드 — recordIdRef가 로드 완료 전에는 빈 문자열이거나
+// 이전 날짜의 id를 그대로 들고 있어, 로드가 끝나기 전에 입력하면 PRIMARY KEY 충돌로
+// 저장이 조용히 실패했다. dateKey마다 즉시 신선한 UUID로 리셋하도록 고쳤다.
+describe('useReflectionDraft.ts recordIdRef 레이스 방지 계약 (코드 리뷰 발견 #1)', () => {
+  it("Test 38: recordIdRef의 초기값이 빈 문자열이 아니라 defaultCryptoDeps.randomUUID()다", () => {
+    expect(draftCodeOnly).toMatch(/useRef<string>\(defaultCryptoDeps\.randomUUID\(\)\)/);
+    expect(draftCodeOnly).not.toMatch(/useRef<string>\(''\)/);
+  });
+
+  it('Test 39: dateKey에만 의존하는 useEffect가 recordIdRef.current를 리셋한다', () => {
+    const resetEffectMatch = draftCodeOnly.match(
+      /useEffect\(\(\) => \{\s*recordIdRef\.current = defaultCryptoDeps\.randomUUID\(\);\s*\}, \[dateKey\]\);/
+    );
+    expect(resetEffectMatch).not.toBeNull();
+  });
+});
+
+// 코드 리뷰 발견(PR #8) 회귀 가드 — handleClose가 flush() 결과를 기다리지 않고 곧장
+// router.back()을 불러, 닫기 직후 저장이 실패해도 화면이 이미 언마운트돼 재시도 UI가
+// 뜨지 않고 입력 내용이 조용히 사라졌다. flush()의 성공 여부를 기다린 뒤에만 닫는다.
+describe('ReflectionModal.tsx 닫기 시 저장 실패 보존 계약 (코드 리뷰 발견 #2)', () => {
+  it('Test 40: handleClose가 router.back()을 draft.flush()의 성공 결과 안에서만 호출한다', () => {
+    const handleCloseMatch = modalCodeOnly.match(
+      /const handleClose = useCallback\(\(\) => \{([\s\S]*?)\}, \[draft\]\);/
+    );
+    expect(handleCloseMatch).not.toBeNull();
+    const body = handleCloseMatch ? handleCloseMatch[1] : '';
+    expect(body).toMatch(/draft\.flush\(\)\.then\(/);
+    expect(body).toMatch(/if \(ok/);
+    expect(body).toMatch(/router\.back\(\)/);
+  });
+});

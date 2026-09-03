@@ -29,12 +29,17 @@ export type ReflectionDraft = {
 
 export type AutosaveController = {
   notify(draft: ReflectionDraft): void;
-  flush(): void;
+  // flush()가 저장 성공 여부를 알려준다(대기 중인 draft가 없으면 true) — 호출자(모달의
+  // 닫기 핸들러)가 저장이 실패했을 때 화면을 이미 떠나 실패 UI를 놓치지 않도록, 결과를
+  // 기다린 뒤에만 내비게이션할 수 있게 하기 위함(코드 리뷰 발견 — 이전에는 flush()가
+  // fire-and-forget이라 닫기 직후 저장이 실패해도 화면이 이미 언마운트돼 재시도 UI가
+  // 뜨지 않고 입력 내용이 조용히 사라졌다).
+  flush(): Promise<boolean>;
   dispose(): void;
 };
 
 export function createAutosaveController(args: {
-  onSave: (draft: ReflectionDraft) => void;
+  onSave: (draft: ReflectionDraft) => Promise<boolean>;
   debounceMs?: number;
 }): AutosaveController {
   const debounceMs = args.debounceMs ?? REFLECTION_AUTOSAVE_DEBOUNCE_MS;
@@ -42,9 +47,9 @@ export function createAutosaveController(args: {
 
   // 대기 중인 draft를 저장하고 대기 상태를 해제한다 — 타이머 만료 경로와 flush() 즉시
   // 저장 경로가 동일한 이 함수를 공유한다.
-  function save(draft: ReflectionDraft) {
+  function save(draft: ReflectionDraft): Promise<boolean> {
     pending = null;
-    args.onSave(draft);
+    return args.onSave(draft);
   }
 
   return {
@@ -52,14 +57,19 @@ export function createAutosaveController(args: {
       if (pending) {
         clearTimeout(pending.timer);
       }
-      const timer = setTimeout(() => save(draft), debounceMs);
+      // 디바운스 타이머 만료 경로는 아무도 결과를 기다리지 않는 백그라운드 저장이다 —
+      // save()가 반환하는 Promise를 의도적으로 버린다(오류는 onSave 내부에서 이미
+      // 처리됨, checkin/settings 저장과 동일 계약).
+      const timer = setTimeout(() => {
+        void save(draft);
+      }, debounceMs);
       pending = { draft, timer };
     },
     flush() {
-      if (!pending) return;
+      if (!pending) return Promise.resolve(true);
       const current = pending;
       clearTimeout(current.timer);
-      save(current.draft);
+      return save(current.draft);
     },
     dispose() {
       // pendingDelete.dispose()와 의미가 반대다 — 여기서는 저장하지 않고 타이머만
