@@ -6,6 +6,7 @@
     "@expo-google-fonts/newsreader": "^0.4.1",
     "@expo/ui": "~57.0.13",
     "@gorhom/bottom-sheet": "^5.2.14",
+    "@react-native-seoul/kakao-login": "^6.0.4",
     "expo": "~57.0.16",
     "expo-constants": "~57.0.14",
     "expo-crypto": "~57.0.2",

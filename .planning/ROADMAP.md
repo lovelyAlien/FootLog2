@@ -245,7 +245,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 | 7. Day-end Reflection | 10/10 | Complete   | 2026-09-03 |
 | 8. Export & Polish | 0/TBD | Not started | - |
 | 9. Backend Foundation | 6/6 | Complete   | 2026-09-02 |
-| 10. Authentication (Kakao OAuth2/PKCE) | 0/TBD | Not started | - |
+| 10. Authentication (Kakao OAuth2/PKCE) | 0/7 | Planned | - |
 | 11. Object Storage (S3-compatible) | 0/TBD | Not started | - |
 | 12. Client-Server Sync | 0/TBD | Not started | - |
 
@@ -278,7 +278,19 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
   1. 사용자가 카카오 로그인 화면에서 OAuth2/PKCE 플로우를 완료하면 서버가 사용자 계정을 생성/조회하고 인증 토큰을 발급한다.
   2. 클라이언트는 발급된 토큰을 안전하게 저장하고, 만료 시 갱신하며, 이후 모든 서버 요청에 사용한다.
 
-**Plans**: TBD
+**Plans**: 7 plans (4 waves)
+
+- [ ] 10-01-PLAN.md — 카카오 개발자 콘솔 앱 등록 게이트 + 패키지 정통성 확인 + 환경변수 계약 (wave 1)
+- [ ] 10-02-PLAN.md — Flyway V4 users 카카오 필드 확장(BIGINT/UNIQUE/nullable) + User 엔티티·리포지토리 (wave 1)
+- [ ] 10-03-PLAN.md — Spring Security 7 + NimbusJwt 발급/검증 인프라 + access/refresh 구분 디코더 2종 (wave 1)
+- [ ] 10-04-PLAN.md — 카카오 /v2/user/me 조회 + find-or-create + 자체 JWT 발급 서비스 (wave 2)
+- [ ] 10-05-PLAN.md — POST /api/auth/kakao/login · /api/auth/refresh + 필터 체인 계약 테스트 (wave 3)
+- [ ] 10-06-PLAN.md — 클라이언트 SecureStore 토큰 보관 + 만료 임박 선제 갱신 + authorizedFetch (wave 2)
+- [ ] 10-07-PLAN.md — 개발자 검증 화면 + Dev Client 재빌드 + 실기기 카카오 왕복 검증 (wave 4)
+
+**Note**: D-14는 계획 단계에서 수정됨 — 네이티브 SDK가 인가 코드가 아니라 카카오 accessToken을
+직접 반환하므로, 백엔드는 `kauth.kakao.com/oauth/token` 교환 없이 `/v2/user/me`만 호출한다.
+10-CONTEXT.md D-14 / 10-RESEARCH.md ⚠️ AMENDMENT 블록 참고.
 
 ### Phase 11: Object Storage (S3-compatible)
 

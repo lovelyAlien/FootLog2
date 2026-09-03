@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: "Phase 07(day-end-reflection) 완료 — 10/10 plans, 전체 게이트 통과, 창업자 실기기 확인 승인; Phase 09(backend-foundation) shipped — PR #6; Phase 06(calendar-tab) shipped — PR #5"
+stopped_at: "Phase 07(day-end-reflection) 완료 — 10/10 plans, 전체 게이트 통과, 창업자 실기기 확인 승인(PR #8); Phase 10(authentication, 병행 트랙) planning complete(7 plans, 4 waves) — ready to execute; Phase 09(backend-foundation) shipped — PR #6; Phase 06(calendar-tab) shipped — PR #5"
 last_updated: "2026-09-03T06:40:00.000Z"
-last_activity: 2026-09-03 -- Phase 07 (day-end-reflection) 완료, 10/10 plans, 전체 게이트+시뮬레이터 검증+창업자 실기기 확인 통과
+last_activity: 2026-09-03 -- Phase 07 (day-end-reflection) 완료, 10/10 plans, 전체 게이트+시뮬레이터 검증+창업자 실기기 확인 통과; main 병합으로 Phase 10 계획(7 plans) 반영
 progress:
   total_phases: 12
   completed_phases: 8
-  total_plans: 63
+  total_plans: 70
   completed_plans: 63
   percent: 67
 ---
@@ -32,10 +32,10 @@ Status: Phase 07 완료(10/10 plans) — 전체 게이트+시뮬레이터 검증
 Last activity: 2026-09-03 -- Phase 07 (day-end-reflection) 완료
 
 **2단계 백엔드 트랙 (Phase 9~12, 병행):**
-Phase: 10
-Plan: Not started
-Status: Ready to plan — Phase 09 shipped(PR #6)
-Last activity: 2026-09-02 -- Phase 09 (backend-foundation) 완료, 6/6 plans, 검증 통과, PR #6로 shipped
+Phase: 10 (authentication) — 계획 완료
+Plan: 0 of 7 (실행 대기)
+Status: Ready to execute — 7 plans, 4 waves
+Last activity: 2026-09-03 -- Phase 10 계획 완료(D-14 계획 단계 중 수정 후 전체 plan에 반영, plan-checker 통과)
 
 Progress: [███████░] 87.5% (7/8 v1.0 phases; Phase 9-12는 병행 트랙)
 
@@ -105,6 +105,7 @@ Progress: [███████░] 87.5% (7/8 v1.0 phases; Phase 9-12는 병�
 - [Phase 2, plan-phase]: 결정 커버리지 게이트(check.decision-coverage-plan)가 02-CONTEXT.md의 D-01~D-07 전부를 "커버 안 됨"으로 보고했으나, PLAN.md 8개 본문(목적/테스트/헤더 주석)에 D-01~D-07이 구체적으로 인용됨을 수동 확인 — 게이트가 must_haves/truths 필드만 매칭하고 본문 인용은 못 잡는 도구 한계로 판단. 사용자 승인으로 경고 무시하고 진행(override). verify-phase에서 재확인 권장.
 - [Phase 5, plan-phase]: 동일한 결정 커버리지 게이트 도구 한계 재발 — 05-CONTEXT.md의 D-01(메모 저장 방식)/D-02(딥링크 백그라운드 flush)가 "커버 안 됨"으로 보고됐으나, 05-04-PLAN.md 본문(objective/tasks/threat_model/acceptance_criteria/done)에 D-01/D-02가 8곳 이상 구체적으로 인용됨을 수동 확인. Phase 2와 동일 사유로 override하고 진행. verify-phase에서 재확인 권장.
 - [Phase 5, plan-phase]: 계획 중 gsd-plan-checker가 블로커로 지적 — 05-UI-SPEC.md(작성 8/31 17:30)가 스와이프 삭제 어포던스 색상으로 `colors.accent`를 지정했는데, 같은 날 18:10 DESIGN.md 갱신이 accent 승인 용도를 캘린더 탭 전용 2개로 좁히고 체크인 관련 색상을 전부 Pin(테라코타)으로 이전한 것과 재검증 없이 충돌. accent 신규 승인 / Pin 전환 / accentSoft 3가지 목업을 창업자에게 제시했고 Pin(`#B85C38`)을 명시적으로 선택 — REQUIREMENTS.md/DESIGN.md/05-UI-SPEC.md/05-RESEARCH.md/05-PATTERNS.md/영향받은 PLAN.md 4개(05-03/05-05/05-06/05-07) 전부 갱신 완료, 재검증 통과. DESIGN.md Decisions Log 2026-09-01 항목 참고.
+- [Phase 10, plan-phase]: 동일한 결정 커버리지 게이트 도구 한계 3번째 재발 — 10-CONTEXT.md의 D-01/D-02/D-08/D-09/D-10/D-11/D-12/D-13이 "커버 안 됨"으로 보고됐으나, 8개 전부 10-01~10-07-PLAN.md 본문(Purpose/task action/acceptance_criteria/threat_model/must_haves 인접 서술)에 D-NN 형태로 구체적으로 인용됨을 grep으로 직접 확인(예: D-08은 10-02/10-04/10-05에 11회, D-13은 10-01/10-07에 9회). Phase 2/5와 동일 사유로 override하고 진행. 이 phase는 계획 중 D-14가 실제로 수정된 사례이기도 함 — plan-checker가 그 수정이 모든 하위 plan에 정확히 전파됐음을 별도로 검증 완료(10-04/10-05/10-07). verify-phase에서 재확인 권장.
 - REQ-reflection-base(Phase 7)는 번호가 매겨진 원본 태스크 ID가 없음 — 스펙이 day-end-reflection-map.md에 빌드 태스크가 아니라 산문(Premises/Visual Design Decisions/Data Model)으로만 존재함. 원본 체크리스트 자체가 가장 과소 명세됐을 가능성이 높은 항목으로 플래그함 — Phase 7 계획 시 더 면밀히 검토할 것.
 - TODOS.md에 사용자가 정리해야 할 오래된 항목 2개가 있음(비차단): 이미 footlog-product-design.md의 Success Criteria에서 해결된 "kill condition 부재" P1 항목(Key Decisions 참고), 그리고 현재의 정성적 kill condition이 아니라 이미 폐기된 정량적 게이트를 여전히 인용하는 2단계 "depends on" 문구.
 - [Phase 6, discuss-phase]: 원본 제품문서(footlog-product-design.md T10)는 "과거 날짜 뷰 + 햄버거 메뉴→설정 화면"을 한 태스크로 묶어뒀고 Phase 4 논의(D-08)가 햄버거 아이콘을 Phase 6로 넘겨뒀는데, REQUIREMENTS.md의 Phase 6 요구사항 3개(REQ-calendar-grid/past-date-view/date-scrubber)엔 설정 화면을 커버하는 항목이 없었음 — 06-CONTEXT.md D-01에서 "전체 포함"으로 확정했으나 REQUIREMENTS.md/ROADMAP.md엔 아직 새 requirement가 반영 안 됨. **해결됨(2026-09-01, 06-01):** REQUIREMENTS.md에 REQ-settings-screen 추가 완료, 06-04/06-06이 구현, 06-08에서 완료 확인.
@@ -125,9 +126,9 @@ Ingest에서 확인되어 이어받은 항목들.
 ## Session Continuity
 
 Last session: 2026-09-03T06:40:00.000Z
-Stopped at: Phase 07(day-end-reflection) 완료 — 창업자 실기기 확인 승인까지 전부 통과; Phase 09(backend-foundation) shipped — PR #6 (https://github.com/lovelyAlien/FootLog2/pull/6); Phase 06(calendar-tab) shipped — PR #5
+Stopped at: Phase 07(day-end-reflection) 완료 — 창업자 실기기 확인 승인까지 전부 통과(PR #8); Phase 10(authentication) planning complete(7 plans, 4 waves) — ready to execute; Phase 09(backend-foundation) shipped — PR #6 (https://github.com/lovelyAlien/FootLog2/pull/6); Phase 06(calendar-tab) shipped — PR #5
 Resume file: .planning/phases/07-day-end-reflection/07-10-SUMMARY.md
-Also open: .planning/phases/09-backend-foundation/09-VERIFICATION.md (병행 트랙, PR #6 shipped) — Phase 08(export & polish) 계획 필요
+Also open: .planning/phases/09-backend-foundation/09-VERIFICATION.md (병행 트랙, PR #6 shipped) — Phase 08(export & polish) 계획 필요; .planning/phases/10-authentication-kakao-oauth2-pkce/10-01-PLAN.md (병행 트랙, 실행 대기)
 
 **Shipping note (2026-09-02, Phase 6):** 원본 실행 브랜치(`gsd/phase-06-calendar-tab`)가 병행 진행 중이던 Phase 9 세션의 커밋과 섞여 있어, Phase 6에 해당하는 커밋만 골라 `origin/main` 위에 `ship/phase-06-calendar-tab` 브랜치로 재구성해 PR #5로 제출함. 원본 브랜치는 그대로 보존(삭제하지 않음).
 
