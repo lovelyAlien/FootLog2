@@ -197,9 +197,20 @@ const dateScrubberSource = readSrcSource(path.join('calendar', 'DateScrubber.tsx
 const dateScrubberCodeOnly = stripComments(dateScrubberSource);
 
 describe('DateScrubber/PastDateScreen — CLEARED 계약 회귀 가드', () => {
-  it('Test 18 (T1, CRITICAL): PastDateScreen.tsx가 snapToIndex(0)을 포함하고 snapToIndex(1)은 포함하지 않는다', () => {
-    expect(pastDateScreenCodeOnly).toMatch(/snapToIndex\(0\)/);
-    expect(pastDateScreenCodeOnly).not.toMatch(/snapToIndex\(1\)/);
+  // 07-07-PLAN.md Task 1 — 이 화면이 인라인 회고 프롬프트를 터치하면 시트를 OPEN으로
+  // 펴기 위해 snapToIndex(1)을 호출해야 한다(키보드가 프롬프트를 가리지 않도록). 원본
+  // 단언은 파일 전체에서 snapToIndex(1)이 절대 등장하지 않아야 한다는 과도하게 넓은
+  // 정규식이었다 — 실제 T1 CRITICAL 불변식은 "스크러버가 시트를 강제로 열지 않는다"는
+  // handleScrubStart 콜백 하나에 대한 것이었다. 아래로 범위를 좁혀 원래 보장은
+  // 그대로 유지하면서 신규 기능(프롬프트 터치 시 OPEN)을 허용한다.
+  it('Test 18 (T1, CRITICAL): PastDateScreen.tsx의 handleScrubStart는 snapToIndex(0)만 호출하고 snapToIndex(1)은 호출하지 않는다(스크러버는 시트를 강제로 열지 않는다)', () => {
+    const handleScrubStartMatch = pastDateScreenCodeOnly.match(
+      /const handleScrubStart = useCallback\(\(\) => \{[\s\S]*?\}, \[\]\);/
+    );
+    expect(handleScrubStartMatch).not.toBeNull();
+    const handleScrubStartBody = handleScrubStartMatch ? handleScrubStartMatch[0] : '';
+    expect(handleScrubStartBody).toMatch(/snapToIndex\(0\)/);
+    expect(handleScrubStartBody).not.toMatch(/snapToIndex\(1\)/);
   });
 
   it('Test 19 (T2): DateScrubber.tsx가 indexForTranslation을 참조하고 withDecay/withSpring/velocity를 포함하지 않는다(모멘텀·러버밴딩 부재)', () => {
