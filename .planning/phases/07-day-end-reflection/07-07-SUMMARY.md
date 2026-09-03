@@ -118,3 +118,12 @@ None - no external service configuration required.
 ---
 *Phase: 07-day-end-reflection*
 *Completed: 2026-09-03*
+
+## Self-Check: PASSED
+
+- FOUND: src/calendar/PastDateScreen.tsx
+- FOUND: src/app/__tests__/calendar-wiring.test.ts
+- FOUND: .planning/phases/07-day-end-reflection/07-07-SUMMARY.md
+- FOUND commit: fc91372 (feat(07-07))
+- FOUND commit: 09e3e87 (test(07-07))
+- FOUND commit: 390bebd (docs(07-07))
