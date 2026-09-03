@@ -1,5 +1,6 @@
 // src/reflection/ReflectionModal.tsx
-// 07-05-PLAN.md Task 1 — 회고 화면 상단부: 닫기 버튼 / 정적 지도 / 읽기전용 체크인 리스트.
+// 07-05-PLAN.md Task 1/2 — 회고 화면 본체: 닫기 버튼 / 정적 지도 / 읽기전용 체크인
+// 리스트 / 프롬프트 2칸(공유 컴포넌트) / 닫기 시 강제 저장.
 //
 // 라우트 파일이 아니라 화면 본체다(CheckinDetailScreen.tsx와 동일 계약) — 라우트 등록
 // (src/app/reflection.tsx, _layout.tsx presentation: 'modal', 알림 탭 딥링크)은
@@ -7,7 +8,8 @@
 //
 // 이 화면은 새 조회 함수를 만들지 않는다 — 오늘 뷰가 이미 쓰는 getTodayCheckins +
 // buildTrajectoryCoordinates를 그대로 재사용한다(07-UI-SPEC.md, 07-PATTERNS.md).
-// Task 2가 프롬프트/자동저장 배선과 닫기 시 강제 저장을 이 파일에 이어 붙인다.
+// 프롬프트 UI/자동저장 로직도 07-04가 만든 공유 훅/컴포넌트를 소비하기만 한다 — 이
+// 파일은 데이터 로직을 소유하지 않는다.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -19,6 +21,8 @@ import { getTodayCheckins } from '../checkin/checkinRepo';
 import { formatLocalTime, resolveLocalDateKey } from '../checkin/localDate';
 import { MAP_REGION_DELTA } from '../checkin/config';
 import { buildTrajectoryCoordinates } from '../today/trajectory';
+import { useReflectionDraft } from './useReflectionDraft';
+import { ReflectionPrompts } from './ReflectionPrompts';
 import { REFLECTION_COPY } from './content';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 import type { MigratableDb } from '../db/migrations';
@@ -119,15 +123,26 @@ export function ReflectionModal({ db }: ReflectionModalProps) {
       }
     : undefined;
 
-  // Task 2가 draft.flush() 호출을 여기 추가할 자리 — 지금은 router.back()만 호출한다.
-  const handleClose = () => {
+  const draft = useReflectionDraft(db, dateKey);
+
+  // 닫기(✕) — draft.flush()를 먼저 호출해 미저장 답변을 강제 저장한 뒤 화면을 닫는다.
+  // 아래로 스와이프해 닫는 경로는 별도 화면 이탈 리스너를 달지 않는다 —
+  // useReflectionDraft가 언마운트 cleanup에서 이미 flush하므로, 화면 제거 시점을
+  // 다시 구독하면 같은 draft가 두 경로로 저장될 위험이 생긴다(스와이프 닫기는 훅의
+  // 언마운트 flush가 커버한다는 판단). 상세화면의 미저장 경고 방식은 여기서 복제하지
+  // 않는다 — 05-CONTEXT.md D-01/D-02가 상세화면(명시적 flush 모델)과 회고(자동저장
+  // 모델)를 의도적으로 다른 모델로 확정했기 때문이다.
+  const handleClose = useCallback(() => {
+    draft.flush();
     router.back();
-  };
+  }, [draft]);
 
   return (
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg }]}
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
     >
       <Pressable
         onPress={handleClose}
@@ -179,6 +194,17 @@ export function ReflectionModal({ db }: ReflectionModalProps) {
       ) : (
         checkins.map((checkin) => <ReflectionCheckinRow key={checkin.id} checkin={checkin} />)
       )}
+
+      <View style={styles.promptsContainer}>
+        <ReflectionPrompts
+          newPlaceAnswer={draft.newPlaceAnswer}
+          freeReflection={draft.freeReflection}
+          onChangeNewPlaceAnswer={draft.onChangeNewPlaceAnswer}
+          onChangeFreeReflection={draft.onChangeFreeReflection}
+          saveFailed={draft.saveFailed}
+          onRetry={draft.onRetry}
+        />
+      </View>
     </ScrollView>
   );
 }
@@ -250,5 +276,9 @@ const styles = StyleSheet.create({
   emptyState: {
     color: colors.textMuted,
     marginTop: spacing.sm,
+  },
+  // 리스트 아래 프롬프트 블록 위 간격 — 07-UI-SPEC.md §Component Contracts 2.
+  promptsContainer: {
+    marginTop: spacing.lg,
   },
 });
