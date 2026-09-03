@@ -1,0 +1,11 @@
+# 스테이징 프로파일 — 비밀값(URL/사용자명/비밀번호)은 전부 환경변수 참조로만 주입한다(D-11).
+# 평문 비밀값을 이 파일에 단 한 글자도 넣지 않는다(T-9-01).
+#
+# spring-boot-docker-compose는 developmentOnly 스코프라 스테이징 실행 가능 jar에는
+# 아예 포함되지 않는다(09-RESEARCH.md Pitfall 3) — 그래서 이 프로파일은 로컬처럼
+# compose.yaml 자동 감지에 기댈 수 없고, DataSource를 명시적으로 설정해야 한다.
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
