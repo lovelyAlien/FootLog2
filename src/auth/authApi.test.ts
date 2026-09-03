@@ -255,6 +255,13 @@ describe('getValidAccessToken', () => {
     p2.catch(() => {});
     p3.catch(() => {});
 
+    // 세 호출 모두 loadTokens의 내부 await 체인을 통과해 in-flight 체크 지점(그중 하나가
+    // fake fetch를 실제로 호출하는 지점)까지 진행되도록, 마이크로태스크 큐가 완전히
+    // 비워질 때까지 기다린다. setImmediate는 마이크로태스크보다 나중에 실행되는
+    // 매크로태스크라 이 시점엔 세 체인 모두 진행이 끝나 있음을 보장한다
+    // (jest.useFakeTimers/jest.spyOn을 쓰지 않고 실제 이벤트 루프 순서에만 의존한다).
+    await new Promise((resolve) => setImmediate(resolve));
+
     fetch.resolveNextDeferred(200, { accessToken: 'access-shared', refreshToken: null, expiresIn: 1800 });
 
     const results = await Promise.all([p1, p2, p3]);
