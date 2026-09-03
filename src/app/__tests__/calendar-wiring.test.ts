@@ -264,3 +264,46 @@ describe('DateScrubber/PastDateScreen — CLEARED 계약 회귀 가드', () => {
     expect(dateScrubberCodeOnly).not.toContain('드래그해서 날짜 이동');
   });
 });
+
+// 07-07-PLAN.md Task 2 — 과거 날짜 회고 편집 계약 회귀 가드. 위 describe 블록/it은
+// 건드리지 않고 여기서부터 append한다. REQ-past-reflection-edit(D-04)의 재사용 계약과
+// 차이점(헤더/썸네일 없음)을 고정한다.
+describe('PastDateScreen 회고 편집 재사용 계약(REQ-past-reflection-edit, D-04)', () => {
+  it('Test 26: useReflectionDraft(db, activeDateKey)가 정확히 1회 등장한다(라우트 파라미터가 아닌 활성 날짜 사용)', () => {
+    const matches = pastDateScreenCodeOnly.match(/useReflectionDraft\(db, activeDateKey\)/g) ?? [];
+    expect(matches.length).toBe(1);
+  });
+
+  it('Test 27: ReflectionPrompts가 등장하고 TextInput은 등장하지 않는다(공유 컴포넌트 재사용, 재구현 금지)', () => {
+    expect(pastDateScreenCodeOnly).toMatch(/ReflectionPrompts/);
+    expect(pastDateScreenCodeOnly).not.toMatch(/TextInput/);
+  });
+
+  it('Test 28 (T-07-18): ListFooterComponent가 등장하고, 인라인 화살표 컴포넌트 형태는 등장하지 않는다(인라인 컴포넌트는 타이핑 중 포커스를 잃게 만든다)', () => {
+    expect(pastDateScreenCodeOnly).toMatch(/ListFooterComponent/);
+    expect(pastDateScreenCodeOnly).not.toMatch(/ListFooterComponent=\{\(\)\s*=>/);
+  });
+
+  it('Test 29 (T-07-05): AppState가 등장하지 않는다(중복 flush 경로 금지)', () => {
+    expect(pastDateScreenCodeOnly).not.toMatch(/AppState/);
+  });
+
+  it('Test 30 (D-04): sectionTitle이 등장하지 않는다(이 화면엔 "오늘의 흔적" 헤더 없음)', () => {
+    expect(pastDateScreenCodeOnly).not.toMatch(/sectionTitle/);
+  });
+
+  it('Test 31 (D-04): 40×40 썸네일 관련 식별자가 등장하지 않는다(과거 날짜 뷰 리스트엔 썸네일 없음)', () => {
+    expect(pastDateScreenCodeOnly).not.toMatch(/REFLECTION_THUMBNAIL/);
+  });
+
+  it('Test 32 (06-RESEARCH.md Pitfall 1): tabBarStyle을 조작하는 블록(숨김 1회 + 복원 1회)이 여전히 정확히 1세트만 존재한다(이 파일이 저장소에서 탭바를 만지는 유일한 파일)', () => {
+    const hideMatches = pastDateScreenCodeOnly.match(/tabBarStyle:\s*\{\s*display:\s*'none'\s*\}/g) ?? [];
+    const restoreMatches = pastDateScreenCodeOnly.match(/tabBarStyle:\s*\{\s*display:\s*'flex'\s*\}/g) ?? [];
+    expect(hideMatches.length).toBe(1);
+    expect(restoreMatches.length).toBe(1);
+  });
+
+  it('Test 33: SQL 키워드(INSERT/SELECT/UPDATE/DELETE)가 등장하지 않는다', () => {
+    expect(pastDateScreenCodeOnly).not.toMatch(/\b(INSERT |SELECT |UPDATE |DELETE )\b/);
+  });
+});
