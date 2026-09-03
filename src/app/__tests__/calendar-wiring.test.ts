@@ -197,9 +197,20 @@ const dateScrubberSource = readSrcSource(path.join('calendar', 'DateScrubber.tsx
 const dateScrubberCodeOnly = stripComments(dateScrubberSource);
 
 describe('DateScrubber/PastDateScreen — CLEARED 계약 회귀 가드', () => {
-  it('Test 18 (T1, CRITICAL): PastDateScreen.tsx가 snapToIndex(0)을 포함하고 snapToIndex(1)은 포함하지 않는다', () => {
-    expect(pastDateScreenCodeOnly).toMatch(/snapToIndex\(0\)/);
-    expect(pastDateScreenCodeOnly).not.toMatch(/snapToIndex\(1\)/);
+  // 07-07-PLAN.md Task 1 — 이 화면이 인라인 회고 프롬프트를 터치하면 시트를 OPEN으로
+  // 펴기 위해 snapToIndex(1)을 호출해야 한다(키보드가 프롬프트를 가리지 않도록). 원본
+  // 단언은 파일 전체에서 snapToIndex(1)이 절대 등장하지 않아야 한다는 과도하게 넓은
+  // 정규식이었다 — 실제 T1 CRITICAL 불변식은 "스크러버가 시트를 강제로 열지 않는다"는
+  // handleScrubStart 콜백 하나에 대한 것이었다. 아래로 범위를 좁혀 원래 보장은
+  // 그대로 유지하면서 신규 기능(프롬프트 터치 시 OPEN)을 허용한다.
+  it('Test 18 (T1, CRITICAL): PastDateScreen.tsx의 handleScrubStart는 snapToIndex(0)만 호출하고 snapToIndex(1)은 호출하지 않는다(스크러버는 시트를 강제로 열지 않는다)', () => {
+    const handleScrubStartMatch = pastDateScreenCodeOnly.match(
+      /const handleScrubStart = useCallback\(\(\) => \{[\s\S]*?\}, \[\]\);/
+    );
+    expect(handleScrubStartMatch).not.toBeNull();
+    const handleScrubStartBody = handleScrubStartMatch ? handleScrubStartMatch[0] : '';
+    expect(handleScrubStartBody).toMatch(/snapToIndex\(0\)/);
+    expect(handleScrubStartBody).not.toMatch(/snapToIndex\(1\)/);
   });
 
   it('Test 19 (T2): DateScrubber.tsx가 indexForTranslation을 참조하고 withDecay/withSpring/velocity를 포함하지 않는다(모멘텀·러버밴딩 부재)', () => {
@@ -251,5 +262,48 @@ describe('DateScrubber/PastDateScreen — CLEARED 계약 회귀 가드', () => {
   it('Test 25: DateScrubber.tsx가 CALENDAR_COPY.scrubberCaption을 참조하고 캡션 한글 리터럴을 직접 포함하지 않는다', () => {
     expect(dateScrubberCodeOnly).toMatch(/CALENDAR_COPY\.scrubberCaption/);
     expect(dateScrubberCodeOnly).not.toContain('드래그해서 날짜 이동');
+  });
+});
+
+// 07-07-PLAN.md Task 2 — 과거 날짜 회고 편집 계약 회귀 가드. 위 describe 블록/it은
+// 건드리지 않고 여기서부터 append한다. REQ-past-reflection-edit(D-04)의 재사용 계약과
+// 차이점(헤더/썸네일 없음)을 고정한다.
+describe('PastDateScreen 회고 편집 재사용 계약(REQ-past-reflection-edit, D-04)', () => {
+  it('Test 26: useReflectionDraft(db, activeDateKey)가 정확히 1회 등장한다(라우트 파라미터가 아닌 활성 날짜 사용)', () => {
+    const matches = pastDateScreenCodeOnly.match(/useReflectionDraft\(db, activeDateKey\)/g) ?? [];
+    expect(matches.length).toBe(1);
+  });
+
+  it('Test 27: ReflectionPrompts가 등장하고 TextInput은 등장하지 않는다(공유 컴포넌트 재사용, 재구현 금지)', () => {
+    expect(pastDateScreenCodeOnly).toMatch(/ReflectionPrompts/);
+    expect(pastDateScreenCodeOnly).not.toMatch(/TextInput/);
+  });
+
+  it('Test 28 (T-07-18): ListFooterComponent가 등장하고, 인라인 화살표 컴포넌트 형태는 등장하지 않는다(인라인 컴포넌트는 타이핑 중 포커스를 잃게 만든다)', () => {
+    expect(pastDateScreenCodeOnly).toMatch(/ListFooterComponent/);
+    expect(pastDateScreenCodeOnly).not.toMatch(/ListFooterComponent=\{\(\)\s*=>/);
+  });
+
+  it('Test 29 (T-07-05): AppState가 등장하지 않는다(중복 flush 경로 금지)', () => {
+    expect(pastDateScreenCodeOnly).not.toMatch(/AppState/);
+  });
+
+  it('Test 30 (D-04): sectionTitle이 등장하지 않는다(이 화면엔 "오늘의 흔적" 헤더 없음)', () => {
+    expect(pastDateScreenCodeOnly).not.toMatch(/sectionTitle/);
+  });
+
+  it('Test 31 (D-04): 40×40 썸네일 관련 식별자가 등장하지 않는다(과거 날짜 뷰 리스트엔 썸네일 없음)', () => {
+    expect(pastDateScreenCodeOnly).not.toMatch(/REFLECTION_THUMBNAIL/);
+  });
+
+  it('Test 32 (06-RESEARCH.md Pitfall 1): tabBarStyle을 조작하는 블록(숨김 1회 + 복원 1회)이 여전히 정확히 1세트만 존재한다(이 파일이 저장소에서 탭바를 만지는 유일한 파일)', () => {
+    const hideMatches = pastDateScreenCodeOnly.match(/tabBarStyle:\s*\{\s*display:\s*'none'\s*\}/g) ?? [];
+    const restoreMatches = pastDateScreenCodeOnly.match(/tabBarStyle:\s*\{\s*display:\s*'flex'\s*\}/g) ?? [];
+    expect(hideMatches.length).toBe(1);
+    expect(restoreMatches.length).toBe(1);
+  });
+
+  it('Test 33: SQL 키워드(INSERT/SELECT/UPDATE/DELETE)가 등장하지 않는다', () => {
+    expect(pastDateScreenCodeOnly).not.toMatch(/\b(INSERT |SELECT |UPDATE |DELETE )\b/);
   });
 });
