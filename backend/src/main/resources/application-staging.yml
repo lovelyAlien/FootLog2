@@ -9,3 +9,9 @@ spring:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
+
+# JWT_SECRET은 기본값 콜론 표기(:) 없이 참조한다 — 미주입 시 기동이 즉시 실패하는 것이
+# 의도된 동작이다(T-9-01 규약 계승, D-11). openssl rand -base64 32로 생성하며,
+# 이 저장소의 .env.example(10-01)이 그 절차를 안내한다.
+jwt:
+  secret: ${JWT_SECRET}
