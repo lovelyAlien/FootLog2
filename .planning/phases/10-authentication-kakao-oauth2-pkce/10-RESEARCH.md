@@ -4,6 +4,35 @@
 **Domain:** 카카오 OAuth2/PKCE 인가 코드 교환, Spring Security 7(Boot 4.1.1) 기반 자체 JWT 발급/검증, Flyway V4 스키마 확장
 **Confidence:** HIGH (Kakao 엔드포인트 계약은 OIDC discovery 문서 실측 + 공식 REST API 문서로 교차검증, Spring Security/Boot 스택은 start.spring.io 생성 + `./gradlew dependencies` 실측으로 검증) / MEDIUM (클라이언트 네이티브 SDK 동작 방식 — README 기반, 실제 SDK 실행 검증은 안 함)
 
+> ## ⚠️ AMENDMENT (2026-09-02, 계획 단계에서 반영) — 이 문서 작성 직후 D-14가 수정됨
+>
+> 이 문서는 D-14 원안("클라이언트는 인가 코드+PKCE `code_verifier`만 백엔드로 전달, 백엔드가
+> 카카오와 토큰 교환")을 전제로 작성됐다. 아래 Open Questions #1이 최우선으로 지적한 대로,
+> 계획 단계에서 `@react-native-seoul/kakao-login` v6.0.4를 실제로 설치해 타입 정의를 확인한
+> 결과 `login()`/`loginWithKakaoAccount()`는 인가 코드가 아니라 카카오 `accessToken`을 포함한
+> `KakaoOAuthToken` 전체를 JS로 직접 반환하며, 인가 코드만 받는 저수준 API는 존재하지 않음이
+> 확인됐다(10-CONTEXT.md D-14 수정 이력 참고).
+>
+> **결과적으로 D-14가 수정됨:** 클라이언트는 SDK가 반환한 카카오 `accessToken`을 백엔드로
+> 전달하고, 백엔드는 그 토큰으로 `GET /v2/user/me`만 호출한다(저장하지 않고 폐기). **카카오
+> `POST /oauth/token` 교환 자체가 이번 phase의 백엔드 코드 경로에서 완전히 사라진다** —
+> `client_secret`도, PKCE `code_verifier`도 이 경로에서 쓰이지 않는다.
+>
+> **아래 섹션 중 이 변경의 영향을 받는 것:**
+> - `## Architecture Patterns`의 System Architecture Diagram, Recommended Project
+>   Structure, **Pattern 1은 전부 원안 기준이라 무효** — 이 AMENDMENT 바로 아래 정정된
+>   버전을 대신 참고할 것(원문은 감사 기록으로 남겨둠, 코드 작성 시 참고 금지).
+> - Pattern 2, Pattern 3(V4 마이그레이션), Pattern 4/5, JWT 발급/검증 관련 내용은 **영향
+>   없음** — 그대로 유효.
+> - Pitfall 4(`client_secret` 필수 quirk)는 카카오 API에 대한 사실로서는 여전히 정확하지만,
+>   **이번 phase의 실제 구현에는 적용되지 않는다**(회피가 아니라 애초에 그 API를 호출하지
+>   않으므로). 감사 기록으로 남겨두되 실행 태스크에 반영하지 말 것.
+> - `KakaoLoginRequest`는 `{ code, codeVerifier, redirectUri }`가 아니라
+>   `{ kakaoAccessToken }` 단일 필드다.
+>
+> 상세 근거는 10-PATTERNS.md(패턴 매핑 단계에서 이 불일치를 처음 발견하고 정리함) 및
+> 10-CONTEXT.md D-14 항목 참고.
+
 ## Summary
 
 이 phase는 두 개의 서로 다른 계약을 연결하는 다리를 놓는 작업이다: (1) 카카오의 OAuth2/OIDC
@@ -38,12 +67,12 @@ oauth2-resource-server`가 `spring-security-oauth2-jose:7.1.1`(`NimbusJwtEncoder
 그대로 설계하되, 이 클라이언트 측 긴장은 Open Questions에 최우선 순위로 플래그해 계획 단계에서
 검증 화면(D-16) 구현 방식을 결정할 때 반드시 인지해야 한다.
 
-**Primary recommendation:** 백엔드는 `spring-boot-starter-security` +
+**Primary recommendation(AMENDMENT 반영):** 백엔드는 `spring-boot-starter-security` +
 `spring-boot-starter-security-oauth2-resource-server` + `spring-boot-starter-restclient`
-(카카오 토큰/사용자정보 엔드포인트 호출용 `RestClient`) 3개 스타터만 추가하고, 자체 JWT는
+(카카오 사용자정보 엔드포인트 호출용 `RestClient`) 3개 스타터만 추가하고, 자체 JWT는
 `NimbusJwtEncoder`(발급)/`NimbusJwtDecoder`(검증)로 HMAC(HS256, env var 시크릿) 서명한다.
-`POST /api/auth/kakao/login`(공개, 코드+code_verifier→카카오 토큰 교환→`/v2/user/me`→
-find-or-create→자체 JWT 발급)과 `POST /api/auth/refresh`(공개, refresh JWT 검증→새 access
+`POST /api/auth/kakao/login`(공개, 클라이언트가 SDK로부터 받은 카카오 accessToken→
+`/v2/user/me`→find-or-create→자체 JWT 발급)과 `POST /api/auth/refresh`(공개, refresh JWT 검증→새 access
 JWT 발급) 2개 엔드포인트만 이번 phase에 필요하며, 그 외 모든 `/api/**`는
 `oauth2ResourceServer(jwt)`로 보호한다. `users` 테이블은 V4 마이그레이션으로 `kakao_id
 BIGINT`(카카오 회원번호는 Int 오버플로 사고가 실제 보고된 Long 타입, `checkins`/
@@ -100,7 +129,7 @@ None — 10-CONTEXT.md 논의는 phase 스코프 안에 머물렀다. 로그아�
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| REQ-auth-kakao-oauth | 사용자가 카카오 로그인 화면에서 OAuth2/PKCE 플로우를 완료하면 서버가 사용자 계정을 생성/조회한다 | `## Standard Stack`(카카오 토큰/사용자정보 엔드포인트 계약, RestClient) + `## Architecture Patterns` Pattern 1~3(로그인 엔드포인트, find-or-create, V4 마이그레이션) + `## Common Pitfalls`(kakao_id Long, client_secret 필수) |
+| REQ-auth-kakao-oauth | 사용자가 카카오 로그인 화면에서 OAuth2/PKCE 플로우를 완료하면 서버가 사용자 계정을 생성/조회한다 | `## Standard Stack`(카카오 사용자정보 엔드포인트 계약, RestClient) + `## Architecture Patterns`(AMENDMENT 반영 diagram/구조) Pattern 2~3(사용자정보 조회, find-or-create, V4 마이그레이션) + `## Common Pitfalls`(kakao_id Long) |
 | REQ-auth-session-token | 서버가 인증 토큰을 발급하고, 클라이언트는 안전하게 저장·만료 시 갱신·재사용한다 | `## Architecture Patterns` Pattern 4~5(NimbusJwtEncoder/Decoder, access/refresh 구분 claim, 리프레시 엔드포인트) + `## Don't Hand-Roll`(JWT 서명/검증 자체 구현 금지) |
 
 ## Architectural Responsibility Map
@@ -198,28 +227,22 @@ Node/npm 생태계이므로 slopcheck 적용:**
 
 ## Architecture Patterns
 
-### System Architecture Diagram
+### System Architecture Diagram (AMENDMENT 반영 — 정정된 버전)
 
 ```
 [Expo 클라이언트 — D-16 백엔드 검증용 로그인 화면]
-  네이티브 카카오 SDK(D-13)로 로그인 트리거
+  네이티브 카카오 SDK(D-13)의 login()/loginWithKakaoAccount() 호출
         │
-        ▼ (인가 코드 + PKCE code_verifier — 단, Open Questions #1 참고:
-        │  SDK 편의 메서드를 그대로 쓰면 이 계약이 성립하지 않을 수 있음)
+        ▼ SDK가 카카오 accessToken을 JS로 직접 반환(KakaoOAuthToken)
         ▼
-POST /api/auth/kakao/login  { code, codeVerifier, redirectUri }
+POST /api/auth/kakao/login  { kakaoAccessToken }
 [Spring Security 필터 체인 — 이 엔드포인트는 permitAll]
         │
         ▼
 [AuthController → KakaoAuthService]
         │
-        ├─▶ RestClient POST https://kauth.kakao.com/oauth/token
-        │     (grant_type=authorization_code, client_id, client_secret,
-        │      redirect_uri, code, code_verifier)
-        │       ◀── { access_token, refresh_token, expires_in, ... }
-        │
         ├─▶ RestClient GET https://kapi.kakao.com/v2/user/me
-        │     (Authorization: Bearer <카카오 access_token>)
+        │     (Authorization: Bearer <kakaoAccessToken>)
         │       ◀── { id, kakao_account.profile.{nickname,profile_image_url} }
         │       (카카오 토큰은 여기서 폐기 — DB에 저장하지 않음, D-14)
         │
@@ -262,18 +285,19 @@ GET /api/** (미래 phase가 추가할 보호된 엔드포인트)
 [SecurityContext에 인증된 사용자(kakao_id 또는 내부 UUID) 주입]
 ```
 
-### Recommended Project Structure
+### Recommended Project Structure (AMENDMENT 반영 — 정정된 버전)
 
 ```
 backend/src/main/kotlin/com/footlog/backend/
 ├── auth/                              # 신규 도메인 패키지(09-RESEARCH.md 도메인별 패키징 관례 계승)
 │   ├── AuthController.kt              # POST /api/auth/kakao/login, POST /api/auth/refresh
-│   ├── KakaoAuthService.kt            # 카카오 토큰 교환 + 사용자정보 조회 + find-or-create
-│   ├── KakaoTokenClient.kt            # RestClient 래퍼(kauth.kakao.com/kapi.kakao.com 전용)
-│   ├── KakaoTokenResponse.kt          # 카카오 /oauth/token 응답 DTO
-│   ├── KakaoUserInfoResponse.kt       # 카카오 /v2/user/me 응답 DTO
+│   ├── KakaoAuthService.kt            # 카카오 사용자정보 조회 + find-or-create
+│   ├── KakaoUserInfoClient.kt         # RestClient 래퍼(kapi.kakao.com/v2/user/me 전용,
+│   │                                   # Pattern 2 그대로) — Pattern 1의 KakaoTokenClient는
+│   │                                   # 더 이상 필요 없음(토큰 교환 자체가 없어짐)
+│   ├── KakaoUserInfoResponse.kt       # 카카오 /v2/user/me 응답 DTO(Pattern 2, 변경 없음)
 │   ├── JwtIssuerService.kt            # NimbusJwtEncoder 래퍼 — access/refresh 발급
-│   ├── KakaoLoginRequest.kt           # { code, codeVerifier, redirectUri } 요청 DTO
+│   ├── KakaoLoginRequest.kt           # { kakaoAccessToken } 요청 DTO(단일 필드)
 │   └── TokenResponse.kt               # { accessToken, refreshToken?, expiresIn } 응답 DTO
 ├── config/
 │   └── SecurityConfig.kt              # SecurityFilterChain(Lambda DSL 필수, Pitfall 참고),
@@ -282,38 +306,13 @@ backend/src/main/kotlin/com/footlog/backend/
     └── User.kt                        # kakaoId/nickname/profileImageUrl 필드 추가
 ```
 
-### Pattern 1: 카카오 토큰 교환 — RestClient (client_secret 필수 quirk 반영)
+### Pattern 1 — 삭제됨(AMENDMENT)
 
-```kotlin
-// Source: https://kauth.kakao.com/.well-known/openid-configuration (실측, VERIFIED) +
-// https://developers.kakao.com/docs/latest/ko/kakaologin/rest-api (CITED)
-// token_endpoint_auth_methods_supported: ["client_secret_post"] — PKCE(code_verifier)를
-// 쓰더라도 client_secret이 항상 함께 필요하다(표준 공개 클라이언트 PKCE와 다른 카카오 quirk).
-@Component
-class KakaoTokenClient(
-    private val restClient: RestClient,
-    @Value("\${kakao.client-id}") private val clientId: String,
-    @Value("\${kakao.client-secret}") private val clientSecret: String,
-) {
-    fun exchangeCodeForToken(code: String, codeVerifier: String, redirectUri: String): KakaoTokenResponse {
-        val form = LinkedMultiValueMap<String, String>().apply {
-            add("grant_type", "authorization_code")
-            add("client_id", clientId)
-            add("client_secret", clientSecret)   // PKCE와 무관하게 항상 포함
-            add("redirect_uri", redirectUri)
-            add("code", code)
-            add("code_verifier", codeVerifier)
-        }
-        return restClient.post()
-            .uri("https://kauth.kakao.com/oauth/token")
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .body(form)
-            .retrieve()
-            .body(KakaoTokenResponse::class.java)
-            ?: throw KakaoAuthException("카카오 토큰 응답이 비어있음")
-    }
-}
-```
+원안의 "카카오 토큰 교환 RestClient" 패턴(`KakaoTokenClient`, `POST /oauth/token` 호출,
+`client_secret` 폼 파라미터)은 D-14 수정으로 이번 phase의 백엔드 코드 경로에서 완전히
+불필요해졌다 — 클라이언트가 이미 카카오 accessToken을 갖고 있으므로 백엔드는 그 토큰 교환
+단계 자체를 건너뛴다. 아래 Pattern 2(사용자정보 조회)만 그대로 쓰면 된다. 원본 코드는
+Pitfall 4 근처에 감사 기록으로만 남겨둠 — 실행 태스크에서 참고하지 말 것.
 
 ### Pattern 2: 카카오 사용자정보 조회 — email 미동의도 허용(D-07)
 
@@ -528,7 +527,7 @@ Int 범위 안에 있는 테스트 계정으로는 이 버그가 절대 드러�
 사용자로 매핑되거나 예외 발생. `[MEDIUM confidence — 카카오 개발자 커뮤니티(devtalk) 보고
 사례 기반, 공식 문서가 "Long 타입"이라고 명시한다는 서술은 재확인됨]`
 
-### Pitfall 4: `client_secret`은 PKCE를 쓰든 안 쓰든 항상 필요(표준 공개 클라이언트 PKCE와 다름)
+### Pitfall 4 (⚠️ AMENDMENT로 이번 phase에는 적용 안 됨 — 감사 기록용): `client_secret`은 PKCE를 쓰든 안 쓰든 항상 필요(표준 공개 클라이언트 PKCE와 다름)
 
 **What goes wrong:** RFC 7636 표준 PKCE의 핵심 이점 중 하나는 "공개 클라이언트(모바일 앱)가
 `client_secret` 없이도 안전하게 인가 코드를 토큰으로 교환할 수 있다"는 것인데, 카카오는 이
@@ -638,7 +637,7 @@ JWT 발급/검증, SecurityFilterChain). 중복을 피하기 위해 여기서는
 | Dependency | Required By | Available | Version | Fallback |
 |------------|--------------|-----------|---------|----------|
 | Java(JDK) / Docker / Docker Compose / Git | 09-RESEARCH.md에서 이미 검증 완료(변경 없음) | ✓ | 09-RESEARCH.md 참고 | — |
-| 카카오 개발자 앱 등록(REST API 키, client_secret 활성화, redirect URI 등록) | `KakaoTokenClient`(Pattern 1)의 `client_id`/`client_secret` | ✗(이 세션에서 확인 불가 — 창업자의 카카오 개발자 콘솔 계정 필요) | — | 없음 — 이 phase의 end-to-end 검증(D-16 검증 화면 포함) 진행의 핵심 전제. 계획 단계 첫 태스크로 "카카오 개발자 콘솔에서 앱 생성 + REST API 키/시크릿 발급 + redirect URI 등록"을 명시적 선행 태스크로 넣어야 한다 |
+| 카카오 개발자 앱 등록(REST API 키/네이티브 앱 키 발급) | 클라이언트 SDK(D-13) 초기화에 필요한 앱 키. AMENDMENT 이후 백엔드 코드 경로는 `client_secret`을 쓰지 않으므로 그 발급/활성화는 더 이상 필수 선행조건이 아님(등록 자체는 여전히 필요) | ✗(이 세션에서 확인 불가 — 창업자의 카카오 개발자 콘솔 계정 필요) | — | 없음 — 이 phase의 end-to-end 검증(D-16 검증 화면 포함) 진행의 핵심 전제. 계획 단계 첫 태스크로 "카카오 개발자 콘솔에서 앱 생성 + REST API/네이티브 앱 키 발급"을 명시적 선행 태스크로 넣어야 한다 |
 | `@react-native-seoul/kakao-login` npm 패키지 | D-13(클라이언트 SDK), D-16(검증 화면) | ✓(npm 레지스트리에 v6.0.4 존재, slopcheck `[OK]`) | 6.0.4 | — (단, Open Questions #1의 아키텍처 검증 필요) |
 
 **Missing dependencies with no fallback:** 카카오 개발자 콘솔 앱 등록(REST API 키/시크릿) —
@@ -692,19 +691,19 @@ JWT 발급/검증, SecurityFilterChain). 중복을 피하기 위해 여기서는
 
 | ASVS Category | Applies | Standard Control |
 |----------------|---------|-------------------|
-| V2 Authentication | Yes | 카카오 위임 인증(OAuth2/PKCE) — 자체 비밀번호를 저장/검증하지 않음. `client_secret`은 서버 프로세스 내에서만 사용, 클라이언트에 노출 금지(Pattern 1) |
+| V2 Authentication | Yes | 카카오 위임 인증(OAuth2) — 자체 비밀번호를 저장/검증하지 않음. 클라이언트가 SDK로부터 받은 카카오 accessToken은 백엔드가 `/v2/user/me` 조회 1회에만 쓰고 저장하지 않음(D-14 AMENDMENT) |
 | V3 Session Management | Yes | Stateless JWT(D-01) — 세션 고정/하이재킹 벡터 자체가 없음. `token_use` 클레임으로 access/refresh 오용 방지(Pattern 4), CSRF는 stateless라 비활성화(Pattern 5, 쿠키 기반 세션이 아니므로 CSRF 벡터 없음) |
 | V4 Access Control | Yes(최소) | `anyRequest().authenticated()` 기본 정책 — 이번 phase에는 도메인 API가 없어 세밀한 인가 규칙은 다음 phase(Phase 12) 소관 |
-| V5 Input Validation | Yes | `spring-boot-starter-validation`(Phase 9에서 이미 포함) — `KakaoLoginRequest`(code/codeVerifier/redirectUri)에 `@NotBlank` 등 적용 |
+| V5 Input Validation | Yes | `spring-boot-starter-validation`(Phase 9에서 이미 포함) — `KakaoLoginRequest`(kakaoAccessToken)에 `@NotBlank` 등 적용 |
 | V6 Cryptography | Yes | JWT 서명 키(HMAC 256비트+)는 환경변수로만 주입(D-11 계승), `openssl rand`로 생성(Pitfall 2). 자체 해시/암호화 알고리즘 구현 금지 — Nimbus 라이브러리에 위임 |
 
 ### Known Threat Patterns for Kakao OAuth2/PKCE + Spring Security JWT 백엔드
 
 | Pattern | STRIDE | Standard Mitigation |
 |---------|--------|-----------------------|
-| 카카오 인가 코드 재사용(replay) 공격 | Spoofing | 카카오 자체가 인가 코드를 1회용으로 처리(카카오 서버측 통제) — 백엔드는 이를 신뢰하되, 자체 JWT 발급 시점에 `code`를 저장/재검증하지 않는다(무상태 설계와 일관) |
+| 탈취된 카카오 accessToken을 `/api/auth/kakao/login`에 재전송해 타인 명의로 세션 발급(AMENDMENT로 새로 생긴 벡터 — 인가 코드가 아니라 토큰 자체를 백엔드가 신뢰) | Spoofing | 카카오 accessToken 자체가 짧은 수명(카카오 발급 TTL)을 가지며 HTTPS 전송만 허용. 백엔드는 이 토큰으로 `/v2/user/me`를 직접 호출해 카카오가 실제로 유효성을 검증하게 하므로(위조 불가), 위험은 "탈취된 진짜 토큰의 재사용 창"으로 제한됨 — 카카오 토큰 TTL 내로 노출 시간이 한정되는 것을 리스크로 계획 단계에 명시할 것 |
 | refresh 토큰 탈취 후 access 토큰 무한 재발급 | Elevation of Privilege | `token_use` 클레임 검증(Pattern 4)으로 refresh 토큰이 보호된 API에 직접 쓰이는 것을 차단. 탈취된 refresh 토큰 자체의 무효화는 A8에 기록된 대로 이번 phase 스코프 밖(회전/블랙리스트 없음) — 계획 단계에서 리스크로 명시할 것 |
-| `client_secret` 클라이언트 번들 유출 | Information Disclosure | `client_secret`은 오직 백엔드 프로세스(env var)에만 존재 — Expo 클라이언트 번들에는 `client_id`(REST API 키)만 포함되고 시크릿은 절대 포함되지 않는다(Pattern 1 설계가 이를 구조적으로 보장) |
+| `client_secret` 클라이언트 번들 유출 | Information Disclosure | AMENDMENT 이후 이번 phase의 백엔드 코드는 `client_secret`을 전혀 사용하지 않으므로(토큰 교환 단계 자체가 없음) 이 벡터는 이번 phase에 적용되지 않음 — 향후 phase가 카카오의 다른 서버간 API(예: 연결끊기 admin API)를 위해 `client_secret`을 도입한다면 재검토 |
 | JWT 서명 키 하드코딩/커밋 | Information Disclosure / Tampering | D-11 계승 — `application-*.yml`에 실제 시크릿 하드코딩 금지, 환경변수 참조만(Pitfall 2) |
 | 카카오 사용자정보 응답의 `nickname`/닉네임에 스크립트/HTML 삽입 후 프론트엔드 미이스케이프 렌더링(저장형 XSS 벡터) | Tampering | 이번 phase는 백엔드가 값을 그대로 저장만 하고 렌더링하지 않음 — 렌더링 책임은 클라이언트(향후 phase)에 있으며, 그 시점에 표준 이스케이프(React Native Text 컴포넌트는 기본적으로 HTML을 해석하지 않아 저위험) 필요성을 인지해둘 것 |
 
