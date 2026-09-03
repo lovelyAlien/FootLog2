@@ -58,11 +58,12 @@ const APP_SETTINGS_COLUMNS = [
   'id',
   'checkin_frequency',
   'daily_reflection_enabled',
+  'daily_reflection_hour',
   'updated_at',
 ];
 
 describe('migrateDbIfNeeded', () => {
-  it('Test 1: 빈 DB에서 checkins/daily_reflections/drafts/app_settings 테이블을 생성하고 user_version을 3으로 올린다', async () => {
+  it('Test 1: 빈 DB에서 checkins/daily_reflections/drafts/app_settings 테이블을 생성하고 user_version을 DATABASE_VERSION으로 올린다', async () => {
     const { db, raw, close } = createTestDb();
     try {
       await migrateDbIfNeeded(db);
@@ -80,7 +81,9 @@ describe('migrateDbIfNeeded', () => {
         user_version: number;
       };
       expect(versionRow.user_version).toBe(DATABASE_VERSION);
-      expect(DATABASE_VERSION).toBe(3);
+      // DATABASE_VERSION 4(Plan 07-01)로 갱신 — 이전 값(3)에 대한 하드코딩 단언은
+      // 07-01에서 daily_reflection_hour 컬럼 마이그레이션이 추가되며 legitimate하게 바뀜.
+      expect(DATABASE_VERSION).toBe(4);
     } finally {
       close();
     }
@@ -522,7 +525,7 @@ describe('migrateDbIfNeeded', () => {
     }
   });
 
-  it('Test B: app_settings 테이블이 정확히 4개 컬럼을 계약대로 갖는다', async () => {
+  it('Test B: app_settings 테이블이 정확히 5개 컬럼을 계약대로 갖는다 (Plan 07-01: daily_reflection_hour 추가)', async () => {
     const { db, raw, close } = createTestDb();
     try {
       await migrateDbIfNeeded(db);
@@ -530,7 +533,7 @@ describe('migrateDbIfNeeded', () => {
       const columns = raw
         .prepare('PRAGMA table_info(app_settings)')
         .all() as { name: string }[];
-      expect(columns).toHaveLength(4);
+      expect(columns).toHaveLength(5);
 
       const columnNames = new Set(columns.map((c) => c.name));
       expect(columnNames).toEqual(new Set(APP_SETTINGS_COLUMNS));
@@ -633,7 +636,9 @@ describe('migrateDbIfNeeded', () => {
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
-      expect(versionRow.user_version).toBe(3);
+      // DATABASE_VERSION 4(Plan 07-01)로 갱신 — v2에서 시작한 migrateDbIfNeeded 호출이
+      // 이미 최신 버전까지 연쇄 실행한다(daily_reflection_hour 백필 포함).
+      expect(versionRow.user_version).toBe(DATABASE_VERSION);
     } finally {
       close();
     }
