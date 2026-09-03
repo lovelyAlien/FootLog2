@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 10(backend, 병행 트랙) wave 2/4 완료(10-01~10-04/10-06, 5/7 plans), wave 3 실행 중; Phase 06(calendar-tab, v1.0 트랙) shipped — Phase 07 계획 대기"
-last_updated: "2026-09-03T18:53:00.000Z"
-last_activity: "2026-09-03 -- Phase 10 wave 2 완료(카카오 로그인 서버 본체, 클라이언트 토큰 저장/authApi), 통합 게이트 green(tsc/jest 659/659/gradle build)"
+stopped_at: "Phase 10(backend, 병행 트랙) wave 3/4 완료(6/7 plans), wave 4(10-07, 창업자 실기기 검증 체크포인트 포함) 실행 중; Phase 06(calendar-tab, v1.0 트랙) shipped — Phase 07 계획 대기"
+last_updated: "2026-09-03T19:11:00.000Z"
+last_activity: "2026-09-03 -- Phase 10 wave 3 완료(AuthController: POST /api/auth/kakao/login, /api/auth/refresh), 백엔드 gradle build green"
 progress:
   total_phases: 12
   completed_phases: 6
@@ -33,9 +33,9 @@ Last activity: 2026-09-02 -- Phase 06 (calendar-tab) 완료 — 시뮬레이터 
 
 **2단계 백엔드 트랙 (Phase 9~12, 병행):**
 Phase: 10 (authentication) — EXECUTING
-Plan: 5 of 7 (wave 2/4 완료 — 10-01, 10-02, 10-03, 10-04, 10-06)
-Status: Wave 3/4 실행 중 (10-05 AuthController HTTP 표면, 10-04 의존)
-Last activity: 2026-09-03 -- wave 2 완료 및 통합 게이트 통과(tsc 0 errors, jest 42 suites/659 tests, gradle build green)
+Plan: 6 of 7 (wave 3/4 완료 — 10-01~10-06)
+Status: Wave 4/4 실행 중 (10-07, 마지막 플랜, non-autonomous — 창업자 실기기 검증 체크포인트 포함)
+Last activity: 2026-09-03 -- wave 3 완료(AuthController + SecurityConfigTest), 백엔드 통합 게이트 통과(gradle build green)
 
 Progress: [██████░░] 75% (6/8 v1.0 phases; Phase 9-12는 병행 트랙)
 

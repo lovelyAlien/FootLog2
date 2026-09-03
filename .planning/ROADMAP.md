@@ -233,7 +233,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 | 7. Day-end Reflection | 0/TBD | Not started | - |
 | 8. Export & Polish | 0/TBD | Not started | - |
 | 9. Backend Foundation | 6/6 | Complete   | 2026-09-02 |
-| 10. Authentication (Kakao OAuth2/PKCE) | 5/7 | In Progress|  |
+| 10. Authentication (Kakao OAuth2/PKCE) | 6/7 | In Progress|  |
 | 11. Object Storage (S3-compatible) | 0/TBD | Not started | - |
 | 12. Client-Server Sync | 0/TBD | Not started | - |
 
@@ -272,7 +272,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 - [x] 10-02-PLAN.md — Flyway V4 users 카카오 필드 확장(BIGINT/UNIQUE/nullable) + User 엔티티·리포지토리 (wave 1)
 - [x] 10-03-PLAN.md — Spring Security 7 + NimbusJwt 발급/검증 인프라 + access/refresh 구분 디코더 2종 (wave 1)
 - [x] 10-04-PLAN.md — 카카오 /v2/user/me 조회 + find-or-create + 자체 JWT 발급 서비스 (wave 2)
-- [ ] 10-05-PLAN.md — POST /api/auth/kakao/login · /api/auth/refresh + 필터 체인 계약 테스트 (wave 3)
+- [x] 10-05-PLAN.md — POST /api/auth/kakao/login · /api/auth/refresh + 필터 체인 계약 테스트 (wave 3)
 - [x] 10-06-PLAN.md — 클라이언트 SecureStore 토큰 보관 + 만료 임박 선제 갱신 + authorizedFetch (wave 2)
 - [ ] 10-07-PLAN.md — 개발자 검증 화면 + Dev Client 재빌드 + 실기기 카카오 왕복 검증 (wave 4)
 
