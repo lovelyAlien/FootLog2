@@ -19,8 +19,17 @@ function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(APP_DIR, relativePath), 'utf-8');
 }
 
+// 07-06-PLAN.md Task 2 — calendar-wiring.test.ts와 동일한 패턴. APP_DIR(src/app) 기준이
+// 아니라 src/ 기준 상대경로를 읽기 위한 헬퍼(TodayBottomSheet.tsx는 src/today/에 있다).
+function readSrcSource(relativePath: string): string {
+  return fs.readFileSync(path.join(APP_DIR, '..', relativePath), 'utf-8');
+}
+
 const indexSource = readSource(TODAY_SCREEN_PATH);
 const codeOnly = stripComments(indexSource);
+
+const todayBottomSheetSource = readSrcSource(path.join('today', 'TodayBottomSheet.tsx'));
+const todayBottomSheetCodeOnly = stripComments(todayBottomSheetSource);
 
 describe('src/app/(tabs)/index.tsx 단일 쿼리 계약 (04-CONTEXT.md D-11)', () => {
   it('getTodayCheckins( 호출이 파일 전체에서 정확히 1회 등장한다', () => {
@@ -275,5 +284,45 @@ describe('src/app/(tabs)/index.tsx 배너 위치 불변 계약', () => {
 
   it('배너 스택 렌더에 paddingTop: insets.top가 그대로 남아있다', () => {
     expect(codeOnly).toMatch(/styles\.bannerStack,\s*\{\s*paddingTop:\s*insets\.top\s*\}/);
+  });
+});
+
+// 07-06-PLAN.md Task 2 — TodayBottomSheet 슬롯 계약(항상 마운트 + ListEmptyComponent +
+// 선택적 ListHeaderComponent/ListFooterComponent)과 "합성 항목 금지" 원칙을 회귀
+// 테스트로 고정한다. 07-RESEARCH.md Pitfall 1이 지정한 warning sign(unshift/prepend로
+// checkins 배열에 진입 행을 합성해 넣는 접근)을 코드 레벨에서 게이트한다.
+describe('src/today/TodayBottomSheet.tsx 리스트 슬롯 계약 (07-06-PLAN.md)', () => {
+  it('체크인 배열 길이가 0인지 확인하는 삼항 분기가 존재하지 않는다', () => {
+    expect(todayBottomSheetCodeOnly).not.toMatch(/checkins\.length === 0/);
+  });
+
+  it('ListEmptyComponent가 등장한다', () => {
+    expect(todayBottomSheetCodeOnly).toMatch(/ListEmptyComponent/);
+  });
+
+  it('ListHeaderComponent와 ListFooterComponent가 각각 등장한다', () => {
+    expect(todayBottomSheetCodeOnly).toMatch(/ListHeaderComponent/);
+    expect(todayBottomSheetCodeOnly).toMatch(/ListFooterComponent/);
+  });
+
+  it('BottomSheetFlatList가 정확히 1회 마운트된다', () => {
+    const occurrences = todayBottomSheetCodeOnly.match(/<BottomSheetFlatList/g) ?? [];
+    expect(occurrences.length).toBe(1);
+  });
+
+  it('합성 리스트 항목 삽입(unshift/prepend)이 등장하지 않는다 (07-RESEARCH.md Pitfall 1)', () => {
+    expect(todayBottomSheetCodeOnly).not.toMatch(/unshift|prepend/);
+  });
+
+  it('emptyText 기본값이 여전히 TODAY_COPY.emptyState다', () => {
+    expect(todayBottomSheetCodeOnly).toMatch(/emptyText\s*=\s*TODAY_COPY\.emptyState/);
+  });
+
+  it('TodayBottomSheetProps의 필수 필드 5개가 옵셔널로 바뀌지 않았다', () => {
+    expect(todayBottomSheetCodeOnly).toMatch(/checkins:\s*CheckinRow\[\];/);
+    expect(todayBottomSheetCodeOnly).toMatch(/containerHeight:\s*number;/);
+    expect(todayBottomSheetCodeOnly).toMatch(/animatedPosition:\s*SharedValue<number>;/);
+    expect(todayBottomSheetCodeOnly).toMatch(/onRowPress:\s*\(id:\s*string\)\s*=>\s*void;/);
+    expect(todayBottomSheetCodeOnly).toMatch(/onDeleteRequest:\s*\(checkin:\s*CheckinRow\)\s*=>\s*void;/);
   });
 });
