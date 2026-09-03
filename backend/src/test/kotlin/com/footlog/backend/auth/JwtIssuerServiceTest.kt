@@ -48,7 +48,10 @@ class JwtIssuerServiceTest {
         val jwt = jwtDecoder.decode(token)
 
         assertEquals(userId.toString(), jwt.subject)
-        assertEquals("footlog-backend", jwt.issuer.toString().trimEnd('/'))
+        // jwt.issuer(getIssuer())는 iss 클레임을 URL로 강제 변환하려 시도해 "footlog-backend"
+        // 같은 비-URL 문자열에서 IllegalArgumentException을 던진다 — getClaimAsString으로
+        // 원본 문자열 클레임을 그대로 비교한다(발견: 실행 중 실제 예외로 확인).
+        assertEquals("footlog-backend", jwt.getClaimAsString("iss"))
         assertEquals("access", jwt.getClaimAsString("token_use"))
     }
 
