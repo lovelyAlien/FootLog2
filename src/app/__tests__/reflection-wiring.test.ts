@@ -204,3 +204,79 @@ describe('ReflectionModal.tsx 진행률 수치 노출 금지 게이트 (T-07-14)
     expect(blockText).not.toMatch(/\$\{/);
   });
 });
+
+// 07-08-PLAN.md Task 3 — 라우트/딥링크 배선 회귀 가드. 위 Test 1~26(07-04/07-05)은
+// 수정하지 않고 이 블록만 append한다.
+const APP_DIR = path.join(__dirname, '..');
+const NOTIFICATIONS_DIR = path.join(__dirname, '..', '..', 'notifications');
+
+function readAppSource(fileName: string): string {
+  return fs.readFileSync(path.join(APP_DIR, fileName), 'utf-8');
+}
+
+function readNotificationsSource(fileName: string): string {
+  return fs.readFileSync(path.join(NOTIFICATIONS_DIR, fileName), 'utf-8');
+}
+
+const reflectionRouteSource = readAppSource('reflection.tsx');
+const reflectionRouteCodeOnly = stripComments(reflectionRouteSource);
+const rootLayoutSource = readAppSource('_layout.tsx');
+const rootLayoutCodeOnly = stripComments(rootLayoutSource);
+const notificationContentSource = readNotificationsSource('content.ts');
+
+describe('reflection.tsx 얇은 래퍼 계약 (07-08-PLAN.md Task 1)', () => {
+  it('Test 27: StyleSheet/useState가 등장하지 않는다', () => {
+    expect(reflectionRouteCodeOnly).not.toMatch(/StyleSheet|useState/);
+  });
+
+  it('Test 28: useSQLiteContext를 참조한다', () => {
+    expect(reflectionRouteCodeOnly).toMatch(/useSQLiteContext/);
+  });
+});
+
+describe('_layout.tsx 모달 스크린 등록 계약 (07-08-PLAN.md Task 1)', () => {
+  it('Test 29: <Stack.Screen name="reflection" ... presentation: \'modal\' ...>가 같은 요소 안에 함께 등장한다', () => {
+    expect(rootLayoutCodeOnly).toMatch(
+      /<Stack\.Screen[\s\S]*?name="reflection"[\s\S]*?presentation:\s*'modal'[\s\S]*?\/>/
+    );
+  });
+});
+
+describe('_layout.tsx 알림 탭 딥링크 게이트 계약 (07-08-PLAN.md Task 2)', () => {
+  it('Test 30: useLastNotificationResponse를 참조한다', () => {
+    expect(rootLayoutCodeOnly).toMatch(/useLastNotificationResponse/);
+  });
+
+  it('Test 31: router.push(\'/reflection\')이 정확히 1회 등장하고 상대 경로 표기는 등장하지 않는다(절대 경로 게이트)', () => {
+    const absoluteMatches = rootLayoutCodeOnly.match(/router\.push\('\/reflection'\)/g) ?? [];
+    expect(absoluteMatches).toHaveLength(1);
+    expect(rootLayoutCodeOnly).not.toMatch(/'\.\/reflection'/);
+  });
+
+  it('Test 32: addNotificationResponseReceivedListener가 등장하지 않는다(중복 처리 경로 금지)', () => {
+    expect(rootLayoutCodeOnly).not.toMatch(/addNotificationResponseReceivedListener/);
+  });
+
+  it('Test 33: AppState.addEventListener가 등장하지 않는다(리스너 1개 계약 재확인)', () => {
+    expect(rootLayoutCodeOnly).not.toMatch(/AppState\.addEventListener/);
+  });
+
+  it('Test 34: tabBarStyle이 등장하지 않는다', () => {
+    expect(rootLayoutCodeOnly).not.toMatch(/tabBarStyle/);
+  });
+
+  it('Test 35: DAILY_REFLECTION_ID 식별자 비교가 존재한다(체크인 알림 탭에는 반응하지 않는다)', () => {
+    expect(rootLayoutCodeOnly).toMatch(/identifier !== DAILY_REFLECTION_ID/);
+  });
+
+  it('Test 36: handledRef 중복 처리 가드가 존재한다', () => {
+    const matches = rootLayoutCodeOnly.match(/handledRef/g) ?? [];
+    expect(matches.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('알림 콘텐츠 반복 트리거 고정 함정 게이트 (07-RESEARCH.md Pitfall 2)', () => {
+  it('Test 37: src/notifications/content.ts에 data: 필드가 등장하지 않는다', () => {
+    expect(notificationContentSource).not.toMatch(/data:/);
+  });
+});
