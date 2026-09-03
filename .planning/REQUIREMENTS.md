@@ -150,10 +150,10 @@
 | REQ-past-date-view | Phase 6 | Complete |
 | REQ-date-scrubber | Phase 6 | Complete |
 | REQ-settings-screen | Phase 6 | Complete |
-| REQ-reflection-base | Phase 7 | Pending |
-| REQ-reflection-autosave | Phase 7 | Pending |
-| REQ-reflection-save-failure-ui | Phase 7 | Pending |
-| REQ-reflection-copy-fix | Phase 7 | Pending |
+| REQ-reflection-base | Phase 7 | Complete |
+| REQ-reflection-autosave | Phase 7 | Complete |
+| REQ-reflection-save-failure-ui | Phase 7 | Complete |
+| REQ-reflection-copy-fix | Phase 7 | Complete |
 | REQ-reflection-notification | Phase 7 | Pending |
 | REQ-reflection-today-entry | Phase 7 | Pending |
 | REQ-past-reflection-edit | Phase 7 | Pending |
