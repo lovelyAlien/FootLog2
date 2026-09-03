@@ -15,20 +15,22 @@
 // 생긴다(T-02-19). 배너의 권한 재조회는 알림 권한 배너 훅이 자체 구독으로
 // 처리하며, 그건 UI 표시용 상태라 자가진단과는 별개 관심사다 — 여기서 중복
 // 호출하지 않는다.
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { DATABASE_NAME, migrateDbIfNeeded } from '../db/migrations';
 import { newsreaderFonts } from '../theme/fonts';
 import { runForegroundNotificationCheck } from '../notifications/registry';
 import { subscribeToForegroundActive } from '../notifications/permissions';
 import { getSettingsRow, resolveNotificationSettings } from '../settings/settingsRepo';
+import { DAILY_REFLECTION_ID } from '../notifications/scheduling';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -76,6 +78,41 @@ function NotificationSelfHealGate() {
   return null;
 }
 
+// 07-08-PLAN.md Task 2 — 회고 알림 탭 → 모달 딥링크 게이트.
+// NotificationSelfHealGate와 동일한 관용구: SQLiteProvider 자식 트리에서 실행되고
+// 항상 null을 반환한다. 새 AppState 리스너를 추가하지 않는다 —
+// useLastNotificationResponse()만으로 콜드스타트(앱이 완전히 종료된 상태에서 알림
+// 탭으로 실행)와 백그라운드 복귀 두 경로를 모두 커버하며(07-RESEARCH.md
+// Don't Hand-Roll), 알림 응답 수신 리스너를 별도로 병행 구독하면 같은 탭이 두
+// 경로로 처리돼 모달이 두 번 push된다. 그래서 이 게이트를 추가해도
+// settings-wiring.test.ts Test 23/24가 지키는 "루트 레이아웃 AppState 리스너
+// 1개" 계약은 그대로 유지된다.
+function ReflectionNotificationDeepLinkGate() {
+  const response = Notifications.useLastNotificationResponse();
+  // 같은 알림 응답을 재렌더마다 다시 처리해 모달이 여러 장 쌓이는 것을 막는
+  // 중복 처리 가드 — 알림 발화 시각 + actionIdentifier를 키로 비교한다.
+  const handledRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!response) return;
+    // 체크인 리마인더 탭에는 반응하지 않는다 — 이 앱이 스케줄 등록 시 직접 부여한
+    // identifier라 외부에서 위조할 수 없다(T-07-22).
+    if (response.notification.request.identifier !== DAILY_REFLECTION_ID) return;
+
+    const responseKey = response.notification.date + response.actionIdentifier;
+    if (handledRef.current === responseKey) return;
+    handledRef.current = responseKey;
+
+    // 절대 경로 '/reflection'을 쓴다 — 현재 스택 기준으로 풀리는 상대 경로 표기는
+    // 조용히 실패한다(07-RESEARCH.md Pitfall 3, STATE.md Phase 6 라우트 버그 선례).
+    // 이동할 라우트를 알림 페이로드에서 읽지 않는다 — 하드코딩된 문자열 하나뿐이라
+    // 딥링크 조작을 통한 URL 인젝션 표면이 존재하지 않는다(T-07-21).
+    router.push('/reflection');
+  }, [response]);
+
+  return null;
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(newsreaderFonts);
 
@@ -102,6 +139,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
           <NotificationSelfHealGate />
+          <ReflectionNotificationDeepLinkGate />
           <StatusBar style="auto" />
           {/* 07-08-PLAN.md Task 1 — "reflection" 스크린은 (tabs) 그룹의 형제로 루트
               Stack에 등록해야 탭 네비게이터 전체를 덮는다(presentation: 'modal').
