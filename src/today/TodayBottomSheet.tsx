@@ -13,7 +13,19 @@
 // 05-05-PLAN.md — onRowPress/onDeleteRequest를 CheckinListRow에 그대로 전달만 한다.
 // 이 시트 자신은 네비게이션이나 삭제 로직을 갖지 않는다(순수 전달) — 삭제 어포던스
 // 배경색도 CheckinListRow 안에만 있고 이 파일에는 등장하지 않는다.
-import type { Ref } from 'react';
+//
+// 07-06-PLAN.md Task 1 — 리스트를 항상 마운트한다. 이전에는 체크인 배열 길이가 0일
+// 때 리스트 자체를 그리지 않고 <Text> 하나만 반환했는데, 그러면 체크인 0건인 순간에는
+// 리스트가 존재하지 않아 최상단/최하단에 끼워 넣을 슬롯이 구조적으로 없다 — "오늘
+// 돌아보기" 행(REQ-reflection-today-entry: 0건이어도 항상 보여야 함)과 과거 날짜 뷰의
+// 인라인 회고 프롬프트(REQ-past-reflection-edit)를 붙일 자리가 없어진다. 그래서
+// BottomSheetFlatList를 항상 마운트하고 빈 상태는 ListEmptyComponent로 옮기며, 부모가
+// 헤더/푸터를 주입할 수 있도록 선택적 ListHeaderComponent/ListFooterComponent를 연다.
+// "오늘 돌아보기" 행을 `checkins` 배열 맨 앞에 합성으로 끼워 넣는 접근은 쓰지 않는다 —
+// `checkins`의 타입은 `CheckinRow[]`이고 `CheckinListRow`는 스와이프 삭제/상세 진입을
+// 전제하므로, 합성 항목을 섞으면 잘못된 대상으로 삭제를 시도하게 만든다
+// (07-RESEARCH.md Pitfall 1 Warning signs).
+import type { Ref, ReactElement } from 'react';
 import { useMemo } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import BottomSheet, { BottomSheetFlatList, useBottomSheetTimingConfigs } from '@gorhom/bottom-sheet';
@@ -50,6 +62,12 @@ export type TodayBottomSheetProps = {
   // 접는다(docs/designs/calendar-date-scrubber.md T1, CRITICAL). 이 시트 자신은
   // 스크러버 관련 로직/스타일을 전혀 갖지 않는다 — 배치·화면 로직 없음 계약 유지.
   sheetRef?: Ref<BottomSheet>;
+  // 07-06-PLAN.md Task 1 — 선택적 리스트 상단 슬롯. 이 prop을 넘기지 않는 호출부(현재
+  // 오늘 뷰)의 동작은 완전히 불변이다. 07-09("오늘 돌아보기" 행)가 이 슬롯을 채운다.
+  ListHeaderComponent?: ReactElement | null;
+  // 07-06-PLAN.md Task 1 — 선택적 리스트 하단 슬롯. 이 prop을 넘기지 않는 호출부(현재
+  // 오늘 뷰)의 동작은 완전히 불변이다. 07-07(과거 날짜 회고 프롬프트)이 이 슬롯을 채운다.
+  ListFooterComponent?: ReactElement | null;
 };
 
 export function TodayBottomSheet({
@@ -60,6 +78,8 @@ export function TodayBottomSheet({
   onDeleteRequest,
   emptyText = TODAY_COPY.emptyState,
   sheetRef,
+  ListHeaderComponent,
+  ListFooterComponent,
 }: TodayBottomSheetProps) {
   const insets = useSafeAreaInsets();
 
@@ -98,21 +118,22 @@ export function TodayBottomSheet({
       handleStyle={styles.handle}
       handleIndicatorStyle={styles.handleIndicator}
     >
-      {checkins.length === 0 ? (
-        <Text style={[typography.helperText, styles.emptyText]}>{emptyText}</Text>
-      ) : (
-        <BottomSheetFlatList
-          data={checkins}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <CheckinListRow
-              checkin={item}
-              onPress={onRowPress}
-              onDeleteRequest={onDeleteRequest}
-            />
-          )}
-        />
-      )}
+      <BottomSheetFlatList
+        data={checkins}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <CheckinListRow
+            checkin={item}
+            onPress={onRowPress}
+            onDeleteRequest={onDeleteRequest}
+          />
+        )}
+        ListHeaderComponent={ListHeaderComponent}
+        ListFooterComponent={ListFooterComponent}
+        ListEmptyComponent={
+          <Text style={[typography.helperText, styles.emptyText]}>{emptyText}</Text>
+        }
+      />
     </BottomSheet>
   );
 }
