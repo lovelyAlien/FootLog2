@@ -130,3 +130,8 @@ None - 외부 서비스 설정 불필요.
 ---
 *Phase: 07-day-end-reflection*
 *Completed: 2026-09-03*
+
+## Self-Check: PASSED
+
+- 파일 7개 전부 존재 확인(`src/db/schema.ts`, `src/db/migrations.ts`, `src/db/migrations.test.ts`, `src/settings/settingsRepo.ts`, `src/settings/settingsRepo.test.ts`, `.planning/REQUIREMENTS.md`, `07-01-SUMMARY.md`)
+- 커밋 6건 전부 `git log --oneline`에서 확인(`b0326de`, `a5e5803`, `bb5e217`, `b6671da`, `b1ddbc1`, `16a305a`)
