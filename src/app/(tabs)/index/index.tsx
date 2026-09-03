@@ -50,6 +50,7 @@ import { NotificationDeniedBanner } from '../../../components/NotificationDenied
 import { LocationDeniedBanner } from '../../../components/LocationDeniedBanner';
 import { CheckinActionCard } from '../../../components/CheckinActionCard';
 import { TodayBottomSheet } from '../../../today/TodayBottomSheet';
+import { ReflectionEntryRow } from '../../../today/ReflectionEntryRow';
 import {
   checkinReducer,
   initialCheckinState,
@@ -561,6 +562,22 @@ export default function Index() {
   const handleRowPress = useCallback((id: string) => {
     router.push({ pathname: './[id]', params: { id } });
   }, []);
+
+  // 07-09-PLAN.md Task 2 — "오늘 돌아보기" 행 탭 → 회고 모달 진입. 이 파일의 다른
+  // 이동은 전부 이 탭의 nested Stack 안에서 상대 경로(예: 설정 화면 push)로 풀리지만,
+  // 회고 모달은 탭 그룹 밖 루트 Stack 라우트라 상대 경로를 그대로 복사하면 조용히
+  // 잘못된 경로로 풀린다(07-RESEARCH.md Pitfall 3) — 반드시 절대 경로를 쓴다.
+  const handleReflectionEntryPress = useCallback(() => {
+    router.push('/reflection');
+  }, []);
+
+  // 07-09-PLAN.md Task 2 — 엘리먼트 자체를 useMemo로 안정화한다. 리스트 헤더 슬롯에
+  // 인라인 화살표 컴포넌트를 직접 넘기면 매 렌더마다 새 컴포넌트 타입이 생겨 리스트가
+  // 불필요하게 재마운트된다 — 엘리먼트 참조 자체를 고정해 그 문제를 피한다.
+  const reflectionEntryRowElement = useMemo(
+    () => <ReflectionEntryRow onPress={handleReflectionEntryPress} />,
+    [handleReflectionEntryPress]
+  );
 
   const isCapturing = state.phase === 'CAPTURING';
   const showActionCard = state.phase !== 'IDLE' && !isCapturing;
@@ -1263,6 +1280,7 @@ export default function Index() {
             animatedPosition={sheetPosition}
             onRowPress={handleRowPress}
             onDeleteRequest={handleDeleteRequest}
+            ListHeaderComponent={reflectionEntryRowElement}
           />
           <Reanimated.View style={[styles.checkinButtonContainer, floatingButtonStyle]}>
             <Pressable
