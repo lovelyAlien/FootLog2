@@ -15,7 +15,7 @@ import {
 } from './schema';
 
 export const DATABASE_NAME = 'footlog.db';
-export const DATABASE_VERSION = 3;
+export const DATABASE_VERSION = 4;
 
 export type MigratableDb = Pick<SQLiteDatabase, 'getFirstAsync' | 'execAsync' | 'runAsync' | 'getAllAsync'>;
 
@@ -45,8 +45,21 @@ export async function migrateDbIfNeeded(db: MigratableDb): Promise<void> {
     currentDbVersion = 3;
   }
 
+  if (currentDbVersion === 3) {
+    // Plan 07-01(D-05): CREATE문이 아니라 ALTER문으로만 컬럼을 추가한다 — 이미 출하된 v3
+    // DDL(CREATE_APP_SETTINGS_TABLE_SQL)을 사후 수정하지 않기 위함(migration_discipline #2,
+    // 07-RESEARCH.md Pitfall 5). `DEFAULT 21`은 SQLite가 기존 row(있다면)에도 자동으로
+    // 채워주므로, D-05 Discretion("21시가 반드시 포함돼야 창업자 현재 설정이 깨지지
+    // 않는다")을 별도 백필 스크립트 없이 이 한 문장으로 보장한다(07-RESEARCH.md Pattern 7 /
+    // Assumptions Log A3).
+    await db.execAsync(
+      'ALTER TABLE app_settings ADD COLUMN daily_reflection_hour INTEGER NOT NULL DEFAULT 21'
+    );
+    currentDbVersion = 4;
+  }
+
   // 다음 phase에서 컬럼/테이블 추가가 필요하면 여기에 새 블록을 append한다:
-  // if (currentDbVersion === 3) { await db.execAsync('ALTER TABLE ...'); currentDbVersion = 4; }
+  // if (currentDbVersion === 4) { await db.execAsync('ALTER TABLE ...'); currentDbVersion = 5; }
   // 이전 버전 블록들(위쪽 if문들)은 절대 사후 수정하지 않는다 — 이미 그 버전을 통과한
   // 기기는 변경분을 받지 못한다(migration_discipline #2).
 

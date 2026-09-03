@@ -25,9 +25,18 @@ export function isNotificationFrequency(value: unknown): value is NotificationFr
   );
 }
 
+// Plan 07-01(D-05): 회고 알림 시각 런타임 가드. zod/joi 등 검증 라이브러리를 도입하지
+// 않는다 — 06-RESEARCH.md Security Domain V5의 기존 판단과 동일하게, 닫힌 정수 범위
+// (0~23)에는 검증 라이브러리가 과설계다.
+export function isDailyReflectionHour(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 23;
+}
+
 // 순수 함수다(db 인자 없음). row가 null이거나 checkin_frequency가 유니온 밖이면 해당
 // 필드만 PHASE2_NOTIFICATION_SETTINGS 값으로 폴백한다(T-06-01 읽기 시점 fail-safe).
-// dailyReflectionHour는 컬럼이 없으므로 항상 PHASE2_NOTIFICATION_SETTINGS 값을 쓴다.
+// Plan 07-01: daily_reflection_hour도 같은 관례를 따른다 — row.daily_reflection_hour가
+// isDailyReflectionHour를 통과하면 그대로 쓰고, 범위 밖/undefined(구버전 row)면
+// PHASE2_NOTIFICATION_SETTINGS.dailyReflectionHour(21)로 폴백한다.
 export function resolveNotificationSettings(row: AppSettingsRow | null): NotificationSettings {
   if (row === null) {
     return PHASE2_NOTIFICATION_SETTINGS;
@@ -37,10 +46,14 @@ export function resolveNotificationSettings(row: AppSettingsRow | null): Notific
     ? row.checkin_frequency
     : PHASE2_NOTIFICATION_SETTINGS.checkinFrequency;
 
+  const dailyReflectionHour = isDailyReflectionHour(row.daily_reflection_hour)
+    ? row.daily_reflection_hour
+    : PHASE2_NOTIFICATION_SETTINGS.dailyReflectionHour;
+
   return {
     checkinFrequency,
     dailyReflectionEnabled: row.daily_reflection_enabled === 1,
-    dailyReflectionHour: PHASE2_NOTIFICATION_SETTINGS.dailyReflectionHour,
+    dailyReflectionHour,
   };
 }
 
@@ -66,13 +79,24 @@ export async function upsertSettings(
     );
   }
 
+  // Plan 07-01(D-05, T-07-02): 범위 밖 시각이 scheduling.ts의 캘린더 트리거 hour로
+  // 흘러들어가 트리거 등록 자체가 실패하는 것을 막기 위해 쓰기 시점에 거부한다 — 위
+  // checkinFrequency 가드와 동일한 형태.
+  if (!isDailyReflectionHour(settings.dailyReflectionHour)) {
+    throw new Error(
+      'upsertSettings: dailyReflectionHour가 0~23 범위 밖 값입니다: ' +
+        String(settings.dailyReflectionHour)
+    );
+  }
+
   await db.runAsync(
     `INSERT OR REPLACE INTO app_settings (
-       id, checkin_frequency, daily_reflection_enabled, updated_at
-     ) VALUES (?, ?, ?, ?)`,
+       id, checkin_frequency, daily_reflection_enabled, daily_reflection_hour, updated_at
+     ) VALUES (?, ?, ?, ?, ?)`,
     SETTINGS_ROW_ID,
     settings.checkinFrequency,
     settings.dailyReflectionEnabled ? 1 : 0,
+    settings.dailyReflectionHour,
     now
   );
 }

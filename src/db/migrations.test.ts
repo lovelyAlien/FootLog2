@@ -58,11 +58,12 @@ const APP_SETTINGS_COLUMNS = [
   'id',
   'checkin_frequency',
   'daily_reflection_enabled',
+  'daily_reflection_hour',
   'updated_at',
 ];
 
 describe('migrateDbIfNeeded', () => {
-  it('Test 1: 빈 DB에서 checkins/daily_reflections/drafts/app_settings 테이블을 생성하고 user_version을 3으로 올린다', async () => {
+  it('Test 1: 빈 DB에서 checkins/daily_reflections/drafts/app_settings 테이블을 생성하고 user_version을 DATABASE_VERSION으로 올린다', async () => {
     const { db, raw, close } = createTestDb();
     try {
       await migrateDbIfNeeded(db);
@@ -80,7 +81,9 @@ describe('migrateDbIfNeeded', () => {
         user_version: number;
       };
       expect(versionRow.user_version).toBe(DATABASE_VERSION);
-      expect(DATABASE_VERSION).toBe(3);
+      // DATABASE_VERSION 4(Plan 07-01)로 갱신 — 이전 값(3)에 대한 하드코딩 단언은
+      // 07-01에서 daily_reflection_hour 컬럼 마이그레이션이 추가되며 legitimate하게 바뀜.
+      expect(DATABASE_VERSION).toBe(4);
     } finally {
       close();
     }
@@ -522,7 +525,7 @@ describe('migrateDbIfNeeded', () => {
     }
   });
 
-  it('Test B: app_settings 테이블이 정확히 4개 컬럼을 계약대로 갖는다', async () => {
+  it('Test B: app_settings 테이블이 정확히 5개 컬럼을 계약대로 갖는다 (Plan 07-01: daily_reflection_hour 추가)', async () => {
     const { db, raw, close } = createTestDb();
     try {
       await migrateDbIfNeeded(db);
@@ -530,7 +533,7 @@ describe('migrateDbIfNeeded', () => {
       const columns = raw
         .prepare('PRAGMA table_info(app_settings)')
         .all() as { name: string }[];
-      expect(columns).toHaveLength(4);
+      expect(columns).toHaveLength(5);
 
       const columnNames = new Set(columns.map((c) => c.name));
       expect(columnNames).toEqual(new Set(APP_SETTINGS_COLUMNS));
@@ -633,7 +636,9 @@ describe('migrateDbIfNeeded', () => {
       const versionRow = raw.prepare('PRAGMA user_version').get() as {
         user_version: number;
       };
-      expect(versionRow.user_version).toBe(3);
+      // DATABASE_VERSION 4(Plan 07-01)로 갱신 — v2에서 시작한 migrateDbIfNeeded 호출이
+      // 이미 최신 버전까지 연쇄 실행한다(daily_reflection_hour 백필 포함).
+      expect(versionRow.user_version).toBe(DATABASE_VERSION);
     } finally {
       close();
     }
@@ -646,6 +651,94 @@ describe('migrateDbIfNeeded', () => {
 
       const rows = raw.prepare('SELECT COUNT(*) as c FROM app_settings').get() as { c: number };
       expect(rows.c).toBe(0);
+    } finally {
+      close();
+    }
+  });
+
+  it('Test F: 빈 DB에서 migrateDbIfNeeded 실행 후 app_settings가 daily_reflection_hour 컬럼을 NOT NULL DEFAULT 21로 갖는다 (07-01)', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      const columns = raw
+        .prepare('PRAGMA table_info(app_settings)')
+        .all() as { name: string; notnull: number; dflt_value: string | null }[];
+      expect(columns).toHaveLength(5);
+
+      const columnNames = new Set(columns.map((c) => c.name));
+      expect(columnNames).toEqual(
+        new Set(['id', 'checkin_frequency', 'daily_reflection_enabled', 'daily_reflection_hour', 'updated_at'])
+      );
+
+      const hourColumn = columns.find((c) => c.name === 'daily_reflection_hour');
+      expect(hourColumn?.notnull).toBe(1);
+      expect(hourColumn?.dflt_value).toBe('21');
+    } finally {
+      close();
+    }
+  });
+
+  it('Test G: user_version=3 기기를 업그레이드하면 기존 row가 보존된 채 daily_reflection_hour가 21로 백필되고 user_version이 4가 된다 (07-01)', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      // v3 기기 재현: v3 시점의 DDL을 직접 실행하고 user_version을 3으로 세팅한다
+      // (daily_reflection_hour 컬럼은 아직 없는 상태).
+      raw.exec(CREATE_CHECKINS_TABLE_SQL);
+      raw.exec(CREATE_DAILY_REFLECTIONS_TABLE_SQL);
+      raw.exec(CREATE_CHECKINS_INDEXES_SQL);
+      raw.exec(CREATE_DRAFTS_TABLE_SQL);
+      raw.exec(
+        `CREATE TABLE IF NOT EXISTS app_settings (
+          id TEXT PRIMARY KEY NOT NULL,
+          checkin_frequency TEXT NOT NULL,
+          daily_reflection_enabled INTEGER NOT NULL,
+          updated_at TEXT NOT NULL
+        );`
+      );
+      raw.exec('PRAGMA user_version = 3');
+
+      raw
+        .prepare(
+          `INSERT INTO app_settings (id, checkin_frequency, daily_reflection_enabled, updated_at)
+           VALUES (?, ?, ?, ?)`
+        )
+        .run('settings', 'every3h', 1, '2026-09-01T00:00:00.000Z');
+
+      await migrateDbIfNeeded(db);
+
+      const row = raw.prepare('SELECT * FROM app_settings WHERE id = ?').get('settings') as {
+        checkin_frequency: string;
+        daily_reflection_enabled: number;
+        daily_reflection_hour: number;
+        updated_at: string;
+      };
+      expect(row.checkin_frequency).toBe('every3h');
+      expect(row.daily_reflection_enabled).toBe(1);
+      expect(row.daily_reflection_hour).toBe(21);
+      expect(row.updated_at).toBe('2026-09-01T00:00:00.000Z');
+
+      const versionRow = raw.prepare('PRAGMA user_version').get() as { user_version: number };
+      expect(versionRow.user_version).toBe(4);
+      expect(DATABASE_VERSION).toBe(4);
+    } finally {
+      close();
+    }
+  });
+
+  it('Test H: migrateDbIfNeeded를 연속 2회 실행해도 결과가 동일하다 (idempotent, v4, 07-01)', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+      await migrateDbIfNeeded(db);
+
+      const columns = raw
+        .prepare('PRAGMA table_info(app_settings)')
+        .all() as { name: string }[];
+      expect(columns.map((c) => c.name)).toContain('daily_reflection_hour');
+
+      const versionRow = raw.prepare('PRAGMA user_version').get() as { user_version: number };
+      expect(versionRow.user_version).toBe(4);
     } finally {
       close();
     }
