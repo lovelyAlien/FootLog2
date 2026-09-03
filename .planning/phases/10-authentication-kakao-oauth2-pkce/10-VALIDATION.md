@@ -1,10 +1,11 @@
 ---
 phase: 10
 slug: authentication-kakao-oauth2-pkce
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: task-3-pending-founder
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-09-02
+updated: 2026-09-03
 ---
 
 # Phase 10 — Validation Strategy
@@ -39,13 +40,13 @@ created: 2026-09-02
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 10-01-XX | 01 | 1 | REQ-auth-kakao-oauth | — | 카카오 콘솔 앱 키/시크릿이 env var로만 존재(D-11 계승) | checkpoint | N/A(창업자 확인) | ❌ W0 | ⬜ pending |
-| 10-02-XX | 02 | 1 | REQ-auth-kakao-oauth | — | V4 마이그레이션 nullable+UNIQUE, 플레이스홀더 로우 보존 | integration | `./gradlew test --tests "*FlywayMigrationTest"` | ❌ W0 | ⬜ pending |
-| 10-03-XX | 03 | 1 | REQ-auth-session-token | T-10-25 | access/refresh JWT 발급, token_use 클레임 구분(2개 디코더) | unit/integration | `./gradlew test --tests "*JwtIssuerServiceTest"` | ❌ W0 | ⬜ pending |
-| 10-04-XX | 04 | 2 | REQ-auth-kakao-oauth | T-10-15 | `/v2/user/me` 조회(client_secret/code_verifier 사용 안 함), find-or-create, JWT 발급 | integration | `./gradlew test --tests "*KakaoAuthServiceTest"` | ❌ W0 | ⬜ pending |
-| 10-06-XX | 06 | 2 | REQ-auth-session-token | — | SecureStore 토큰 보관, 만료 임박 선제 갱신, authorizedFetch | unit | `npm test -- --testPathPattern=auth` | ❌ W0 | ⬜ pending |
-| 10-05-XX | 05 | 3 | REQ-auth-kakao-oauth, REQ-auth-session-token | T-10-01(actuator permitAll 유지) | 두 엔드포인트 계약, 보호된 엔드포인트 401, refresh는 token_use 검증 | integration | `./gradlew test --tests "*AuthControllerTest" --tests "*SecurityConfigTest"` | ❌ W0 | ⬜ pending |
-| 10-07-XX | 07 | 4 | REQ-auth-kakao-oauth, REQ-auth-session-token | — | 개발자 검증 화면, 실기기 카카오 왕복 확인 | manual + simulator | 시뮬레이터 화면 전환/배선 확인 + 실기기 카카오 계정 로그인(창업자) | ❌ W0 | ⬜ pending |
+| 10-01-XX | 01 | 1 | REQ-auth-kakao-oauth | — | 카카오 콘솔 앱 키/시크릿이 env var로만 존재(D-11 계승) | checkpoint | N/A(창업자 확인) | ✅ | ✅ green |
+| 10-02-XX | 02 | 1 | REQ-auth-kakao-oauth | — | V4 마이그레이션 nullable+UNIQUE, 플레이스홀더 로우 보존 | integration | `./gradlew test --tests "*FlywayMigrationTest"` | ✅ | ✅ green |
+| 10-03-XX | 03 | 1 | REQ-auth-session-token | T-10-25 | access/refresh JWT 발급, token_use 클레임 구분(2개 디코더) | unit/integration | `./gradlew test --tests "*JwtIssuerServiceTest"` | ✅ | ✅ green |
+| 10-04-XX | 04 | 2 | REQ-auth-kakao-oauth | T-10-15 | `/v2/user/me` 조회(client_secret/code_verifier 사용 안 함), find-or-create, JWT 발급 | integration | `./gradlew test --tests "*KakaoAuthServiceTest"` | ✅ | ✅ green |
+| 10-06-XX | 06 | 2 | REQ-auth-session-token | — | SecureStore 토큰 보관, 만료 임박 선제 갱신, authorizedFetch | unit | `npm test -- --testPathPattern=auth` | ✅ | ✅ green |
+| 10-05-XX | 05 | 3 | REQ-auth-kakao-oauth, REQ-auth-session-token | T-10-01(actuator permitAll 유지) | 두 엔드포인트 계약, 보호된 엔드포인트 401, refresh는 token_use 검증 | integration | `./gradlew test --tests "*AuthControllerTest" --tests "*SecurityConfigTest"` | ✅ | ✅ green |
+| 10-07-XX | 07 | 4 | REQ-auth-kakao-oauth, REQ-auth-session-token | — | 개발자 검증 화면, 실기기 카카오 왕복 확인 | manual + simulator | 시뮬레이터 화면 전환/배선 확인(Task 1/2, Claude 완료) + 실기기 카카오 계정 로그인(Task 3, 창업자 대기) | ✅ | 🔶 Task 1/2 green, Task 3 pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky. Task ID 접미사(`-XX`)는 실행 단계에서 실제 태스크 번호로 확정.*
 
@@ -53,12 +54,12 @@ created: 2026-09-02
 
 ## Wave 0 Requirements
 
-- [ ] `backend/src/test/kotlin/com/footlog/backend/auth/KakaoAuthServiceTest.kt` — REQ-auth-kakao-oauth
-- [ ] `backend/src/test/kotlin/com/footlog/backend/FlywayMigrationTest.kt` 확장(V4 컬럼/UNIQUE 제약 + 플레이스홀더 로우 보존 검증 테스트 추가) — REQ-auth-kakao-oauth
-- [ ] `backend/src/test/kotlin/com/footlog/backend/auth/JwtIssuerServiceTest.kt` — REQ-auth-session-token
-- [ ] `backend/src/test/kotlin/com/footlog/backend/config/SecurityConfigTest.kt` — REQ-auth-session-token
-- [ ] `backend/src/test/kotlin/com/footlog/backend/auth/AuthControllerTest.kt` — REQ-auth-session-token
-- [ ] `MockRestServiceServer` 기반 카카오 API 모킹 헬퍼(공통 테스트 유틸) — 신규 작성 필요
+- [x] `backend/src/test/kotlin/com/footlog/backend/auth/KakaoAuthServiceTest.kt` — REQ-auth-kakao-oauth
+- [x] `backend/src/test/kotlin/com/footlog/backend/FlywayMigrationTest.kt` 확장(V4 컬럼/UNIQUE 제약 + 플레이스홀더 로우 보존 검증 테스트 추가) — REQ-auth-kakao-oauth
+- [x] `backend/src/test/kotlin/com/footlog/backend/auth/JwtIssuerServiceTest.kt` — REQ-auth-session-token
+- [x] `backend/src/test/kotlin/com/footlog/backend/config/SecurityConfigTest.kt` — REQ-auth-session-token
+- [x] `backend/src/test/kotlin/com/footlog/backend/auth/AuthControllerTest.kt` — REQ-auth-session-token
+- [x] `FakeKakaoUserInfoClient` 기반 카카오 API 테스트 더블(공통 테스트 유틸) — 10-04에서 작성 완료
 
 ---
 
