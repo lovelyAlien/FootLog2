@@ -35,7 +35,7 @@ patterns-established:
 
 requirements-completed: [REQ-auth-kakao-oauth]
 
-duration: TBD
+duration: ~15min
 completed: 2026-09-03
 ---
 
@@ -59,7 +59,7 @@ completed: 2026-09-03
 
 1. **Task 1: 카카오 개발자 콘솔 앱 등록(창업자 완료 확인)** - `cde99a2` (docs)
 2. **Task 2: expo-secure-store 패키지 정통성 승인 기록** - `69bf94f` (docs)
-3. **Task 3: .env.example 환경변수 계약 + 시크릿 커밋 회귀 가드** - `PENDING` (feat)
+3. **Task 3: .env.example 환경변수 계약 + 시크릿 커밋 회귀 가드** - `dde16d6` (feat)
 
 **Plan metadata:** `PENDING` (docs: complete plan)
 
@@ -164,6 +164,12 @@ None - 카카오 개발자 콘솔 앱 등록과 `.env` 값 채우기는 창업�
 - 10-02(V4 마이그레이션)/10-03(JWT 발급·검증 인프라, 이미 실행됨)/10-04/10-06/10-07이 참조할 환경변수 이름 계약(`.env.example`)이 고정됨
 - `expo-secure-store` 설치 승인이 완료되어 10-06이 차단 없이 진행 가능
 - 카카오 개발자 콘솔의 네이티브 앱 키가 로컬 `.env`에 존재하므로 10-07(클라이언트 SDK 초기화)이 값 발급을 기다릴 필요 없음
+
+## Self-Check: PASSED
+
+- 파일 존재 확인: `.env.example`, `src/auth/envContract.test.ts`, `10-01-SUMMARY.md`, `10-VALIDATION.md`, `.gitignore` 전부 FOUND
+- 커밋 존재 확인: `cde99a2`(Task 1), `69bf94f`(Task 2), `dde16d6`(Task 3) 전부 FOUND
+- `npm test -- src/auth/envContract.test.ts` 재실행 — 7/7 통과 확인
 
 ---
 *Phase: 10-authentication-kakao-oauth2-pkce*
