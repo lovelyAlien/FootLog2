@@ -9,6 +9,7 @@ requires: []
 provides:
   - "카카오 개발자 콘솔 앱 등록 완료(iOS 번들 ID `com.jaeseungchoun.footlog`, 카카오 로그인 활성화, 이메일 동의항목 미설정)"
   - "로컬 `.env`(git-ignored)에 KAKAO_NATIVE_APP_KEY / JWT_SECRET / EXPO_PUBLIC_API_BASE_URL 유효값 확보"
+  - "expo-secure-store 패키지 정통성 창업자 승인(설치는 10-06 소관, 이번엔 게이트만)"
 affects: [10-02, 10-03, 10-04, 10-05, 10-06, 10-07]
 
 # Tech tracking
@@ -23,6 +24,7 @@ key-files:
 
 key-decisions:
   - "카카오 콘솔에서 REST API 키/client_secret은 발급하지 않음 — D-14 AMENDMENT로 백엔드가 카카오 토큰 교환을 하지 않으므로 네이티브 앱 키만 필요"
+  - "expo-secure-store는 이번 플랜에서 설치하지 않음 — Task 2는 승인 게이트일 뿐, 설치는 10-06 소관"
 
 patterns-established: []
 
@@ -59,6 +61,21 @@ git check-ignore -q .env                               → 성공(정상적으�
 `JWT_SECRET`이 32바이트 이상이므로 10-03의 `NimbusJwtEncoder`/`NimbusJwtDecoder` 기동 실패(10-RESEARCH.md Pitfall 2) 위험이 없다.
 
 10-VALIDATION.md의 Manual-Only Verifications 첫 행을 완료 상태로 갱신하고, AMENDMENT로 불필요해진 REST API 키/client_secret 언급을 실제 수행 내용(네이티브 앱 키만 발급)에 맞게 정정했다.
+
+## Task 2 — expo-secure-store 패키지 정통성 확인 (완료, 창업자 승인)
+
+10-06(클라이언트 토큰 저장)이 새로 설치해야 하는 `expo-secure-store`는 10-RESEARCH.md `## Package Legitimacy Audit` 감사 표에 없는 `[ASSUMED]` 패키지였다. 창업자가 아래 두 곳을 직접 확인하고 승인("승인")했다:
+
+- https://www.npmjs.com/package/expo-secure-store — Repository가 `github.com/expo/expo`(Expo 공식 모노레포)를 가리키고, 주간 다운로드 수·최근 배포일이 1st-party Expo 모듈 수준임을 확인
+- https://docs.expo.dev/versions/latest/sdk/securestore/ — Expo 공식 문서에 SDK 모듈로 등재되어 있음을 확인
+
+10-RESEARCH.md `## Package Legitimacy Audit` 표와 동일한 형식으로 기록:
+
+| Package | Registry | Verification Method | Source Repo | Disposition |
+|---------|----------|---------------------|--------------|-------------|
+| `expo-secure-store` | npm | 창업자가 npm 레지스트리(Repository/Weekly Downloads/최근 배포일) + Expo 공식 SDK 문서를 직접 확인 | `github.com/expo/expo` | Approved `[VERIFIED: 창업자 수동 확인 2026-09-03]` |
+
+**설치는 이번 플랜에서 하지 않았다** — `grep -c 'expo-secure-store' package.json` = 0. 이 태스크는 승인 게이트이며, 실제 설치는 10-06 Task 1의 작업이다.
 
 ---
 *Phase: 10-authentication-kakao-oauth2-pkce*
