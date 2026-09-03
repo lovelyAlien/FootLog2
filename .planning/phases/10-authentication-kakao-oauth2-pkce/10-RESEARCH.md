@@ -136,9 +136,8 @@ None — 10-CONTEXT.md 논의는 phase 스코프 안에 머물렀다. 로그아�
 
 | Capability | Primary Tier | Secondary Tier | Rationale |
 |------------|-------------|----------------|-----------|
-| 카카오 인가 코드 획득(SDK 앱 전환/웹뷰 폴백) | Browser/Client | — | 네이티브 SDK가 기기 내에서 처리, 서버는 관여하지 않음(D-13) |
-| 인가 코드↔카카오 토큰 교환 | API/Backend | 외부 서비스(카카오) | D-14가 명시적으로 서버 소유로 지정 — 카카오 액세스 토큰이 클라이언트에 노출되지 않아야 함 |
-| 카카오 사용자 정보 조회(`/v2/user/me`) | API/Backend | 외부 서비스(카카오) | 백엔드가 교환받은 카카오 액세스 토큰으로 즉시 호출, 토큰 자체는 저장하지 않고 폐기 |
+| 카카오 로그인(액세스 토큰 획득) | Browser/Client | — | 네이티브 SDK가 기기 내에서 인가+토큰 교환까지 전부 처리, 서버는 관여하지 않음(D-13, ⚠️ AMENDMENT — D-14 수정으로 인가 코드↔토큰 교환은 서버 책임에서 완전히 제외됨) |
+| 카카오 사용자 정보 조회(`/v2/user/me`) | API/Backend | 외부 서비스(카카오) | 백엔드가 클라이언트로부터 전달받은 카카오 액세스 토큰으로 즉시 호출, 토큰 자체는 저장하지 않고 폐기(D-14 AMENDMENT) |
 | 사용자 계정 find-or-create(kakao_id 매칭) | API/Backend | Database/Storage | 리포지토리 계층이 UNIQUE(kakao_id) 제약에 기대어 조회/생성 분기 |
 | 자체 JWT 발급(access+refresh) | API/Backend | — | `NimbusJwtEncoder`가 프로세스 내에서 서명, 외부 IdP 위임 없음(D-01 stateless 원칙) |
 | 자체 JWT 검증(보호된 엔드포인트) | API/Backend | — | Spring Security `oauth2ResourceServer(jwt)` 필터 체인이 모든 요청에서 검증 |
@@ -584,10 +583,15 @@ JWT 발급/검증, SecurityFilterChain). 중복을 피하기 위해 여기서는
 | A8 | 리프레시 토큰을 회전(rotation)하지 않고(재사용 가능한 단일 refresh JWT를 30일간 유지) 서버측 폐기(revocation) 목록도 두지 않는다는 설계(D-01의 "Redis/세션 스토어 없이" 원칙을 리프레시 토큰에도 그대로 적용) | Architecture Patterns > System Architecture Diagram | 중간 — 리프레시 토큰이 유출되면 만료(30일)까지 무효화할 방법이 없음. 1인 프로젝트 초기 규모에서는 D-01의 "인프라 추가 없이" 원칙과 일관되지만, 사용자 수가 늘면 재검토 필요(로그아웃/연결끊기 자체가 이번 phase 스코프 밖이므로 자연스러운 후속 논의 대상) |
 | A9 | `@react-native-seoul/kakao-login`(`crossplatformkorea/react-native-kakao-login`)의 `login()`/`loginWithKakaoAccount()`가 인가 코드가 아니라 카카오 액세스 토큰을 직접 반환한다는 판단 — WebFetch로 GitHub README를 요약 조회한 결과에 근거, 실제 SDK를 설치·실행해 검증하지는 않음 | Summary, Open Questions #1 | 높음 — 이 판단이 틀렸다면(즉 SDK에 인가 코드만 반환하는 저수준 메서드가 실제로 존재한다면) Open Questions #1의 권고(expo-auth-session으로 수동 PKCE 구현)가 불필요한 우회가 된다. 계획/실행 단계에서 SDK를 실제로 설치해 타입 정의(`.d.ts`)를 직접 확인하는 검증이 필요 |
 
-## Open Questions
+## Open Questions (RESOLVED — 계획 단계에서 전부 해소됨)
 
-1. **[최우선] D-13(네이티브 SDK)과 D-14(인가 코드+PKCE만 클라이언트→백엔드 전달)가 실제
+1. **[최우선] (RESOLVED) D-13(네이티브 SDK)과 D-14(인가 코드+PKCE만 클라이언트→백엔드 전달)가 실제
    SDK 동작과 충돌할 가능성**
+   - **RESOLVED (2026-09-02, 계획 단계):** `@react-native-seoul/kakao-login` v6.0.4를 실제
+     설치해 `src/index.d.ts`/`src/types/index.d.ts`를 직접 확인한 결과, "인가 코드만 받는"
+     저수준 API는 존재하지 않음을 확인(HIGH confidence로 격상). 창업자가 D-14를 완화하는
+     쪽(옵션 a)을 선택 — 10-CONTEXT.md D-14 AMENDMENT 및 이 문서 최상단 ⚠️ AMENDMENT 블록
+     참고. 10-04/10-05/10-07 PLAN.md에 그대로 반영되어 plan-checker 검증 통과.
    - What we know: `@react-native-seoul/kakao-login` 계열 SDK의 표준 `login()` API는 카카오
      인가 코드↔토큰 교환을 SDK 내부에서 완료하고 `KakaoOAuthToken`(액세스/리프레시/ID
      토큰)을 JS 레이어에 직접 반환한다(README 기반, A9 — MEDIUM confidence).
@@ -609,7 +613,8 @@ JWT 발급/검증, SecurityFilterChain). 중복을 피하기 위해 여기서는
      엔드포인트 설계(Pattern 1)는 D-14 원안 그대로 준비해뒀으므로, 어느 쪽으로 결론나든
      백엔드 쪽 재작업은 최소화된다(코드 경로만 다르고 요청 DTO 형태가 약간 달라질 뿐).
 
-2. **리프레시 토큰 회전(rotation) 여부**
+2. **(RESOLVED) 리프레시 토큰 회전(rotation) 여부**
+   - **RESOLVED:** 회전 없음(A8 그대로 확정) — 10-03/10-05/10-06 PLAN.md에 구현됨.
    - What we know: D-01~D-04는 access/refresh 이중 토큰과 TTL만 명시했고, 리프레시 시
      refresh 토큰 자체를 재발급(회전)할지는 명시하지 않았다(Claude's Discretion 범위로 보임).
    - What's unclear: 회전을 도입하면 탈취된 refresh 토큰의 재사용 탐지(reuse detection)가
@@ -619,7 +624,12 @@ JWT 발급/검증, SecurityFilterChain). 중복을 피하기 위해 여기서는
      재사용 가능)으로 계획하고, 이 트레이드오프를 PLAN.md에도 명시적으로 남긴다. 사용자 규모가
      커지면 별도 phase에서 재검토.
 
-3. **JWT 시크릿의 로컬 개발 기본값 정책**
+3. **(RESOLVED) JWT 시크릿의 로컬 개발 기본값 정책**
+   - **RESOLVED:** Pitfall 2 절충안을 채택하되, 계획 단계에서 한 단계 더 정확히 다듬음 — 이
+     프로젝트의 통합 테스트가 프로파일 없이(`no active profile`) 실행되므로 기본값은
+     `application-local.yml`이 아니라 **공통(`application.yml`)** 프로파일에 둬야 모든
+     `@SpringBootTest`가 기동한다(10-03 PLAN.md 반영). staging은 여전히 기본값 없는
+     `${JWT_SECRET}`으로 강제.
    - What we know: Phase 9의 D-11("비밀값은 환경변수로만, 하드코딩 금지")은 DB 접속정보를
      염두에 둔 결정이었고, 로컬은 `spring-boot-docker-compose`가 자동으로 접속정보를 주입해
      사람이 직접 값을 다룰 필요가 없었다.
