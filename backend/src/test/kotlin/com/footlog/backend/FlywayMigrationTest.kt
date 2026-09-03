@@ -23,7 +23,8 @@ class FlywayMigrationTest {
     @Autowired
     lateinit var jdbcTemplate: JdbcTemplate
 
-    private val usersColumns = setOf("id", "created_at")
+    // Phase 10(V4)이 추가한 카카오 프로필 3개 컬럼을 포함한다(D-08/D-11).
+    private val usersColumns = setOf("id", "created_at", "kakao_id", "nickname", "profile_image_url")
 
     private val checkinsColumns = setOf(
         "id", "user_id", "timestamp_utc", "local_date_key", "timezone_at_capture",
@@ -80,22 +81,24 @@ class FlywayMigrationTest {
         )
     }
 
-    // Test 1: flyway_schema_history에 version 1, 2, 3이 각각 success = true로 기록된다
+    // Test 1: flyway_schema_history에 version 1, 2, 3, 4가 각각 success = true로 기록된다
+    // (Phase 10 V4 추가로 목록 확장)
     @Test
-    fun `flyway_schema_history에 V1 V2 V3가 success로 기록된다`() {
+    fun `flyway_schema_history에 V1 V2 V3 V4가 success로 기록된다`() {
         val rows = jdbcTemplate.queryForList(
-            "SELECT version, success FROM flyway_schema_history WHERE version IN ('1', '2', '3') ORDER BY version",
+            "SELECT version, success FROM flyway_schema_history WHERE version IN ('1', '2', '3', '4') ORDER BY version",
         )
-        assertEquals(3, rows.size, "V1~V3 마이그레이션 이력 3건이 존재해야 한다")
-        assertEquals(listOf("1", "2", "3"), rows.map { it["version"] as String })
+        assertEquals(4, rows.size, "V1~V4 마이그레이션 이력 4건이 존재해야 한다")
+        assertEquals(listOf("1", "2", "3", "4"), rows.map { it["version"] as String })
         rows.forEach { row ->
             assertTrue(row["success"] as Boolean, "version ${row["version"]} 마이그레이션이 success=true여야 한다")
         }
     }
 
-    // Test 2: users 테이블 컬럼 집합이 정확히 {id, created_at}이다
+    // Test 2: users 테이블 컬럼 집합이 정확히 {id, created_at, kakao_id, nickname, profile_image_url}이다
+    // (Phase 10 V4가 카카오 프로필 3개 컬럼을 추가함, D-08/D-11)
     @Test
-    fun `users 테이블 컬럼 집합이 정확히 id created_at이다`() {
+    fun `users 테이블 컬럼 집합이 정확히 id created_at kakao_id nickname profile_image_url이다`() {
         assertEquals(usersColumns, columnNames("users"))
     }
 
@@ -142,7 +145,29 @@ class FlywayMigrationTest {
         assertEquals("uuid", dataType("daily_reflections", "user_id"))
     }
 
-    // Test 6: NOT NULL 대비 — accuracy_meters/note/photo_path/new_place_answer/free_reflection만 nullable
+    // Test A(신규): users.kakao_id의 data_type이 bigint다 — INTEGER면 실패해야 한다(Pitfall 3,
+    // 카카오 회원번호는 Long이고 Int로 캐스팅하면 overflow로 음수가 되는 실사고 보고가 있다).
+    @Test
+    fun `users kakao_id의 데이터 타입이 bigint다`() {
+        assertEquals("bigint", dataType("users", "kakao_id"), "kakao_id는 BIGINT여야 한다(Pitfall 3)")
+    }
+
+    // Test B(신규): users.nickname/profile_image_url의 data_type이 text이고 길이 상한이 없다
+    // (A7 — 카카오 공식 문서가 두 필드의 길이 상한을 명시하지 않으므로 VARCHAR(N)으로 임의 추정하지 않음).
+    @Test
+    fun `users nickname과 profile_image_url의 데이터 타입이 text이고 길이 상한이 없다`() {
+        assertEquals("text", dataType("users", "nickname"))
+        assertNull(charMaxLength("users", "nickname"), "nickname은 TEXT라 character_maximum_length가 NULL이어야 한다")
+        assertEquals("text", dataType("users", "profile_image_url"))
+        assertNull(
+            charMaxLength("users", "profile_image_url"),
+            "profile_image_url은 TEXT라 character_maximum_length가 NULL이어야 한다",
+        )
+    }
+
+    // Test 6: NOT NULL 대비 — accuracy_meters/note/photo_path/new_place_answer/free_reflection/
+    // kakao_id/nickname/profile_image_url만 nullable(D-11 — 플레이스홀더 로우 공존을 위해 신규
+    // 3개 컬럼도 nullable이어야 한다)
     @Test
     fun `nullable 제약이 계약대로다`() {
         assertTrue(isNullable("checkins", "accuracy_meters"))
@@ -150,6 +175,12 @@ class FlywayMigrationTest {
         assertTrue(isNullable("checkins", "photo_path"))
         assertTrue(isNullable("daily_reflections", "new_place_answer"))
         assertTrue(isNullable("daily_reflections", "free_reflection"))
+        assertTrue(isNullable("users", "kakao_id"), "users.kakao_id는 nullable이어야 한다(D-11)")
+        assertTrue(isNullable("users", "nickname"), "users.nickname은 nullable이어야 한다(D-11)")
+        assertTrue(
+            isNullable("users", "profile_image_url"),
+            "users.profile_image_url은 nullable이어야 한다(D-11)",
+        )
 
         val notNullColumns = listOf(
             "checkins" to "id",
@@ -216,6 +247,35 @@ class FlywayMigrationTest {
         assertEquals(1, uniqueCount, "daily_reflections에 UNIQUE(user_id, date) 제약이 정확히 1건 존재해야 한다")
     }
 
+    // Test C(신규): users에 kakao_id 단일 컬럼만 포함하는 UNIQUE 제약이 정확히 1개 존재한다
+    // (D-08 — 동일 카카오 계정의 중복 가입을 DB 레벨에서 차단). daily_reflections의 UNIQUE(user_id,
+    // date) 단언(Test 8)을 그대로 본떠서 컬럼 1개 버전으로 바꾼 것 — 제약 이름이 아니라 컬럼
+    // 구성으로 단언한다(이름은 구현 세부사항).
+    @Test
+    fun `users에 kakao_id 단일 컬럼 UNIQUE 제약이 존재한다`() {
+        val uniqueCount = jdbcTemplate.queryForObject(
+            """
+            SELECT COUNT(*) FROM (
+              SELECT tc.constraint_name
+              FROM information_schema.table_constraints tc
+              JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+              WHERE tc.constraint_type = 'UNIQUE' AND tc.table_name = 'users'
+              GROUP BY tc.constraint_name
+              HAVING COUNT(*) = 1 AND bool_and(kcu.column_name = 'kakao_id')
+            ) sub
+            """.trimIndent(),
+            Int::class.javaObjectType,
+        )
+        assertEquals(1, uniqueCount, "users에 kakao_id 단일 컬럼 UNIQUE 제약이 정확히 1건 존재해야 한다(D-08)")
+    }
+
+    // Test D(신규): users 테이블에 email이라는 이름의 컬럼이 존재하지 않는다
+    // (D-05 — 이메일 미저장이 스키마 레벨에서 강제됨)
+    @Test
+    fun `users 테이블에 email 컬럼이 존재하지 않는다`() {
+        assertTrue(!columnNames("users").contains("email"), "users 테이블에 email 컬럼이 없어야 한다(D-05)")
+    }
+
     // Test 9: checkins.id와 daily_reflections.id의 column_default가 NULL이다 — 서버가 ID를 생성하지 않음
     @Test
     fun `checkins id와 daily_reflections id에 DB 기본값 생성기가 없다`() {
@@ -242,6 +302,8 @@ class FlywayMigrationTest {
     }
 
     // Test 12: users 테이블에 id = 00000000-0000-0000-0000-000000000001 로우가 정확히 1건 존재한다(D-02 플레이스홀더)
+    // + 그 로우의 kakao_id/nickname/profile_image_url이 전부 NULL이다(D-10/D-11 — V4가 V1의
+    // INSERT문을 수정하지 않으므로 플레이스홀더 로우는 새 컬럼이 전부 NULL인 채로 살아남는다).
     @Test
     fun `users 테이블에 플레이스홀더 로우가 정확히 1건 존재한다`() {
         val count = jdbcTemplate.queryForObject(
@@ -250,5 +312,13 @@ class FlywayMigrationTest {
             PLACEHOLDER_USER_ID,
         )
         assertEquals(1, count)
+
+        val row = jdbcTemplate.queryForMap(
+            "SELECT kakao_id, nickname, profile_image_url FROM users WHERE id = ?::uuid",
+            PLACEHOLDER_USER_ID,
+        )
+        assertNull(row["kakao_id"], "플레이스홀더 로우의 kakao_id는 NULL이어야 한다(D-10/D-11)")
+        assertNull(row["nickname"], "플레이스홀더 로우의 nickname은 NULL이어야 한다(D-10/D-11)")
+        assertNull(row["profile_image_url"], "플레이스홀더 로우의 profile_image_url은 NULL이어야 한다(D-10/D-11)")
     }
 }
