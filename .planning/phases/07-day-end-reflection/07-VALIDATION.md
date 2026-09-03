@@ -2,7 +2,7 @@
 phase: 07
 slug: day-end-reflection
 status: executed
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: true
 created: 2026-09-02
 ---
@@ -85,22 +85,40 @@ created: 2026-09-02
 
 ---
 
+## Task 2 — 시뮬레이터 자체 검증 결과 (2026-09-03, Claude 직접 수행)
+
+절차: iOS Simulator 패널 attach → 최근 DerivedData 빌드(`FootLog-egavmkuofntpqmdojqtfyhrsxmyu`) launch → `npx expo start --dev-client`(포트 8090, 로컬 포트 8081이 이 머신의 다른 프로젝트에 점유돼 있어 회피) → `exp+footlog://` 커스텀 스킴으로 라우트 딥링크 → 탭/텍스트입력/터치패스로 조작. `xcrun simctl location set`으로 GPS 좌표 고정(37.5665,126.9780) 후 실제 체크인 1건을 만들어 지도 핀/시간표시가 있는 상태로 검증했다.
+
+| 항목 | 결과 | 비고 |
+|------|------|------|
+| A. 오늘 돌아보기 진입 행 — 체크인 0건 상태 | ✅ PASS | 앱 최초 실행 직후(체크인 0건) 스크린샷에서 바텀시트 peek에 "오늘 돌아보기" 행이 이미 렌더됨을 직접 확인. 07-RESEARCH.md Assumptions Log A2(`ListHeaderComponent` 지원 여부) 해소됨. |
+| B. 모달 프레젠테이션 | ✅ PASS | `/reflection` 딥링크로 연 모달이 탭바를 포함해 화면 전체를 덮음(탭바 미노출 직접 관찰). 헤더에 ✕만 있고 날짜 타이틀 없음(D-03) 확인. ✕ 탭으로 정상적으로 닫힘. |
+| C. 정적 지도 | ✅ PASS | 체크인 1건 상태에서 지도에 핀 1개만 표시(궤적선 없음 — graceful degradation). 핀 색상은 Pin(terracotta) 계열, accent 아님. |
+| D. 자동저장 | ✅ PASS | 두 경로 직접 확인: (1) 프롬프트 입력 직후 ✕로 즉시 닫고 재진입 → 값 유지(닫기 flush), (2) 추가 입력 후 HOME 버튼으로 백그라운드 전환 → 재진입 → 값 유지(AppState flush). 두 경우 모두 "저장 중" 등 문구 없이 조용히 저장됨. 5초 디바운스 자체의 정밀 타이밍은 07-02 autosaveController.test.ts(9/9 green, jest fake timers)가 커버. |
+| E. 진입 행 D-02(완료 후에도 모습 불변) | ⚠️ 코드 리뷰로 대체 | 시뮬레이터에서 회고 작성 전/후 진입 행을 나란히 스크린샷 비교하지는 못했음(세션 내 시간 제약) — `ReflectionEntryRow.tsx` 소스에 완료 상태를 나타내는 prop/조건부 렌더링이 전혀 없음을 코드로 확인(07-09-SUMMARY.md D-02 계약과 일치), `today-wiring.test.ts` 회귀 가드가 이를 정적으로 고정. |
+| F. 과거 날짜 인라인 편집 | ✅ PASS (일부는 코드 리뷰로 대체) | 2026-09-02 과거 날짜 뷰 진입 → 시트를 끝까지 드래그해 체크인(11:00) 아래 회고 프롬프트 2칸 확인, "오늘의 흔적" 헤더/40×40 썸네일 없음(D-04) 확인, 프롬프트에 입력 가능함을 확인. **날짜 전환 시 값 귀속(T-07-05)**은 시뮬레이터에서 스크러버를 정밀 드래그하지 못해(작은 터치 타겟) 직접 재현하지 못했음 — `calendar-wiring.test.ts`의 정적 계약 테스트와 `PastDateScreen.tsx`의 `activeDateKeyRef` 가드 코드 리뷰로 대체. |
+| G. 설정 4번째 행 | ⚠️ 부분 확인 | "회고 알림 시각" 행이 토글 바로 아래 정확한 위치에 기본값 "21시"로 렌더됨을 직접 확인. 행을 탭해 액션시트(19~23시)를 여는 상호작용은 여러 차례 시도했으나 시뮬레이터에서 네이티브 `ActionSheetIOS`가 스크린샷에 캡처되지 않아(또는 탭 좌표가 정확히 맞지 않아) 직접 확인하지 못함 — `settings-wiring.test.ts`의 신규 10개 테스트(Test 26–35, 전부 green)가 상수/핸들러 배선을 정적으로 검증. |
+| H. 알림 탭 딥링크(부분 검증) | ⚠️ 시뮬레이터로 확인 불가한 부분 발견 | `xcrun simctl push`로 알림을 보냈으나 (1) 앱이 포그라운드 상태라 배너가 표시되지 않았고, (2) 더 근본적으로 `simctl push`는 **원격(remote) 푸시**를 시뮬레이션하므로 시스템이 `UNNotificationRequest.identifier`를 자동 생성한다 — `_layout.tsx`의 딥링크 게이트는 **로컬 스케줄 알림**에만 앱이 직접 부여하는 `DAILY_REFLECTION_ID`('daily_reflection') 식별자를 정확히 매칭하는 방식이라, `simctl push` 경로로는 이 특정 조건을 재현할 수 없음(원천적 도구 한계, 07-10 계획 자체가 이미 "자연 발화 여부는 확인 불가"로 예견한 범주에 포함됨). 실제 로컬 알림 발화 경로는 `reflection-wiring.test.ts`의 정적 배선 테스트로만 커버되며, 실제 탭 동작은 Task 3(실기기)에서 확인한다. |
+| I. DESIGN.md 정합성 | ⚠️ 부분 확인 | 회고 화면 전체에서 accent 색상 미사용 확인(핀 포함). 한글 텍스트는 Newsreader가 한글 글리프를 지원하지 않아 시스템 폰트로 폴백되는 것이 이미 알려진/의도된 동작이라(01-02 Newsreader 번들 결정 참고) 세리프/시스템 폰트 시각적 구분이 한글 프롬프트에서는 무의미함 — 코드 리뷰로 typography 토큰 적용을 확인. 저장 실패 문구의 muted 스타일은 재현하지 못해(의도적 오류 주입 없음) `ReflectionPrompts.tsx`의 `errorText`/`retryText` 스타일이 `SettingsScreen.tsx`와 동일함을 코드로 확인. |
+
+---
+
 ## Manual-Only Verifications
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| 매일 고정 시각 알림의 실제 발화(잠금화면 노출, 탭 시 딥링크 동작) | REQ-reflection-notification | OS 알림 스케줄러의 실기기 타이밍/잠금화면 렌더링은 시뮬레이터로 원천 재현 불가 | 실기기에서 알림 시각 도래 대기 → 알림 확인 → 탭 → `/reflection` 모달 열림 확인 |
-| 앱 백그라운드 전환 시 자동저장 플러시 | REQ-reflection-autosave | 시뮬레이터로 AppState 전환 자체는 재현 가능하므로 Claude가 시뮬레이터에서 먼저 확인 — 이 항목은 자동화 커버리지 보완용 수동 확인만 남김 | 회고 입력 → 홈 버튼으로 백그라운드 전환 → 재진입 → 입력값 유지 확인 |
+| 매일 고정 시각 알림의 실제 발화(잠금화면 노출, 탭 시 딥링크 동작) | REQ-reflection-notification | OS 알림 스케줄러의 실기기 타이밍/잠금화면 렌더링은 시뮬레이터로 원천 재현 불가. **추가로 확인됨(2026-09-03):** `simctl push`는 원격 푸시라 로컬 알림 전용 식별자(`DAILY_REFLECTION_ID`)를 재현하지 못해, 딥링크 게이트 자체도 시뮬레이터에서 검증 불가 — 위 Task 2 표 H행 참고 | 실기기에서 알림 시각 도래 대기 → 알림 확인(제목만, 사적 정보 없음) → 탭 → `/reflection` 모달이 콜드스타트로도 곧장 열리는지 확인 |
+| ~~앱 백그라운드 전환 시 자동저장 플러시~~ (해소됨) | REQ-reflection-autosave | ~~시뮬레이터로 AppState 전환 자체는 재현 가능~~ — **2026-09-03 Claude가 시뮬레이터에서 직접 확인 완료**(위 Task 2 표 D행). 더 이상 수동 확인 대상 아님 | (해소) |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** Task 1(자동 게이트)/Task 2(시뮬레이터 검증) — Claude 완료, 2026-09-03. Task 3(실기기 알림 자연 발화 + 콜드스타트 딥링크) — 창업자 확인 대기.
