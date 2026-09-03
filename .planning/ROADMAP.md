@@ -194,14 +194,14 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
   1. 사용자가 (오늘의 정적 지도를 재사용하고 2개 프롬프트를 담은) 전체화면 하루 마무리 회고 모달을 열 수 있으며, `DailyReflection` 레코드로 저장된다. 이 모달은 탭 바를 숨기는 push 규칙이 아니라, 탭 바를 덮는 방식이다.
   2. 회고 답변은 5초 디바운스, 앱 백그라운드 전환, 모달 닫기(✕/스와이프) 시점에 — 모두 동일한 저장 함수를 통해 — 자동저장되며, 저장 실패 시 체크인 저장과 동일한 재시도 패턴을 사용한다.
   3. 이름이 바뀐 "오늘의 흔적" 행은 체크인 개수를 표시하지 않으며(진행률 수치 금지), 체크인이 0건이어도 오늘 뷰 바텀시트 리스트 최상단에 고정된다.
-  4. 사용자는 기본으로 켜진 매일 고정 시각의 회고 리마인더를 받으며, 설정에서 끌 수 있는 토글이 있다.
+  4. 사용자는 기본으로 켜진 매일 고정 시각의 회고 리마인더를 받으며, 설정에서 끌 수 있는 토글이 있다. 설정에서 알림 시각(19/20/21/22/23시)을 직접 고를 수 있다.
   5. 과거 날짜 뷰에서 사용자는 그날의 회고 프롬프트도 편집할 수 있다(읽기전용 아님).
 
 **Plans**: 10 plans (6 waves)
 
-- [ ] 07-01-PLAN.md — app_settings.daily_reflection_hour 마이그레이션 v4 + settingsRepo 확장 + 요구사항 문서 갱신 (wave 1)
-- [ ] 07-02-PLAN.md — 회고 도메인 순수 로직: REFLECTION_COPY / reflectionRepo / 5초 디바운스 컨트롤러 (wave 1)
-- [ ] 07-06-PLAN.md — TodayBottomSheet 리스트 상시 마운트 + 헤더/푸터/빈상태 슬롯 (wave 1)
+- [x] 07-01-PLAN.md — app_settings.daily_reflection_hour 마이그레이션 v4 + settingsRepo 확장 + 요구사항 문서 갱신 (wave 1)
+- [x] 07-02-PLAN.md — 회고 도메인 순수 로직: REFLECTION_COPY / reflectionRepo / 5초 디바운스 컨트롤러 (wave 1)
+- [x] 07-06-PLAN.md — TodayBottomSheet 리스트 상시 마운트 + 헤더/푸터/빈상태 슬롯 (wave 1)
 - [ ] 07-03-PLAN.md — 설정 화면 "회고 알림 시각" 4번째 행 + ActionSheetIOS (wave 2)
 - [ ] 07-04-PLAN.md — 공유 프롬프트 컴포넌트 + useReflectionDraft 자동저장 훅 (wave 2)
 - [ ] 07-05-PLAN.md — 회고 화면 본체(정적 지도 + 읽기전용 리스트 + 프롬프트 배선) (wave 3)
@@ -242,7 +242,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 | 4. Today View | 7/7 | Complete   | 2026-08-31 |
 | 5. Check-in Detail & Edit | 7/7 | Complete   | 2026-08-31 |
 | 6. Calendar Tab | 8/8 | Complete   | 2026-09-02 |
-| 7. Day-end Reflection | 0/10 | Not started | - |
+| 7. Day-end Reflection | 3/10 | In Progress|  |
 | 8. Export & Polish | 0/TBD | Not started | - |
 | 9. Backend Foundation | 6/6 | Complete   | 2026-09-02 |
 | 10. Authentication (Kakao OAuth2/PKCE) | 0/TBD | Not started | - |
