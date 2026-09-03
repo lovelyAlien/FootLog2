@@ -114,3 +114,14 @@ None - no external service configuration required.
 ---
 *Phase: 07-day-end-reflection*
 *Completed: 2026-09-03*
+
+## Self-Check: PASSED
+
+- FOUND: src/reflection/useReflectionDraft.ts
+- FOUND: src/reflection/ReflectionPrompts.tsx
+- FOUND: src/app/__tests__/reflection-wiring.test.ts
+- FOUND: .planning/phases/07-day-end-reflection/07-04-SUMMARY.md
+- FOUND commit: d5eeb61 (Task 1)
+- FOUND commit: 37c5534 (Task 2)
+- FOUND commit: 9e5fe3d (Task 3)
+- FOUND commit: b83cc14 (SUMMARY.md)
