@@ -39,13 +39,15 @@ created: 2026-09-02
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 10-01-XX | 01 | 1 | REQ-auth-kakao-oauth | — | N/A | integration | `./gradlew test --tests "*FlywayMigrationTest"` | ❌ W0 | ⬜ pending |
-| 10-02-XX | 02 | — | REQ-auth-kakao-oauth | — | 카카오 토큰/사용자정보 교환, client_secret 미노출 | integration | `./gradlew test --tests "*KakaoAuthServiceTest"` | ❌ W0 | ⬜ pending |
-| 10-03-XX | 03 | — | REQ-auth-session-token | — | access/refresh JWT 발급, token_use 클레임 구분 | unit/integration | `./gradlew test --tests "*JwtIssuerServiceTest"` | ❌ W0 | ⬜ pending |
-| 10-04-XX | 04 | — | REQ-auth-session-token | — | 보호된 엔드포인트는 401, refresh는 token_use 검증 | integration | `./gradlew test --tests "*SecurityConfigTest"` | ❌ W0 | ⬜ pending |
-| 10-05-XX | 05 | — | REQ-auth-session-token | — | `/api/auth/refresh`가 유효 refresh로 새 access 발급 | integration | `./gradlew test --tests "*AuthControllerTest"` | ❌ W0 | ⬜ pending |
+| 10-01-XX | 01 | 1 | REQ-auth-kakao-oauth | — | 카카오 콘솔 앱 키/시크릿이 env var로만 존재(D-11 계승) | checkpoint | N/A(창업자 확인) | ❌ W0 | ⬜ pending |
+| 10-02-XX | 02 | 1 | REQ-auth-kakao-oauth | — | V4 마이그레이션 nullable+UNIQUE, 플레이스홀더 로우 보존 | integration | `./gradlew test --tests "*FlywayMigrationTest"` | ❌ W0 | ⬜ pending |
+| 10-03-XX | 03 | 1 | REQ-auth-session-token | T-10-25 | access/refresh JWT 발급, token_use 클레임 구분(2개 디코더) | unit/integration | `./gradlew test --tests "*JwtIssuerServiceTest"` | ❌ W0 | ⬜ pending |
+| 10-04-XX | 04 | 2 | REQ-auth-kakao-oauth | T-10-15 | `/v2/user/me` 조회(client_secret/code_verifier 사용 안 함), find-or-create, JWT 발급 | integration | `./gradlew test --tests "*KakaoAuthServiceTest"` | ❌ W0 | ⬜ pending |
+| 10-06-XX | 06 | 2 | REQ-auth-session-token | — | SecureStore 토큰 보관, 만료 임박 선제 갱신, authorizedFetch | unit | `npm test -- --testPathPattern=auth` | ❌ W0 | ⬜ pending |
+| 10-05-XX | 05 | 3 | REQ-auth-kakao-oauth, REQ-auth-session-token | T-10-01(actuator permitAll 유지) | 두 엔드포인트 계약, 보호된 엔드포인트 401, refresh는 token_use 검증 | integration | `./gradlew test --tests "*AuthControllerTest" --tests "*SecurityConfigTest"` | ❌ W0 | ⬜ pending |
+| 10-07-XX | 07 | 4 | REQ-auth-kakao-oauth, REQ-auth-session-token | — | 개발자 검증 화면, 실기기 카카오 왕복 확인 | manual + simulator | 시뮬레이터 화면 전환/배선 확인 + 실기기 카카오 계정 로그인(창업자) | ❌ W0 | ⬜ pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky. Plan ID는 계획 단계에서 확정.*
+*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky. Task ID 접미사(`-XX`)는 실행 단계에서 실제 태스크 번호로 확정.*
 
 ---
 
@@ -64,8 +66,8 @@ created: 2026-09-02
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| 카카오 개발자 콘솔 앱 등록(REST API 키, client_secret, redirect URI) | REQ-auth-kakao-oauth | 창업자 본인의 카카오 개발자 계정 접근이 필요 — 이 세션에서 확인 불가, 대체 경로 없음 | 계획 단계 첫 태스크로 명시. 창업자가 카카오 개발자 콘솔에서 앱 생성 후 REST API 키/시크릿/redirect URI를 확인해 환경변수로 제공 |
-| 실제 카카오 계정으로 전체 OAuth 왕복 완주 | REQ-auth-kakao-oauth, REQ-auth-session-token | 실제 네트워크 호출 + 실제 카카오 계정 필요. 화면 전환/텍스트 렌더링/토큰 저장 배선은 시뮬레이터로 검증 가능하나, 카카오 서버와의 실제 왕복은 계획 단계에서 검증 주체(Claude 시뮬레이터 vs 창업자 실기기)를 확정할 것 | D-16 검증 화면에서 카카오 로그인 버튼 탭 → 카카오 인증 → 백엔드가 JWT 발급 → 클라이언트가 안전 저장 확인 |
+| 카카오 개발자 콘솔 앱 등록(REST API/네이티브 앱 키 — client_secret은 D-14 AMENDMENT 이후 백엔드 코드 경로에서 불필요) | REQ-auth-kakao-oauth | 창업자 본인의 카카오 개발자 계정 접근이 필요 — 이 세션에서 확인 불가, 대체 경로 없음 | 10-01-PLAN.md 체크포인트 태스크로 명시. 창업자가 카카오 개발자 콘솔에서 앱 생성 후 REST API/네이티브 앱 키를 확인해 환경변수로 제공 |
+| 실제 카카오 계정으로 전체 OAuth 왕복 완주 | REQ-auth-kakao-oauth, REQ-auth-session-token | 실제 네트워크 호출 + 실제 카카오 계정 필요. 화면 전환/텍스트 렌더링/토큰 저장 배선은 시뮬레이터로 검증 가능하나, 카카오 서버와의 실제 왕복은 실기기(카카오톡 앱 전환 필요)가 요구됨 — 10-07-PLAN.md에서 검증 주체를 확정(시뮬레이터: 화면/배선, 실기기: 창업자 본인) | D-16 검증 화면에서 카카오 로그인 버튼 탭 → 카카오 SDK가 accessToken 반환 → 백엔드가 `/v2/user/me`로 JWT 발급 → 클라이언트가 안전 저장 확인 |
 
 ---
 
