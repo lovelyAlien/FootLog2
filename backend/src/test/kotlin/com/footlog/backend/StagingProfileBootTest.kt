@@ -48,6 +48,13 @@ class StagingProfileBootTest {
             registry.add("DATABASE_URL") { postgres.jdbcUrl }
             registry.add("DATABASE_USERNAME") { postgres.username }
             registry.add("DATABASE_PASSWORD") { postgres.password }
+            // staging 프로파일이 기본값 없는 ${JWT_SECRET}을 요구한다(10-03-PLAN.md) — 이
+            // 등록이 없으면 컨텍스트 로딩이 실패한다. 그리고 그 실패는 의도된 설계의 증거다:
+            // JWT_SECRET이 실제 배포 환경변수로 주입되지 않으면 staging이 아예 기동되지
+            // 않아야 하고, 이 테스트는 "환경변수만으로 기동됨"을 증명하는 것이지 그 요구를
+            // 우회하는 것이 아니다. 32바이트 이상(HS256 최소 256비트, Pitfall 2)인 테스트
+            // 전용 문자열을 쓴다.
+            registry.add("JWT_SECRET") { "staging-boot-test-only-jwt-secret-32bytes-min" }
         }
     }
 
