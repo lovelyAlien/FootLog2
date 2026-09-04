@@ -11,10 +11,28 @@ import type { AppSettingsRow } from '../db/schema';
 import { PHASE2_NOTIFICATION_SETTINGS } from '../notifications/config';
 import {
   isNotificationFrequency,
+  isDailyReflectionHour,
   resolveNotificationSettings,
   getSettingsRow,
   upsertSettings,
 } from './settingsRepo';
+
+describe('isDailyReflectionHour', () => {
+  it('Test 10: 0~23 범위의 정수는 true다 (07-01)', () => {
+    expect(isDailyReflectionHour(21)).toBe(true);
+    expect(isDailyReflectionHour(0)).toBe(true);
+    expect(isDailyReflectionHour(23)).toBe(true);
+  });
+
+  it('Test 11: 범위 밖/비정수/문자열/null은 false다 (07-01)', () => {
+    expect(isDailyReflectionHour(24)).toBe(false);
+    expect(isDailyReflectionHour(-1)).toBe(false);
+    expect(isDailyReflectionHour(20.5)).toBe(false);
+    expect(isDailyReflectionHour('21')).toBe(false);
+    expect(isDailyReflectionHour(null)).toBe(false);
+    expect(isDailyReflectionHour(undefined)).toBe(false);
+  });
+});
 
 describe('isNotificationFrequency', () => {
   it('Test 1: hourly/every3h/off는 true다', () => {
@@ -37,17 +55,18 @@ describe('resolveNotificationSettings', () => {
     expect(resolveNotificationSettings(null)).toEqual(PHASE2_NOTIFICATION_SETTINGS);
   });
 
-  it('Test 4: 정상 row는 checkinFrequency/dailyReflectionEnabled를 그대로 변환한다', () => {
+  it('Test 4: 정상 row는 checkinFrequency/dailyReflectionEnabled/daily_reflection_hour를 그대로 변환한다', () => {
     const row: AppSettingsRow = {
       id: 'settings',
       checkin_frequency: 'every3h',
       daily_reflection_enabled: 0,
+      daily_reflection_hour: 19,
       updated_at: '2026-09-01T00:00:00Z',
     };
     expect(resolveNotificationSettings(row)).toEqual({
       checkinFrequency: 'every3h',
       dailyReflectionEnabled: false,
-      dailyReflectionHour: 21,
+      dailyReflectionHour: 19,
     });
   });
 
@@ -56,6 +75,7 @@ describe('resolveNotificationSettings', () => {
       id: 'settings',
       checkin_frequency: 'garbage',
       daily_reflection_enabled: 1,
+      daily_reflection_hour: 21,
       updated_at: '2026-09-01T00:00:00Z',
     } as AppSettingsRow;
 
@@ -64,6 +84,37 @@ describe('resolveNotificationSettings', () => {
       result = resolveNotificationSettings(row);
     }).not.toThrow();
     expect(result?.checkinFrequency).toBe('hourly');
+  });
+
+  it('Test 12: daily_reflection_hour가 범위 밖이면 throw하지 않고 21로 폴백한다 (07-01)', () => {
+    const row = {
+      id: 'settings',
+      checkin_frequency: 'hourly',
+      daily_reflection_enabled: 1,
+      daily_reflection_hour: 99,
+      updated_at: '2026-09-01T00:00:00Z',
+    } as AppSettingsRow;
+
+    let result: ReturnType<typeof resolveNotificationSettings> | undefined;
+    expect(() => {
+      result = resolveNotificationSettings(row);
+    }).not.toThrow();
+    expect(result?.dailyReflectionHour).toBe(21);
+  });
+
+  it('Test 13: daily_reflection_hour가 undefined(구버전 row)면 throw하지 않고 21로 폴백한다 (07-01)', () => {
+    const row = {
+      id: 'settings',
+      checkin_frequency: 'hourly',
+      daily_reflection_enabled: 1,
+      updated_at: '2026-09-01T00:00:00Z',
+    } as AppSettingsRow;
+
+    let result: ReturnType<typeof resolveNotificationSettings> | undefined;
+    expect(() => {
+      result = resolveNotificationSettings(row);
+    }).not.toThrow();
+    expect(result?.dailyReflectionHour).toBe(21);
   });
 });
 
@@ -152,6 +203,48 @@ describe('upsertSettings / getSettingsRow', () => {
 
       const row = await getSettingsRow(db);
       expect(row).toBeNull();
+    } finally {
+      close();
+    }
+  });
+
+  it('Test 14: upsertSettings(dailyReflectionHour: 19) → getSettingsRow → resolveNotificationSettings 왕복 시 19가 보존된다 (07-01)', async () => {
+    const { db, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      await upsertSettings(
+        db,
+        { checkinFrequency: 'hourly', dailyReflectionEnabled: true, dailyReflectionHour: 19 },
+        '2026-09-02T00:00:00.000Z'
+      );
+
+      const row = await getSettingsRow(db);
+      expect(row).not.toBeNull();
+      expect(row?.daily_reflection_hour).toBe(19);
+      expect(resolveNotificationSettings(row).dailyReflectionHour).toBe(19);
+    } finally {
+      close();
+    }
+  });
+
+  it('Test 15: dailyReflectionHour가 범위 밖(99)이면 쓰기 시점에 rejects한다 (07-01, T-07-02)', async () => {
+    const { db, raw, close } = createTestDb();
+    try {
+      await migrateDbIfNeeded(db);
+
+      await expect(
+        upsertSettings(
+          db,
+          { checkinFrequency: 'hourly', dailyReflectionEnabled: true, dailyReflectionHour: 99 },
+          '2026-09-02T00:00:00.000Z'
+        )
+      ).rejects.toThrow();
+
+      const countRow = raw.prepare('SELECT COUNT(*) as c FROM app_settings').get() as {
+        c: number;
+      };
+      expect(countRow.c).toBe(0);
     } finally {
       close();
     }

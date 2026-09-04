@@ -11,6 +11,8 @@
 import fs from 'fs';
 import path from 'path';
 import { stripComments } from '../../test-utils/stripComments';
+import { REFLECTION_COPY } from '../../reflection/content';
+import { TODAY_COPY } from '../../today/content';
 
 const APP_DIR = path.join(__dirname, '..');
 const TODAY_SCREEN_PATH = path.join('(tabs)', 'index', 'index.tsx');
@@ -19,8 +21,21 @@ function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(APP_DIR, relativePath), 'utf-8');
 }
 
+// 07-06-PLAN.md Task 2 — calendar-wiring.test.ts와 동일한 패턴. APP_DIR(src/app) 기준이
+// 아니라 src/ 기준 상대경로를 읽기 위한 헬퍼(TodayBottomSheet.tsx는 src/today/에 있다).
+function readSrcSource(relativePath: string): string {
+  return fs.readFileSync(path.join(APP_DIR, '..', relativePath), 'utf-8');
+}
+
 const indexSource = readSource(TODAY_SCREEN_PATH);
 const codeOnly = stripComments(indexSource);
+
+const todayBottomSheetSource = readSrcSource(path.join('today', 'TodayBottomSheet.tsx'));
+const todayBottomSheetCodeOnly = stripComments(todayBottomSheetSource);
+
+// 07-09-PLAN.md Task 3 — "오늘 돌아보기" 진입 행 컴포넌트 소스.
+const reflectionEntryRowSource = readSrcSource(path.join('today', 'ReflectionEntryRow.tsx'));
+const reflectionEntryRowCodeOnly = stripComments(reflectionEntryRowSource);
 
 describe('src/app/(tabs)/index.tsx 단일 쿼리 계약 (04-CONTEXT.md D-11)', () => {
   it('getTodayCheckins( 호출이 파일 전체에서 정확히 1회 등장한다', () => {
@@ -159,8 +174,14 @@ describe('src/app/(tabs)/index.tsx accent 예산 계약', () => {
 // 진입 식별자가 아직 없다"고 명시적으로 남겨둔 스코프 경계였다. 05-05-PLAN.md
 // Task 3이 REQ-checkin-detail-base(행 탭 → 상세화면)를 이 파일에 배선하면서 그
 // 경계를 의도한 대로 반전시킨다 — 아래 단언은 회귀가 아니라 Phase 4→5 전환의 계획된
-// 결과다. Phase 7(회고) 스코프 경계는 이 phase와 무관하므로 그대로 유지한다.
-describe('src/app/(tabs)/index.tsx 스코프 경계 계약 (D-03 반전 — Phase 5 REQ-checkin-detail-base 배선, Phase 7 미선점)', () => {
+// 결과다.
+//
+// 2번째 반전 근거(2026-09-03, 07-09-PLAN.md) — 아래 두 번째 테스트는 원래 "회고
+// 관련 식별자가 이 파일에 등장하지 않는다"(Phase 7이 아직 이 화면을 선점하지 않았다)를
+// 확인했다. 07-06이 TodayBottomSheet에 연 리스트 헤더 슬롯을 07-09가 실제로 채우는
+// 시점이라 이 경계도 D-03과 동일한 방식으로 의도적으로 반전된다 — 아래 상세 배선
+// 계약은 이 파일 말미의 07-09 전용 describe 블록이 더 촘촘하게 게이트한다.
+describe('src/app/(tabs)/index.tsx 스코프 경계 계약 (D-03 반전 — Phase 5 REQ-checkin-detail-base 배선, Phase 7 07-09에서 회고 진입행 반전)', () => {
   it('상세화면 진입 배선이 존재한다: router.push와 pathname: \'./[id]\' (2026-09-01: D-03 반전, useRouter/<Link>는 여전히 쓰지 않는다)', () => {
     expect(codeOnly).toMatch(/router\.push/);
     expect(codeOnly).toMatch(/pathname:\s*'\.\/\[id\]'/);
@@ -168,9 +189,10 @@ describe('src/app/(tabs)/index.tsx 스코프 경계 계약 (D-03 반전 — Phas
     expect(codeOnly).not.toMatch(/<Link\b/);
   });
 
-  it('"오늘 돌아보기"/reflection 관련 식별자가 등장하지 않는다 (Phase 7 소관)', () => {
-    expect(codeOnly).not.toMatch(/오늘 돌아보기/);
-    expect(codeOnly).not.toMatch(/reflection/i);
+  it('"오늘 돌아보기" 진입 행 배선이 존재한다 (2026-09-03: 07-09 반전, useRouter/<Link>는 여전히 쓰지 않는다)', () => {
+    expect(codeOnly).toMatch(/오늘 돌아보기|ReflectionEntryRow/);
+    expect(codeOnly).not.toMatch(/useRouter/);
+    expect(codeOnly).not.toMatch(/<Link\b/);
   });
 });
 
@@ -275,5 +297,119 @@ describe('src/app/(tabs)/index.tsx 배너 위치 불변 계약', () => {
 
   it('배너 스택 렌더에 paddingTop: insets.top가 그대로 남아있다', () => {
     expect(codeOnly).toMatch(/styles\.bannerStack,\s*\{\s*paddingTop:\s*insets\.top\s*\}/);
+  });
+});
+
+// 07-06-PLAN.md Task 2 — TodayBottomSheet 슬롯 계약(항상 마운트 + ListEmptyComponent +
+// 선택적 ListHeaderComponent/ListFooterComponent)과 "합성 항목 금지" 원칙을 회귀
+// 테스트로 고정한다. 07-RESEARCH.md Pitfall 1이 지정한 warning sign(unshift/prepend로
+// checkins 배열에 진입 행을 합성해 넣는 접근)을 코드 레벨에서 게이트한다.
+describe('src/today/TodayBottomSheet.tsx 리스트 슬롯 계약 (07-06-PLAN.md)', () => {
+  it('체크인 배열 길이가 0인지 확인하는 삼항 분기가 존재하지 않는다', () => {
+    expect(todayBottomSheetCodeOnly).not.toMatch(/checkins\.length === 0/);
+  });
+
+  it('ListEmptyComponent가 등장한다', () => {
+    expect(todayBottomSheetCodeOnly).toMatch(/ListEmptyComponent/);
+  });
+
+  it('ListHeaderComponent와 ListFooterComponent가 각각 등장한다', () => {
+    expect(todayBottomSheetCodeOnly).toMatch(/ListHeaderComponent/);
+    expect(todayBottomSheetCodeOnly).toMatch(/ListFooterComponent/);
+  });
+
+  it('BottomSheetFlatList가 정확히 1회 마운트된다', () => {
+    const occurrences = todayBottomSheetCodeOnly.match(/<BottomSheetFlatList/g) ?? [];
+    expect(occurrences.length).toBe(1);
+  });
+
+  it('합성 리스트 항목 삽입(unshift/prepend)이 등장하지 않는다 (07-RESEARCH.md Pitfall 1)', () => {
+    expect(todayBottomSheetCodeOnly).not.toMatch(/unshift|prepend/);
+  });
+
+  it('emptyText 기본값이 여전히 TODAY_COPY.emptyState다', () => {
+    expect(todayBottomSheetCodeOnly).toMatch(/emptyText\s*=\s*TODAY_COPY\.emptyState/);
+  });
+
+  it('TodayBottomSheetProps의 필수 필드 5개가 옵셔널로 바뀌지 않았다', () => {
+    expect(todayBottomSheetCodeOnly).toMatch(/checkins:\s*CheckinRow\[\];/);
+    expect(todayBottomSheetCodeOnly).toMatch(/containerHeight:\s*number;/);
+    expect(todayBottomSheetCodeOnly).toMatch(/animatedPosition:\s*SharedValue<number>;/);
+    expect(todayBottomSheetCodeOnly).toMatch(/onRowPress:\s*\(id:\s*string\)\s*=>\s*void;/);
+    expect(todayBottomSheetCodeOnly).toMatch(/onDeleteRequest:\s*\(checkin:\s*CheckinRow\)\s*=>\s*void;/);
+  });
+});
+
+// 07-09-PLAN.md Task 3 — "오늘 돌아보기" 진입 행 배선(D-02 계약)과 오늘 뷰 개수
+// 미표시(REQ-reflection-copy-fix) 계약을 회귀 테스트로 고정한다.
+describe('src/app/(tabs)/index.tsx "오늘 돌아보기" 진입 행 배선 계약 (07-09-PLAN.md)', () => {
+  it('router.push(\'/reflection\')이 정확히 1회 등장하고, 상대 경로 표기는 등장하지 않는다', () => {
+    const occurrences = codeOnly.match(/router\.push\('\/reflection'\)/g) ?? [];
+    expect(occurrences.length).toBe(1);
+    expect(codeOnly).not.toMatch(/'\.\/reflection'/);
+  });
+
+  it('ListHeaderComponent가 등장하고, 인라인 화살표 컴포넌트 형태로는 전달되지 않는다', () => {
+    expect(codeOnly).toMatch(/ListHeaderComponent/);
+    expect(codeOnly).not.toMatch(/ListHeaderComponent=\{\(\)\s*=>/);
+  });
+
+  it('회고 존재 여부를 조회하지 않는다 (D-02 — getReflectionByDate/reflectionRepo 미등장)', () => {
+    expect(codeOnly).not.toMatch(/getReflectionByDate|reflectionRepo/);
+  });
+});
+
+describe('src/today/ReflectionEntryRow.tsx 컴포넌트 계약 (07-09-PLAN.md D-02)', () => {
+  it('colors.accentSoft가 정확히 1회 등장하고, colors.accent(정확한 식별자)는 등장하지 않는다', () => {
+    const accentSoftOccurrences = reflectionEntryRowCodeOnly.match(/colors\.accentSoft/g) ?? [];
+    expect(accentSoftOccurrences.length).toBe(1);
+    expect(reflectionEntryRowCodeOnly).not.toMatch(/colors\.accent\b/);
+  });
+
+  it('완료 상태를 뜻하는 식별자가 등장하지 않는다 (completed/hasReflection/isDone)', () => {
+    expect(reflectionEntryRowCodeOnly).not.toMatch(/completed|hasReflection|isDone/i);
+  });
+
+  it('탭 가능함을 암시하는 시각 요소(chevron/SymbolView)가 등장하지 않는다', () => {
+    expect(reflectionEntryRowCodeOnly).not.toMatch(/chevron|SymbolView/i);
+  });
+
+  it('expo-router import가 없다 (네비게이션은 콜백으로만 받는 컴포넌트 계약)', () => {
+    expect(reflectionEntryRowCodeOnly).not.toMatch(/expo-router/);
+  });
+});
+
+describe('REFLECTION_COPY.todayEntryRow 문구 계약 (D-02)', () => {
+  it('완료 여부를 뜻하는 숫자/접미사 없이 고정 라벨이다', () => {
+    expect(REFLECTION_COPY.todayEntryRow).toBe('오늘 돌아보기');
+    expect(REFLECTION_COPY.todayEntryRow).not.toMatch(/\d/);
+  });
+});
+
+// 개수 미표시 게이트(REQ-reflection-copy-fix) — 오늘 뷰 어디에도 체크인 개수/진행률
+// 숫자가 렌더되지 않는다는 계약을 코드/문구 양쪽에서 고정한다.
+describe('오늘 뷰 개수 미표시 계약 (REQ-reflection-copy-fix)', () => {
+  it('index.tsx와 TodayBottomSheet.tsx 어디에도 checkins.length를 화면에 보간하는 패턴이 없다', () => {
+    const lengthInterpolationPattern = /\{[^}]*checkins\.length[^}]*\}/;
+    expect(codeOnly).not.toMatch(lengthInterpolationPattern);
+    expect(todayBottomSheetCodeOnly).not.toMatch(lengthInterpolationPattern);
+  });
+
+  it('TODAY_COPY의 어떤 값에도 숫자 자리표시자가 없다 ({}/%d/${ 부재)', () => {
+    Object.values(TODAY_COPY).forEach((value) => {
+      expect(value).not.toMatch(/\{\}|%d|\$\{/);
+    });
+  });
+
+  it('TODAY_COPY 키 집합이 기존 6개 그대로다 (개수/진행률을 뜻하는 새 키 추가 없음)', () => {
+    const expectedKeys = [
+      'tabToday',
+      'tabCalendar',
+      'emptyState',
+      'deletedSnackbar',
+      'undoCta',
+      'deleteAffordanceLabel',
+    ].sort();
+    expect(Object.keys(TODAY_COPY).sort()).toEqual(expectedKeys);
   });
 });

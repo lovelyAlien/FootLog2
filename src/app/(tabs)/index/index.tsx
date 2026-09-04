@@ -50,6 +50,7 @@ import { NotificationDeniedBanner } from '../../../components/NotificationDenied
 import { LocationDeniedBanner } from '../../../components/LocationDeniedBanner';
 import { CheckinActionCard } from '../../../components/CheckinActionCard';
 import { TodayBottomSheet } from '../../../today/TodayBottomSheet';
+import { ReflectionEntryRow } from '../../../today/ReflectionEntryRow';
 import {
   checkinReducer,
   initialCheckinState,
@@ -286,6 +287,33 @@ export default function Index() {
     stateRef.current = state;
   }, [state]);
 
+  // 콜드 부팅 직후 첫 상호작용 버그 가드 — 네이티브 MapView(iOS MKMapView)가
+  // 완전히 초기화되기 전에 animateToRegion 등 imperative 메서드를 호출하면
+  // 에러 없이 조용히 무시된다. 앱을 막 켜고 서두르며 재센터/체크인 버튼을 누르면
+  // 이 창(window)에 걸려 카메라가 전혀 움직이지 않는다(실기기·시뮬레이터 콜드
+  // 부팅으로 재현 확인됨 — Fast Refresh로 리셋한 상태는 네이티브 뷰가 이미
+  // 준비돼 있어 이 버그를 가리므로 재현되지 않았다). onMapReady가 최초 1회
+  // fire되기 전까지는 카메라를 움직이는 모든 imperative 호출을 여기서 대기시킨다.
+  // (아래 useEffect의 드래프트 복구 경로가 이 함수를 참조하므로, eslint
+  // react-hooks/immutability가 "선언 전 접근"으로 오탐하지 않도록 그 useEffect
+  // 보다 앞에 선언한다.)
+  const isMapReadyRef = useRef(false);
+  const mapReadyWaitersRef = useRef<Array<() => void>>([]);
+
+  const handleMapReady = useCallback(() => {
+    isMapReadyRef.current = true;
+    const waiters = mapReadyWaitersRef.current;
+    mapReadyWaitersRef.current = [];
+    waiters.forEach((resolve) => resolve());
+  }, []);
+
+  const waitForMapReady = useCallback(() => {
+    if (isMapReadyRef.current) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      mapReadyWaitersRef.current.push(resolve);
+    });
+  }, []);
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -515,7 +543,15 @@ export default function Index() {
   }, [commitPendingDelete]);
 
   // 지연 삭제 컨트롤러 — 마운트 시 1회만 생성한다(buttonContentOpacity와 동일한
-  // useState 지연 초기화 관용구).
+  // useState 지연 초기화 관용구). eslint-disable 근거: 아래 onCommit 클로저는
+  // 렌더 중(초기화 함수 실행 시점)에는 정의만 되고, 실제 ref.current 읽기는
+  // 나중에 삭제가 커밋될 때(이벤트 콜백 시점)에만 일어난다 — React 공식 문서가
+  // 명시하는 "ref는 이벤트 핸들러 안에서 읽는다"는 안전 규칙을 그대로 따른다.
+  // react-hooks/refs는 초기화 함수 자체가 렌더 중 실행된다는 이유로 이 패턴을
+  // 정적으로 구분하지 못해 과탐한다 — useCallback으로 분리해봐도(react-hooks/refs가
+  // 참조 그래프를 따라가 동일하게 과탐함, 확인됨) 동작은 바뀌지 않으므로 원래의
+  // 단순한 형태를 유지한다.
+  // eslint-disable-next-line react-hooks/refs
   const pendingDeleteController = useState(() =>
     createPendingDeleteController({
       onCommit: (item) => commitPendingDeleteRef.current(item),
@@ -561,6 +597,22 @@ export default function Index() {
   const handleRowPress = useCallback((id: string) => {
     router.push({ pathname: './[id]', params: { id } });
   }, []);
+
+  // 07-09-PLAN.md Task 2 — "오늘 돌아보기" 행 탭 → 회고 모달 진입. 이 파일의 다른
+  // 이동은 전부 이 탭의 nested Stack 안에서 상대 경로(예: 설정 화면 push)로 풀리지만,
+  // 회고 모달은 탭 그룹 밖 루트 Stack 라우트라 상대 경로를 그대로 복사하면 조용히
+  // 잘못된 경로로 풀린다(07-RESEARCH.md Pitfall 3) — 반드시 절대 경로를 쓴다.
+  const handleReflectionEntryPress = useCallback(() => {
+    router.push('/reflection');
+  }, []);
+
+  // 07-09-PLAN.md Task 2 — 엘리먼트 자체를 useMemo로 안정화한다. 리스트 헤더 슬롯에
+  // 인라인 화살표 컴포넌트를 직접 넘기면 매 렌더마다 새 컴포넌트 타입이 생겨 리스트가
+  // 불필요하게 재마운트된다 — 엘리먼트 참조 자체를 고정해 그 문제를 피한다.
+  const reflectionEntryRowElement = useMemo(
+    () => <ReflectionEntryRow onPress={handleReflectionEntryPress} />,
+    [handleReflectionEntryPress]
+  );
 
   const isCapturing = state.phase === 'CAPTURING';
   const showActionCard = state.phase !== 'IDLE' && !isCapturing;
@@ -652,30 +704,6 @@ export default function Index() {
       return 0;
     }
     return RECENTER_ANIMATION_MS;
-  }, []);
-
-  // 콜드 부팅 직후 첫 상호작용 버그 가드 — 네이티브 MapView(iOS MKMapView)가
-  // 완전히 초기화되기 전에 animateToRegion 등 imperative 메서드를 호출하면
-  // 에러 없이 조용히 무시된다. 앱을 막 켜고 서두르며 재센터/체크인 버튼을 누르면
-  // 이 창(window)에 걸려 카메라가 전혀 움직이지 않는다(실기기·시뮬레이터 콜드
-  // 부팅으로 재현 확인됨 — Fast Refresh로 리셋한 상태는 네이티브 뷰가 이미
-  // 준비돼 있어 이 버그를 가리므로 재현되지 않았다). onMapReady가 최초 1회
-  // fire되기 전까지는 카메라를 움직이는 모든 imperative 호출을 여기서 대기시킨다.
-  const isMapReadyRef = useRef(false);
-  const mapReadyWaitersRef = useRef<Array<() => void>>([]);
-
-  const handleMapReady = useCallback(() => {
-    isMapReadyRef.current = true;
-    const waiters = mapReadyWaitersRef.current;
-    mapReadyWaitersRef.current = [];
-    waiters.forEach((resolve) => resolve());
-  }, []);
-
-  const waitForMapReady = useCallback(() => {
-    if (isMapReadyRef.current) return Promise.resolve();
-    return new Promise<void>((resolve) => {
-      mapReadyWaitersRef.current.push(resolve);
-    });
   }, []);
 
   // 나침반 배지 탭과 손 팬(handlePanDrag) 둘 다 "회전만 리셋"하는 로직을 공유한다.
@@ -1263,6 +1291,7 @@ export default function Index() {
             animatedPosition={sheetPosition}
             onRowPress={handleRowPress}
             onDeleteRequest={handleDeleteRequest}
+            ListHeaderComponent={reflectionEntryRowElement}
           />
           <Reanimated.View style={[styles.checkinButtonContainer, floatingButtonStyle]}>
             <Pressable

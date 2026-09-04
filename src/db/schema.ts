@@ -118,15 +118,18 @@ export interface AppSettingsRow {
   id: string;
   checkin_frequency: string; // NotificationFrequency 유니온 — 쓰기 시점에 settingsRepo가 검증
   daily_reflection_enabled: number; // SQLite에는 boolean 타입이 없다 — 0/1
+  daily_reflection_hour: number; // Plan 07-01 — D-05로 컬럼화(마이그레이션 v4, ALTER TABLE 전용). 아래 CREATE문에는 절대 추가하지 않는다.
   updated_at: string;
 }
 
 // (1) id는 항상 'settings' 고정값이다 — DRAFT_ROW_ID와 동일한 근거로, PRIMARY KEY 제약이
 //     "단일 row만 존재"를 스키마 레벨에서 강제한다(구현은 06-01 Task 2, SETTINGS_ROW_ID).
-// (2) dailyReflectionHour는 컬럼으로 두지 않는다 — day-end-reflection-map.md Premises #4가
-//     1단계에서 회고 시각을 21시로 하드코딩했고, 사용자가 시각 자체를 조정할 수 있는 UI가
-//     없기 때문이다(토글만 가능). 컬럼을 추가하면 "설정 가능하다"는 잘못된 인상을 주므로,
-//     이 값은 항상 PHASE2_NOTIFICATION_SETTINGS.dailyReflectionHour에서 온다.
+// (2) daily_reflection_hour는 이 CREATE문에 없다 — Plan 07-01(D-05)에서 마이그레이션 v4의
+//     `ALTER TABLE app_settings ADD COLUMN daily_reflection_hour ...`로만 추가된다
+//     (src/db/migrations.ts `currentDbVersion === 3` 블록). 이미 출하된 v3 DDL을 사후
+//     수정하면 안 되므로(migration_discipline #2, 07-RESEARCH.md Pitfall 5) 새 컬럼은
+//     반드시 ALTER TABLE 경로로만 도착해야 한다. day-end-reflection-map.md Premises #4의
+//     "시각 변경 UI는 스코프 밖" 전제는 2026-09-02 창업자 논의(D-05)로 뒤집혔다.
 // (3) 인덱스는 만들지 않는다 — drafts와 동일하게 단일 row 테이블이라 PK만으로 충분하다.
 export const CREATE_APP_SETTINGS_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS app_settings (

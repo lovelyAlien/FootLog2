@@ -16,6 +16,8 @@ export const SETTINGS_COPY = {
   sectionInfo: '정보',
   rowFrequency: '알림 빈도',
   rowDailyReflection: '하루 마무리 알림',
+  // 07-UI-SPEC.md §Copywriting Contract "설정 — 신규 행: 회고 알림 시각(D-05)" 라벨 원문.
+  rowReflectionHour: '회고 알림 시각',
   rowVersion: '버전',
   frequencyHourly: '매시간',
   frequencyEvery3h: '3시간마다',
@@ -62,3 +64,30 @@ export const FREQUENCY_LABEL_BY_VALUE: Readonly<Record<NotificationFrequency, st
 // 데이터를 지우는 위험 동작)은 1단계 스코프에서 의도적으로 뺐다. 이 주석은 이후 실수로
 // 재도입되지 않도록 근거를 남긴다 — 이 파일에는 그 행의 문구를 절대 추가하지 않는다
 // (회귀 가드: settings-wiring.test.ts가 이 단어가 부재함을 정적으로 검증한다).
+
+// D-05(07-UI-SPEC.md §Copywriting Contract) — 설정 화면 4번째 행("회고 알림 시각")이
+// 소비하는 액션시트 상수 4종. FREQUENCY_* 트리오와 구조적으로 동일한 세트다(옵션
+// 배열/취소 인덱스/인덱스→값/값→라벨). 라벨 리터럴을 REFLECTION_HOUR_OPTIONS와
+// REFLECTION_HOUR_LABEL_BY_VALUE 두 곳에 중복 하드코딩하지 않도록, 두 상수 모두
+// 아래 REFLECTION_HOURS 단일 리터럴에서 파생시킨다.
+const REFLECTION_HOURS = [19, 20, 21, 22, 23] as const;
+
+export const REFLECTION_HOUR_OPTIONS = [
+  ...REFLECTION_HOURS.map((hour) => `${hour}시`),
+  SETTINGS_COPY.actionSheetCancel,
+] as const;
+
+export const REFLECTION_HOUR_CANCEL_INDEX = REFLECTION_HOUR_OPTIONS.length - 1;
+
+// 21시('21시')가 반드시 후보에 포함되어야 한다 — PHASE2_NOTIFICATION_SETTINGS.dailyReflectionHour
+// 기본값이자 창업자 본인의 현재 설정(src/notifications/config.ts). 21이 목록에서
+// 빠지면 기존 사용자의 설정값이 REFLECTION_HOUR_LABEL_BY_VALUE 조회에서 빠진 값이 되어
+// 설정 화면 4번째 행의 trailing 라벨이 빈 문자열로 렌더된다.
+export const REFLECTION_HOUR_BY_ACTION_SHEET_INDEX: readonly (number | null)[] = [
+  ...REFLECTION_HOURS,
+  null,
+];
+
+// 설정 화면이 현재 선택된 회고 알림 시각을 행 trailing 텍스트로 렌더할 때 쓴다.
+export const REFLECTION_HOUR_LABEL_BY_VALUE: Readonly<Record<number, string>> =
+  Object.fromEntries(REFLECTION_HOURS.map((hour) => [hour, `${hour}시`]));

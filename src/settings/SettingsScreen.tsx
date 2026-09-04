@@ -19,6 +19,10 @@ import {
   FREQUENCY_ACTION_SHEET_OPTIONS,
   FREQUENCY_BY_ACTION_SHEET_INDEX,
   FREQUENCY_LABEL_BY_VALUE,
+  REFLECTION_HOUR_BY_ACTION_SHEET_INDEX,
+  REFLECTION_HOUR_CANCEL_INDEX,
+  REFLECTION_HOUR_LABEL_BY_VALUE,
+  REFLECTION_HOUR_OPTIONS,
   SETTINGS_COPY,
 } from './content';
 import { applyNotificationSettings } from '../notifications/scheduling';
@@ -122,6 +126,26 @@ export function SettingsScreen({ db }: SettingsScreenProps) {
     );
   }, [persist, settings]);
 
+  // T-07-07(threat_model) — 인덱스→시각 매핑은 content.ts가 소유하고(REFLECTION_HOUR_BY_ACTION_SHEET_INDEX),
+  // 이 콜백은 그 매핑을 그대로 소비한다. handleFrequencyPress의 `if (!next) return;`
+  // 형태를 그대로 복사하지 않는다 — 시각 값은 숫자이고 0이 falsy라 유효값을 삼킬 수
+  // 있다(현재 후보 목록엔 0이 없지만 목록이 확장되면 즉시 버그가 된다). null/undefined
+  // 명시 비교로 가드한다. 강조(경고) 버튼 스타일 옵션은 지정하지 않는다(위
+  // handleFrequencyPress와 동일 근거).
+  const handleReflectionHourPress = useCallback(() => {
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: [...REFLECTION_HOUR_OPTIONS],
+        cancelButtonIndex: REFLECTION_HOUR_CANCEL_INDEX,
+      },
+      (buttonIndex) => {
+        const nextHour = REFLECTION_HOUR_BY_ACTION_SHEET_INDEX[buttonIndex];
+        if (nextHour === null || nextHour === undefined) return;
+        persist({ ...settings, dailyReflectionHour: nextHour });
+      }
+    );
+  }, [persist, settings]);
+
   const handleToggleDailyReflection = useCallback(
     (value: boolean) => {
       persist({ ...settings, dailyReflectionEnabled: value });
@@ -177,6 +201,24 @@ export function SettingsScreen({ db }: SettingsScreenProps) {
             onValueChange={handleToggleDailyReflection}
           />
         </View>
+        <View style={styles.divider} />
+        {/* 07-UI-SPEC.md §Component Contracts 4 "활성화 상태" — 위 토글이 꺼져 있어도
+            이 행은 흐리게 표시하거나 비활성화하지 않는다. 이 앱에 비활성 행 토큰이 없고,
+            미리 정해둔 시각이 토글 재활성화 시 그대로 쓰이는 게 자연스럽기 때문이다. */}
+        <Pressable
+          style={styles.row}
+          onPress={handleReflectionHourPress}
+          accessibilityRole="button"
+          accessibilityLabel={SETTINGS_COPY.rowReflectionHour}
+        >
+          <Text style={styles.rowLabel}>{SETTINGS_COPY.rowReflectionHour}</Text>
+          <View style={styles.rowTrailing}>
+            <Text style={styles.rowValue}>
+              {REFLECTION_HOUR_LABEL_BY_VALUE[settings.dailyReflectionHour]}
+            </Text>
+            <SymbolView name="chevron.right" tintColor={colors.textMuted} />
+          </View>
+        </Pressable>
       </View>
 
       <Text style={styles.sectionHeader}>{SETTINGS_COPY.sectionInfo}</Text>
