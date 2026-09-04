@@ -6,7 +6,7 @@
 // 배치(화면 하단, 탭바 위)는 항상 부모(오늘 화면)가 결정한다. visible이 거짓이면
 // disable이 아니라 미마운트(null)한다 — 이 저장소의 "비활성화가 아니라 미마운트"
 // 계약(CheckinActionCard.tsx SAVE_FAILED 절과 동일 원칙).
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 import { colors, motion, radius, spacing, typography } from '../theme/tokens';
 import { TODAY_COPY } from './content';
@@ -20,8 +20,11 @@ export function UndoSnackbar({ visible, onUndo }: UndoSnackbarProps) {
   // 등장 크로스페이드 — 기존 저장 상태 전환 모션 토큰(180ms)을 재사용한다(새 모션
   // 토큰을 발명하지 않는다). 마운트될 때마다 0에서 1로 페이드인한다 — 부모가
   // visible을 false로 바꾸는 즉시 이 컴포넌트 자체가 미마운트되므로 별도의 퇴장
-  // 페이드를 걸 대상이 없다.
-  const opacity = useRef(new Animated.Value(0)).current;
+  // 페이드를 걸 대상이 없다. (tabs)/index/index.tsx의 buttonContentOpacity와
+  // 동일하게 useState 지연 초기화를 쓴다 — useRef().current를 렌더 중 읽는 것은
+  // react-hooks/refs가 금지하는 패턴이고, state는 렌더 중 읽어도 안전하다(setter는
+  // 호출하지 않으므로 리렌더를 유발하지 않는다는 점은 동일).
+  const [opacity] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     opacity.setValue(0);

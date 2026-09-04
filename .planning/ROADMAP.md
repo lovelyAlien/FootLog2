@@ -28,7 +28,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 - [x] **Phase 4: Today View** - 사용자가 오늘의 체크인들을 지도에서 보여주는 홈 화면과, 새 체크인을 위한 마찰 낮은 진입점을 갖는다. (completed 2026-08-31)
 - [x] **Phase 5: Check-in Detail & Edit** - 사용자가 기록된 개별 체크인을 조회·수정·삭제할 수 있다. (completed 2026-08-31)
 - [x] **Phase 6: Calendar Tab** - 사용자가 월 그리드와 빠른 날짜별 스크러버로 과거 날짜를 훑어볼 수 있다. (completed 2026-09-02)
-- [ ] **Phase 7: Day-end Reflection** - 사용자가 하루 루프의 핵심 요소인 짧은 하루 마무리 회고를 완료할 수 있다.
+- [x] **Phase 7: Day-end Reflection** - 사용자가 하루 루프의 핵심 요소인 짧은 하루 마무리 회고를 완료할 수 있다. (completed 2026-09-03)
 - [ ] **Phase 8: Export & Polish** - 사용자가 데이터를 로컬로 내보낼 수 있고, 앱이 이름/접근성 기준을 충족한다.
 
 **Phase 9~12: 백엔드/인증/클라우드(2단계)** — 1단계 로드맵(Phase 1~8)과 별도 트랙으로, 1단계 실사용 트라이얼 완료 게이트를 사용자 명시적 승인으로 우회하고 착수됨(2026-09-01). PROJECT.md Out of Scope / Key Decisions 참고.
@@ -194,10 +194,22 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
   1. 사용자가 (오늘의 정적 지도를 재사용하고 2개 프롬프트를 담은) 전체화면 하루 마무리 회고 모달을 열 수 있으며, `DailyReflection` 레코드로 저장된다. 이 모달은 탭 바를 숨기는 push 규칙이 아니라, 탭 바를 덮는 방식이다.
   2. 회고 답변은 5초 디바운스, 앱 백그라운드 전환, 모달 닫기(✕/스와이프) 시점에 — 모두 동일한 저장 함수를 통해 — 자동저장되며, 저장 실패 시 체크인 저장과 동일한 재시도 패턴을 사용한다.
   3. 이름이 바뀐 "오늘의 흔적" 행은 체크인 개수를 표시하지 않으며(진행률 수치 금지), 체크인이 0건이어도 오늘 뷰 바텀시트 리스트 최상단에 고정된다.
-  4. 사용자는 기본으로 켜진 매일 고정 시각의 회고 리마인더를 받으며, 설정에서 끌 수 있는 토글이 있다.
+  4. 사용자는 기본으로 켜진 매일 고정 시각의 회고 리마인더를 받으며, 설정에서 끌 수 있는 토글이 있다. 설정에서 알림 시각(19/20/21/22/23시)을 직접 고를 수 있다.
   5. 과거 날짜 뷰에서 사용자는 그날의 회고 프롬프트도 편집할 수 있다(읽기전용 아님).
 
-**Plans**: TBD
+**Plans**: 10 plans (6 waves)
+
+- [x] 07-01-PLAN.md — app_settings.daily_reflection_hour 마이그레이션 v4 + settingsRepo 확장 + 요구사항 문서 갱신 (wave 1)
+- [x] 07-02-PLAN.md — 회고 도메인 순수 로직: REFLECTION_COPY / reflectionRepo / 5초 디바운스 컨트롤러 (wave 1)
+- [x] 07-06-PLAN.md — TodayBottomSheet 리스트 상시 마운트 + 헤더/푸터/빈상태 슬롯 (wave 1)
+- [x] 07-03-PLAN.md — 설정 화면 "회고 알림 시각" 4번째 행 + ActionSheetIOS (wave 2)
+- [x] 07-04-PLAN.md — 공유 프롬프트 컴포넌트 + useReflectionDraft 자동저장 훅 (wave 2)
+- [x] 07-05-PLAN.md — 회고 화면 본체(정적 지도 + 읽기전용 리스트 + 프롬프트 배선) (wave 3)
+- [x] 07-07-PLAN.md — 과거 날짜 뷰 인라인 회고 편집 (wave 3)
+- [x] 07-08-PLAN.md — /reflection 모달 라우트 등록 + 알림 탭 딥링크 게이트 (wave 4)
+- [x] 07-09-PLAN.md — 오늘 뷰 "오늘 돌아보기" 상시 진입 행 + 개수 미표시 가드 (wave 5)
+- [x] 07-10-PLAN.md — 전체 게이트 + 시뮬레이터 자체 검증 + 창업자 실기기 확인 (wave 6)
+
 **UI hint**: yes
 
 ### Phase 8: Export & Polish
@@ -230,7 +242,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 | 4. Today View | 7/7 | Complete   | 2026-08-31 |
 | 5. Check-in Detail & Edit | 7/7 | Complete   | 2026-08-31 |
 | 6. Calendar Tab | 8/8 | Complete   | 2026-09-02 |
-| 7. Day-end Reflection | 0/TBD | Not started | - |
+| 7. Day-end Reflection | 10/10 | Complete   | 2026-09-03 |
 | 8. Export & Polish | 0/TBD | Not started | - |
 | 9. Backend Foundation | 6/6 | Complete   | 2026-09-02 |
 | 10. Authentication (Kakao OAuth2/PKCE) | 0/7 | Planned | - |

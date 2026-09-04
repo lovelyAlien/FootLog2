@@ -34,6 +34,8 @@ import { resolveLocalDateKey } from '../checkin/localDate';
 import { formatDateKeyTitle } from './monthGrid';
 import { CALENDAR_COPY } from './content';
 import { buildScrubberDateKeys, SCRUBBER_BOTTOM_OFFSET_PT, shouldShowScrubber } from './scrubberRange';
+import { useReflectionDraft } from '../reflection/useReflectionDraft';
+import { ReflectionPrompts } from '../reflection/ReflectionPrompts';
 import type { MigratableDb } from '../db/migrations';
 import type { CheckinRow } from '../db/schema';
 
@@ -62,10 +64,18 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
   // 라우트를 바꾸는 순환)를 만들지 않기 위함이다. `dateKey` prop이 바뀌면(예: 캘린더
   // 그리드로 돌아가 다른 날짜를 탭한 뒤 이 화면이 새 파라미터로 재사용되는 경우)
   // 아래 useEffect가 다시 동기화한다.
+  // dateKey prop이 바뀌면(예: 캘린더 그리드로 돌아가 다른 날짜를 탭한 뒤 이 화면이
+  // 새 파라미터로 재사용되는 경우) activeDateKey를 다시 동기화해야 하지만,
+  // activeDateKey는 스크러버 드래그로도 독립적으로 갱신된다(순수 prop 미러가 아님).
+  // 이런 "파생 상태 + 로컬 갱신 병행" 케이스는 React 공식 문서가 권장하는 대로
+  // useEffect+setState 대신 렌더 중 비교로 처리한다(react-hooks/set-state-in-effect
+  // — 이전 방식은 매 prop 변경마다 불필요한 추가 렌더를 유발했다).
   const [activeDateKey, setActiveDateKey] = useState(dateKey);
-  useEffect(() => {
+  const [prevDateKeyProp, setPrevDateKeyProp] = useState(dateKey);
+  if (dateKey !== prevDateKeyProp) {
+    setPrevDateKeyProp(dateKey);
     setActiveDateKey(dateKey);
-  }, [dateKey]);
+  }
 
   // 늦게 도착한 조회 응답이 최신 activeDateKey를 덮어쓰지 않도록 하는 가드용 ref —
   // reloadCheckins의 클로저가 호출 시점의 activeDateKey를 캡처하므로, 응답이 돌아온
@@ -213,6 +223,10 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
     commitPendingDeleteRef.current = commitPendingDelete;
   }, [commitPendingDelete]);
 
+  // (tabs)/index/index.tsx의 동일 패턴과 같은 이유로 eslint-disable — onCommit
+  // 클로저는 정의 시점(렌더 중)이 아니라 실제 삭제 커밋 시점(이벤트 콜백)에만
+  // ref.current를 읽는다.
+  // eslint-disable-next-line react-hooks/refs
   const pendingDeleteController = useState(() =>
     createPendingDeleteController({
       onCommit: (item) => commitPendingDeleteRef.current(item),
@@ -280,6 +294,53 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
   const handleScrubStart = useCallback(() => {
     sheetRef.current?.snapToIndex(0);
   }, []);
+
+  // 07-07-PLAN.md Task 1 — 라우트 파라미터 dateKey가 아니라 스크러버로 갱신되는
+  // activeDateKey를 넘긴다(handleRowPress와 동일한 이유 — 스크럽 중 보고 있는
+  // 날짜의 회고를 편집해야 한다). 날짜 전환 시의 flush/재로드는 useReflectionDraft
+  // 내부에서 이미 처리되므로(dateKey가 바뀌는 effect의 cleanup에서 flush) 이
+  // 화면이 별도의 flush용 effect나 앱 포그라운드/백그라운드 전환 리스너를 추가하지
+  // 않는다 — 추가하면 같은 draft가 훅 내부 경로와 이 화면의 경로 두 곳에서 저장을
+  // 시도하게 된다.
+  const reflection = useReflectionDraft(db, activeDateKey);
+
+  // 07-07-PLAN.md Task 1 — 시트 푸터는 반드시 useMemo로 만든 엘리먼트를 전달한다.
+  // 렌더 함수를 그 자리에서 인라인으로 만들어 넘기면(매 렌더마다 새 함수 참조) 매
+  // 렌더마다 새 컴포넌트 *타입*이 생성되어 리스트가 이전 푸터를 언마운트하고 새
+  // 푸터를 마운트한다 — 그 안의 입력칸도 함께 재마운트되어 타이핑 중 키보드
+  // 포커스가 끊긴다. 엘리먼트(인스턴스)를 넘기면 타입이 안정적으로 유지되어 입력칸
+  // 생명주기가 보존된다(T-07-18).
+  const reflectionFooter = useMemo(
+    () => (
+      <View
+        style={styles.reflectionSection}
+        onTouchStart={() => {
+          // 키보드가 프롬프트를 가리지 않도록, 프롬프트 터치 시 시트를 OPEN으로
+          // 편다 — 스크러버가 쓰는 동일한 imperative sheetRef 관용구의 반대
+          // 방향(스크러버는 접고, 프롬프트 터치는 편다). TodayBottomSheet를
+          // 수정하지 않고 이 화면 안에서 해결한다.
+          sheetRef.current?.snapToIndex(1);
+        }}
+      >
+        <ReflectionPrompts
+          newPlaceAnswer={reflection.newPlaceAnswer}
+          freeReflection={reflection.freeReflection}
+          onChangeNewPlaceAnswer={reflection.onChangeNewPlaceAnswer}
+          onChangeFreeReflection={reflection.onChangeFreeReflection}
+          saveFailed={reflection.saveFailed}
+          onRetry={reflection.onRetry}
+        />
+      </View>
+    ),
+    [
+      reflection.newPlaceAnswer,
+      reflection.freeReflection,
+      reflection.onChangeNewPlaceAnswer,
+      reflection.onChangeFreeReflection,
+      reflection.saveFailed,
+      reflection.onRetry,
+    ]
+  );
 
   // 범위는 첫 체크인 날짜 ~ 오늘이며 미래로는 넘어가지 않는다(Premise 5).
   const scrubberDateKeys = useMemo(
@@ -378,6 +439,7 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
         onRowPress={handleRowPress}
         onDeleteRequest={handleDeleteRequest}
         emptyText={CALENDAR_COPY.pastDateEmptyState}
+        ListFooterComponent={reflectionFooter}
       />
 
       {/* 06-07-PLAN.md Task 2 — 스크러버는 시트보다 위 레이어(JSX상 더 뒤에 렌더돼
@@ -407,6 +469,14 @@ export function PastDateScreen({ db, dateKey }: PastDateScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  // 07-07-PLAN.md Task 1 — 시트 하단 인라인 회고 프롬프트 섹션. 07-UI-SPEC.md
+  // §Component Contracts 3 — 회고 모달과 동일한 프롬프트 UI를 그대로 재사용하되
+  // "오늘의 흔적" 헤더/썸네일은 없다(D-04). 좌우 spacing.md, 상/하단 spacing.lg.
+  reflectionSection: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
   screen: {
     flex: 1,
     backgroundColor: colors.background,
