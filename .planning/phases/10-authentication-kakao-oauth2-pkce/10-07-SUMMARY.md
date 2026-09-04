@@ -3,7 +3,7 @@ phase: 10-authentication-kakao-oauth2-pkce
 plan: 07
 type: execute
 wave: 4
-status: task-3-pending-founder
+status: complete
 ---
 
 # 10-07 SUMMARY — Phase 10 전체 관통 검증
@@ -11,7 +11,7 @@ status: task-3-pending-founder
 ## Plan
 10-07 (wave 4, non-autonomous — checkpoint:human-verify 포함, 마지막 플랜)
 
-## Tasks: 2/3 (Task 1, 2 완료 / Task 3 창업자 실기기 확인 대기)
+## Tasks: 3/3 (전체 완료)
 
 ## Task 1 — app.config.js 플러그인 주입 + 카카오 로그인 모듈 + 개발자 검증 화면 (완료)
 
@@ -76,15 +76,53 @@ iPhone 17 Pro 시뮬레이터 attach → `npx expo run:ios`로 네이티브 빌�
 3. 실기기 키체인(SecureStore)에서의 세션 영속(앱 완전 종료 후 재실행)
 4. 항목 c(네트워크 에러, 위 표 참고 — 코드 리뷰로 대체, Task 3 항목 7이 실기기에서 동등 시나리오 커버)
 
-## Task 3 — 창업자 실기기 전체 왕복 검증 (대기 중)
+## Task 3 — 창업자 실기기 전체 왕복 검증 (완료)
 
-아래 항목은 실제 카카오 계정 + 카카오톡 앱 설치 실기기가 필요해 창업자에게 이관됩니다 — 별도 메시지로 안내드립니다.
+EAS Dev Client 빌드(`eas build --profile development --platform ios`)를 신규로 만들어 창업자 iPhone에 설치 후 진행. 자세한 내용은 아래 "EAS 빌드 및 환경변수" 절 참고.
 
-창업자 응답 대기 중 — 7개 항목 결과 수신 시 이 SUMMARY와 10-VALIDATION.md를 갱신하고, 실패 항목이 있으면 gap closure 필요를 명시합니다.
+### Claude 시뮬레이터 확인 항목 vs 창업자 실기기 확인 항목 (CLAUDE.md 4항)
+
+| # | 항목 | 확인 주체 | 결과 |
+|---|------|-----------|------|
+| a | 화면 렌더/signed-out 시작 | Claude(시뮬레이터) | ✅ PASS |
+| b | 로그인 버튼 반응(signing-in 전환) | Claude(시뮬레이터) | ✅ PASS |
+| 카카오 웹 인증 화면 진입 | Claude(시뮬레이터, 웹 폴백만) | ✅ PASS |
+| 로그인 취소 시 거부+재시도 | Claude(시뮬레이터) | ✅ PASS |
+| 1 | 딥링크 진입, signed-out 시작 | 창업자(실기기) | ✅ PASS |
+| 2 | **카카오톡 앱 전환**(D-13 핵심) | 창업자(실기기, 시뮬레이터 원천 불가) | ✅ PASS |
+| 3 | 인증 완주 → signed-in 전환(토큰 표시) | 창업자(실기기) | ✅ PASS |
+| 4 | 서버측 계정 생성(users 2건, email 컬럼 없음) | Claude가 창업자 로그인 직후 DB 직접 쿼리로 확인 | ✅ PASS |
+| 5 | 프로필 갱신(로우 안 늘고 기존 로우 갱신) | 창업자(카카오 닉네임 변경) + Claude(DB 재쿼리로 row count/id/created_at 불변 확인) | ✅ PASS |
+| 6 | 세션 영속(완전 종료 후 재실행) | 창업자(실기기) | ✅ PASS |
+| 7 | 오프라인 에러 + 재시도(D-15) | 창업자(실기기) | ✅ PASS (아래 참고) |
+
+**항목 4/5 검증 방식**: 실제 `kakao_id`/`nickname`/`profile_image_url` 값은 채팅에 노출하지 않고, `IS NOT NULL` boolean과 row count/id/created_at만 확인해 개인정보 노출 없이 검증했다.
+
+**항목 7 관련 이슈 1건 — iOS 비행기 모드가 Wi-Fi를 끄지 않는 경우**: 최초 시도에서 비행기 모드를 켰음에도 로그인이 그대로 성공해 이상 징후로 판단, 조사한 결과 iOS는 비행기 모드 중 Wi-Fi를 수동으로 켠 이력이 있으면 이후 비행기 모드 전환 시에도 Wi-Fi를 끄지 않는 채로 유지하는 알려진 동작이 있음을 확인. 창업자에게 제어센터에서 Wi-Fi를 명시적으로 꺼달라고 안내 → 재시도 결과 네트워크 오류 문구 + 재시도 버튼 정상 노출, Wi-Fi 복구 후 재시도 버튼으로 정상 로그인 완주 확인. **앱 버그 아님, 코드 변경 없음.**
+
+### EAS 빌드 및 환경변수 (실기기 설치를 위해 이 세션에서 추가로 수행)
+
+Task 2까지는 시뮬레이터 검증이라 EAS 빌드가 필요 없었으나, Task 3은 실기기 설치가 필요해 신규 진행:
+
+1. `eas build --profile development --platform ios --non-interactive` 최초 시도 실패 — EAS 클라우드 빌드는 로컬 `.env`를 읽지 않음(`EXPO_NO_DOTENV` 강제, 빌드 서버에 로컬 파일이 없는 것이 원인이자 의도된 동작). `app.config.js`가 `KAKAO_NATIVE_APP_KEY` 부재로 throw.
+2. **창업자 승인 하에** `eas env:create`로 EAS 프로젝트 환경변수 2개 등록: `KAKAO_NATIVE_APP_KEY`(visibility: secret, development 환경 한정), `EXPO_PUBLIC_API_BASE_URL`(visibility: plaintext, 당시 LAN IP). 값 자체는 셸 치환으로만 전달, 채팅/로그에 출력하지 않음.
+3. 재시도 성공 — 빌드: https://expo.dev/accounts/jaeseungchoun/projects/footlog/builds/55e61703-8f58-4f61-8cc0-74b6ae242c41 (기존 Apple 서명/프로비저닝 재사용, 새 자격증명 생성 없음)
+4. **후속 이슈**: 창업자가 최초 로그인 시도에서 "네트워크 연결을 확인한 뒤 다시 시도해주세요"(network 에러) 조우 — 원인은 Mac의 LAN IP가 Wi-Fi 재연결로 `172.30.1.7`→`192.168.0.10`으로 바뀌었는데, **EAS 등록 환경변수는 클라우드 네이티브 빌드에만 적용되고, 이 빌드는 development 프로필(`developmentClient: true`)이라 실행 시 Metro가 실시간으로 서빙하는 JS 번들을 쓰며 그 번들의 `EXPO_PUBLIC_API_BASE_URL`은 로컬 `.env`(구 IP `localhost:8080`으로 방치돼 있었음)에서 인라인됨**을 뒤늦게 파악. 로컬 `.env`를 현재 LAN IP로 갱신하고 Metro를 재시작해 해결. 이 시점에 창업자는 이미 카카오톡 앱 전환+인증 완주(항목 2/3)에 성공한 상태였음 — 실패한 것은 그 이후 백엔드 교환 단계뿐이었다.
+
+### 배포/후속 인계 사항 (플랜 요구)
+
+- **T-10-15**: 탈취된 카카오 액세스 토큰 재사용 방어 미흡 — `/v1/user/access_token_info` 앱 바인딩 검증이 후속 하드닝 후보
+- **T-10-25**: refresh 토큰 회전/폐기 메커니즘 없음
+- **T-10-26**: 인증 엔드포인트에 rate limit 없음
+- **T-10-32 / T-10-37**: 평문 HTTP(개발 검증 한정) — 실제 배포 시 HTTPS 강제가 선행조건
+- **T-10-36**: `dev-login` 라우트가 프로덕션 번들에도 포함됨 — 배포 시 `__DEV__` 게이트 또는 라우트 제외 필요
+- **로그아웃/카카오 연결끊기**: 이번 phase 스코프 밖(10-CONTEXT.md Phase Boundary) — 별도 phase 필요
 
 ## Deviations
 - 로컬 환경 이슈 2건(빌드 호출 경로의 `.env` 미전파, 구버전 Docker Compose CLI 비호환) — 둘 다 저장소 코드/설정 변경 없이 호출 방식 전환으로 해결. 상세는 위 "빌드/실행 경로 이슈"/"백엔드 로컬 기동 이슈" 절 참고
-- Task 2 항목 c의 완전한 런타임 재현 불가(실제 카카오 계정 필요) — 코드 리뷰로 대체, 사유 명시
+- Task 2 항목 c의 완전한 런타임 재현 불가(실제 카카오 계정 필요) — 코드 리뷰로 대체, Task 3 항목 7이 실기기에서 동등 시나리오로 커버함
+- Task 3 진행 중 LAN IP 변경으로 인한 일시적 network 에러 — 근본 원인(EAS 환경변수와 로컬 Metro `.env`의 적용 범위가 다르다는 점) 조사 후 `.env` 갱신으로 해결, 코드 변경 없음
+- iOS 비행기 모드가 Wi-Fi를 끄지 않는 로컬 iOS 설정 이슈 — 창업자 안내로 해결, 앱 동작과 무관
 
 ## Files Modified (이 플랜에서, Task 1)
 - `app.config.js`, `src/auth/kakaoLogin.ts`, `src/auth/devLoginContent.ts`, `src/app/dev-login.tsx`, `src/app/__tests__/dev-login-wiring.test.ts`

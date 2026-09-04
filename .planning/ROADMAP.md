@@ -34,7 +34,7 @@ Decimal phase는 앞뒤 정수 phase 사이에 숫자 순서대로 배치됩니�
 **Phase 9~12: 백엔드/인증/클라우드(2단계)** — 1단계 로드맵(Phase 1~8)과 별도 트랙으로, 1단계 실사용 트라이얼 완료 게이트를 사용자 명시적 승인으로 우회하고 착수됨(2026-09-01). PROJECT.md Out of Scope / Key Decisions 참고.
 
 - [x] **Phase 9: Backend Foundation** - Spring Boot(Kotlin) 백엔드 프로젝트가 스캐폴딩되고, 서버측 DB 스키마와 마이그레이션 프레임워크가 존재한다. (completed 2026-09-02)
-- [ ] **Phase 10: Authentication (Kakao OAuth2/PKCE)** - 사용자가 카카오 계정으로 OAuth2/PKCE 로그인해 인증 토큰을 발급받는다.
+- [x] **Phase 10: Authentication (Kakao OAuth2/PKCE)** - 사용자가 카카오 계정으로 OAuth2/PKCE 로그인해 인증 토큰을 발급받는다. (completed 2026-09-04)
 - [ ] **Phase 11: Object Storage (S3-compatible)** - 체크인 사진이 S3 호환 오브젝트 스토리지에 업로드·조회된다.
 - [ ] **Phase 12: Client-Server Sync** - 클라이언트 SQLite와 서버 DB 간 local-first 동기화가 이뤄진다.
 
@@ -233,7 +233,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 | 7. Day-end Reflection | 0/TBD | Not started | - |
 | 8. Export & Polish | 0/TBD | Not started | - |
 | 9. Backend Foundation | 6/6 | Complete   | 2026-09-02 |
-| 10. Authentication (Kakao OAuth2/PKCE) | 6/7 | In Progress|  |
+| 10. Authentication (Kakao OAuth2/PKCE) | 7/7 | Complete   | 2026-09-04 |
 | 11. Object Storage (S3-compatible) | 0/TBD | Not started | - |
 | 12. Client-Server Sync | 0/TBD | Not started | - |
 
@@ -274,7 +274,7 @@ Phase 9~12(백엔드/인증/클라우드)는 위 1단계 트랙과 별도로 병
 - [x] 10-04-PLAN.md — 카카오 /v2/user/me 조회 + find-or-create + 자체 JWT 발급 서비스 (wave 2)
 - [x] 10-05-PLAN.md — POST /api/auth/kakao/login · /api/auth/refresh + 필터 체인 계약 테스트 (wave 3)
 - [x] 10-06-PLAN.md — 클라이언트 SecureStore 토큰 보관 + 만료 임박 선제 갱신 + authorizedFetch (wave 2)
-- [ ] 10-07-PLAN.md — 개발자 검증 화면 + Dev Client 재빌드 + 실기기 카카오 왕복 검증 (wave 4)
+- [x] 10-07-PLAN.md — 개발자 검증 화면 + Dev Client 재빌드 + 실기기 카카오 왕복 검증 (wave 4)
 
 **Note**: D-14는 계획 단계에서 수정됨 — 네이티브 SDK가 인가 코드가 아니라 카카오 accessToken을
 직접 반환하므로, 백엔드는 `kauth.kakao.com/oauth/token` 교환 없이 `/v2/user/me`만 호출한다.
